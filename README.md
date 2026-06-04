@@ -8,6 +8,26 @@ flowsheet is *end-to-end differentiable*: you can take gradients through phase
 equilibrium and recycle loops for optimization, parameter estimation, and tight
 ML integration.
 
+Fugacio treats physical correctness as the baseline, not a stretch goal — and
+because its reference data and models are open, that correctness stays
+*continuously machine-checkable* as the engine grows one model at a time. Every
+model is graded against free, authoritative oracles: differential testing against
+open reference codes ([CoolProp](https://github.com/CoolProp/CoolProp),
+[`thermo`](https://github.com/CalebBell/thermo),
+[Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl), and
+[Cantera](https://github.com/Cantera/cantera)); first-principles consistency laws
+that need no external data (Gibbs-Duhem, Maxwell relations, mass- and
+energy-balance closure, equifugacity, and phase-stability tangent-plane tests);
+open experimental measurements from the [NIST ThermoML
+Archive](https://www.nist.gov/mml/acmd/trc/thermoml/thermoml-archive); and —
+uniquely for a differentiable core — automatic-differentiation gradients checked
+against finite differences, with group-contribution methods (UNIFAC, Joback)
+covering parameters where curated industrial datasets remain proprietary.
+Together these oracles act as an executable *acceptance harness* for physics —
+turning "is this simulator correct?" into thousands of small, automatically
+graded checks: a fast, unambiguous feedback loop that makes the core tractable to
+grow incrementally, including via long-running, AI-assisted development.
+
 It ships as three layered packages in a single [`uv`](https://docs.astral.sh/uv/)
 workspace:
 
