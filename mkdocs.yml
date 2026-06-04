@@ -1,0 +1,6 @@
+site_name: Fugacio
+site_description: Open, differentiable thermodynamics + process simulation.
+theme:
+  name: material
+nav:
+  - Home: index.md

@@ -1,0 +1,11 @@
+[importlinter]
+root_packages =
+    fugacio
+
+[importlinter:contract:layering]
+name = Fugacio layered architecture (thermo < sim < copilot)
+type = layers
+layers =
+    fugacio.copilot
+    fugacio.sim
+    fugacio.thermo

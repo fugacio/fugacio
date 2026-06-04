@@ -1,0 +1,80 @@
+[project]
+name = "fugacio"
+version = "0.0.1"
+description = "Open, differentiable thermodynamics + process simulation, with an AI design copilot."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+    { name = "Owen Carey", email = "37121709+owenthcarey@users.noreply.github.com" },
+]
+dependencies = []
+
+# The root is the workspace/aggregator only; it is never built or published.
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "import-linter>=2.1",
+    "pre-commit>=4.0",
+]
+docs = [
+    "mkdocs-material>=9.5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = [
+    "packages/fugacio-thermo/src",
+    "packages/fugacio-sim/src",
+    "packages/fugacio-copilot/src",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fugacio"]
+
+[tool.mypy]
+python_version = "3.11"
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "packages/fugacio-thermo/src:packages/fugacio-sim/src:packages/fugacio-copilot/src"
+files = [
+    "packages/fugacio-thermo/src",
+    "packages/fugacio-sim/src",
+    "packages/fugacio-copilot/src",
+]
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+# JAX array ops are largely untyped; don't fail on Any propagation from them.
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = ["jax.*", "jaxlib.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = [
+    "packages/fugacio-thermo/tests",
+    "packages/fugacio-sim/tests",
+    "packages/fugacio-copilot/tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["fugacio"]
