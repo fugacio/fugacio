@@ -1,7 +1,6 @@
-"""Activity-coefficient models for non-ideal liquid mixtures.
+"""Two-parameter Margules activity-coefficient model for binary mixtures.
 
-The two-parameter Margules model for a binary mixture is derived from the
-dimensionless excess Gibbs energy::
+The model is derived from the dimensionless excess Gibbs energy::
 
     g^E / (R T) = x1 * x2 * (A21 * x1 + A12 * x2)
 
