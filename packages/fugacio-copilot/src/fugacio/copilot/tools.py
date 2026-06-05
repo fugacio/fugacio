@@ -190,7 +190,9 @@ def _valve(
     }
 
 
-def _distillation_recoveries(alpha: list[float], lk: int, hk: int, lk_rec: float, hk_rec: float):
+def _distillation_recoveries(
+    alpha: list[float], lk: int, hk: int, lk_rec: float, hk_rec: float
+) -> list[float]:
     """Per-component recovery to the distillate via the key recoveries and volatility."""
     a_lk, a_hk = alpha[lk], alpha[hk]
     recoveries = []
