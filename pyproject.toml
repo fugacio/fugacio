@@ -73,8 +73,22 @@ warn_return_any = false
 module = ["jax.*", "jaxlib.*"]
 ignore_missing_imports = true
 
+# Optional differential-testing oracles (see fugacio.thermo.oracles). They are
+# never runtime dependencies and ship no type stubs, so ignore them whether or
+# not they happen to be installed in a given environment.
+[[tool.mypy.overrides]]
+module = ["CoolProp.*", "thermo.*", "chemicals.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
-addopts = "-q"
+# Oracle (differential-testing) tests are opt-in: they require heavy optional
+# packages (CoolProp / chemicals) and are excluded from the default run so the
+# unit suite stays fast and hermetic. Run them explicitly with `just oracles`
+# (i.e. `pytest -m oracle`).
+addopts = "-q -m 'not oracle'"
+markers = [
+    "oracle: differential tests against external reference codes (opt-in; needs CoolProp/chemicals)",
+]
 testpaths = [
     "packages/fugacio-thermo/tests",
     "packages/fugacio-sim/tests",

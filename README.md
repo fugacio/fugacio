@@ -51,16 +51,24 @@ uv sync --all-packages   # venv + lockfile; install all three packages (editable
 uv run pytest            # run the test suite
 ```
 
+A flash drum, and its gradient — differentiated straight through the
+equation-of-state phase equilibrium:
+
 ```python
-from fugacio.sim import bubble_pressure
+import jax
+import jax.numpy as jnp
+from fugacio.sim import Stream, flash_drum
 
-# Antoine constants (log10, mmHg, deg C), illustrative binary mixture
-comp1 = (8.07131, 1730.63, 233.426)
-comp2 = (7.43155, 1554.68, 240.337)
-
-pressure, y1 = bubble_pressure(
-    x1=0.4, temperature=80.0, antoine1=comp1, antoine2=comp2, a12=0.5, a21=0.8
+feed = Stream.from_fractions(
+    ("methane", "propane", "n-pentane"),
+    jnp.array([0.5, 0.3, 0.2]),
+    flow=100.0, t=320.0, p=20e5,
 )
+vapor, liquid = flash_drum(feed, 320.0, 20e5)   # rigorous Peng-Robinson flash
+
+# Sensitivity of vapour product flow to drum temperature (exact, via implicit diff):
+d_vapor_dT = jax.grad(lambda T: flash_drum(feed, T, 20e5)[0].total)
+d_vapor_dT(320.0)
 ```
 
 ## Development
@@ -78,6 +86,13 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 | Types | `just types` |
 | Import boundaries | `just imports` |
 | Tests | `just test` |
+| Oracle differential tests (opt-in) | `just oracles` |
+
+`just test` runs the fast, hermetic unit suite. The differential-testing oracles
+(graded against [CoolProp](https://github.com/CoolProp/CoolProp) and
+[`chemicals`](https://github.com/CalebBell/chemicals)) are marked `oracle` and
+excluded from the default run; install those optional packages and run them
+explicitly with `just oracles`.
 
 ## Layout
 

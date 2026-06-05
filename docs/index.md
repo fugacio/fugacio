@@ -1,11 +1,48 @@
 # Fugacio
 
 Open, differentiable thermodynamics and process simulation, with an AI design
-copilot. See the [project README](https://github.com/owenthcarey/fugacio) for an
-overview.
+copilot. See the [project README](https://github.com/owenthcarey/fugacio) for the
+full overview.
 
-Fugacio is built as three layered packages:
+Fugacio is built as three layered packages (strict direction
+**`thermo` < `sim` < `copilot`**, enforced in CI):
 
-- **`fugacio.thermo`** — differentiable properties + phase equilibrium.
-- **`fugacio.sim`** — flowsheet / unit-operation engine (depends on `thermo`).
-- **`fugacio.copilot`** — LLM design agent (depends on `sim`).
+- **`fugacio.thermo`** — differentiable properties + phase equilibrium: a curated
+  open component database, ideal-gas correlations, cubic equations of state
+  (vdW / RK / SRK / PR) with fugacity coefficients, activity-coefficient models
+  (Margules, van Laar, Wilson, NRTL, UNIQUAC), group contribution (UNIFAC,
+  Joback), and equilibrium solvers (Rachford-Rice, PT flash, saturation,
+  bubble/dew, tangent-plane stability).
+- **`fugacio.sim`** — flowsheet / unit-operation engine (depends on `thermo`):
+  a differentiable `Stream` pytree and unit operations (`flash_drum`, `mix`).
+- **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
+  registry over the engine and a model-agnostic agent loop.
+
+Everything is written in [JAX](https://github.com/jax-ml/jax) and the iterative
+solvers carry implicit-function-theorem gradient rules, so an entire flowsheet is
+end-to-end differentiable — including through phase equilibrium.
+
+```python
+import jax
+import jax.numpy as jnp
+from fugacio.sim import Stream, flash_drum
+
+feed = Stream.from_fractions(
+    ("methane", "propane", "n-pentane"),
+    jnp.array([0.5, 0.3, 0.2]),
+    flow=100.0, t=320.0, p=20e5,
+)
+vapor, liquid = flash_drum(feed, 320.0, 20e5)
+
+# Exact sensitivity of vapour product flow to drum temperature:
+jax.grad(lambda T: flash_drum(feed, T, 20e5)[0].total)(320.0)
+```
+
+## Correctness as an executable harness
+
+Physical correctness is continuously machine-checked: first-principles
+consistency laws that need no external data (Gibbs-Duhem, equifugacity,
+fugacity-pressure identity, phase stability), automatic-differentiation gradients
+checked against finite differences, and opt-in differential testing against open
+reference codes ([CoolProp](https://github.com/CoolProp/CoolProp) and
+[`chemicals`](https://github.com/CalebBell/chemicals)).

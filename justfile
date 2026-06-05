@@ -25,9 +25,13 @@ types:
 imports:
     uv run lint-imports
 
-# Run the test suite.
+# Run the test suite (fast, hermetic; oracle tests excluded).
 test:
     uv run pytest
+
+# Opt-in differential tests against external references (CoolProp / chemicals).
+oracles:
+    uv run pytest -m oracle
 
 # Everything CI runs, in order.
 check: lint types imports test
