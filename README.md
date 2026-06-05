@@ -33,9 +33,9 @@ workspace:
 
 | Package | Import | Responsibility |
 | --- | --- | --- |
-| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium (the foundation). |
-| `fugacio-sim` | `fugacio.sim` | Flowsheet / unit-operation engine and solvers (depends on `thermo`). |
-| `fugacio-copilot` | `fugacio.copilot` | LLM design agent: flowsheets, sizing, TEA/LCA (depends on `sim`). |
+| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS, activity models, energy (enthalpy/entropy) and PT/PH/PS flashes (the foundation). |
+| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, and distillation columns (depends on `thermo`). |
+| `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
 The dependency direction is strict — **`thermo` < `sim` < `copilot`** — and is
 enforced in CI by [import-linter](https://github.com/seddonym/import-linter).
@@ -69,6 +69,23 @@ vapor, liquid = flash_drum(feed, 320.0, 20e5)   # rigorous Peng-Robinson flash
 # Sensitivity of vapour product flow to drum temperature (exact, via implicit diff):
 d_vapor_dT = jax.grad(lambda T: flash_drum(feed, T, 20e5)[0].total)
 d_vapor_dT(320.0)
+```
+
+Unit operations close rigorous energy balances, and recycle loops are solved to a
+fixed point and differentiated by the implicit function theorem — so gradients
+flow through the *converged* flowsheet, not the iteration:
+
+```python
+from fugacio.sim import mix, splitter, tear_solve
+
+def one_pass(recycle, theta):                      # mixer -> flash -> recycle split
+    mixed = mix([feed, recycle], t=320.0)          # adiabatic, energy-balanced
+    _vapor, liquid = flash_drum(mixed, theta["T"], theta["P"])
+    recycled, _purge = splitter(liquid, jnp.array([theta["r"], 1.0 - theta["r"]]))
+    return recycled
+
+guess = Stream.from_fractions(feed.components, jnp.array([0.1, 0.3, 0.6]), 30.0, 320.0, 20e5)
+recycle = tear_solve(one_pass, guess, {"T": 320.0, "P": 20e5, "r": 0.5})
 ```
 
 ## Development

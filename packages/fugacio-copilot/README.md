@@ -7,10 +7,20 @@ calculations: flowsheets, equipment sizing, and (eventually) techno-economic /
 life-cycle analysis.
 
 The bridge between a language model and the differentiable engine is a **tool
-registry** — deterministic, JSON-in/JSON-out functions (`list_components`,
-`component_properties`, `saturation_pressure`, `bubble_pressure`, `flash_drum`)
-exposed with the same function-calling schemas OpenAI/Anthropic expect. A
-model-agnostic **agent loop** (`run_agent`) drives plan→act→answer; the planner
+registry** — deterministic, JSON-in/JSON-out functions exposed with the same
+function-calling schemas OpenAI/Anthropic expect:
+
+- **Properties & equilibrium**: `list_components`, `component_properties`,
+  `saturation_pressure`, `bubble_pressure`, `flash_drum`.
+- **Unit operations**: `heat_exchanger`, `compressor` (and turbine), `pump`,
+  `valve` — each closing a rigorous energy balance.
+- **Distillation**: `shortcut_distillation` (Fenske-Underwood-Gilliland) and
+  `rigorous_distillation` (multistage column with duties).
+- **Gradient-based optimization**: `optimize_flash_temperature` and
+  `optimize_column_reflux` solve for the operating variable that hits a target by
+  differentiating straight through the equilibrium flash and the column.
+
+A model-agnostic **agent loop** (`run_agent`) drives plan→act→answer; the planner
 is injected, so the loop is fully testable with a scripted planner while a real
 LLM drops in behind the optional `llm` extra.
 

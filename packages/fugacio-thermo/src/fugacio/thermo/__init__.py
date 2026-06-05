@@ -43,6 +43,21 @@ from fugacio.thermo.components import (
     names,
 )
 from fugacio.thermo.constants import P_REF, T_REF, R
+from fugacio.thermo.departure import (
+    ResidualProperties,
+    residual_cp,
+    residual_enthalpy,
+    residual_entropy,
+    residual_gibbs,
+    residual_properties,
+)
+from fugacio.thermo.energy import (
+    EnergyFlashResult,
+    flash_ph,
+    flash_ps,
+    mixture_enthalpy,
+    mixture_entropy,
+)
 from fugacio.thermo.eos import (
     PR,
     RK,
@@ -67,7 +82,24 @@ from fugacio.thermo.equilibrium import (
     wilson_k,
 )
 from fugacio.thermo.groupcontrib import joback_estimate, unifac_activity
-from fugacio.thermo.ideal import cp_ig, enthalpy_ig, entropy_ig, gibbs_ig
+from fugacio.thermo.ideal import (
+    cp_ig,
+    enthalpy_ig,
+    enthalpy_ig_mixture,
+    entropy_ig,
+    entropy_ig_mixture,
+    gibbs_ig,
+    gibbs_ig_mixture,
+    ideal_gas_coeffs,
+)
+from fugacio.thermo.properties import (
+    molar_cp,
+    molar_enthalpy,
+    molar_entropy,
+    molar_gibbs,
+    speed_of_sound_ideal,
+    stable_phase,
+)
 
 __all__ = [
     "DATABASE",
@@ -81,8 +113,10 @@ __all__ = [
     "Component",
     "CpIdeal",
     "CubicEOS",
+    "EnergyFlashResult",
     "FlashResult",
     "R",
+    "ResidualProperties",
     "StabilityResult",
     "bubble_pressure_eos",
     "component_arrays",
@@ -90,16 +124,28 @@ __all__ = [
     "cp_ig",
     "dew_pressure_eos",
     "enthalpy_ig",
+    "enthalpy_ig_mixture",
     "entropy_ig",
+    "entropy_ig_mixture",
+    "flash_ph",
+    "flash_ps",
     "flash_pt",
     "get",
     "gibbs_ig",
+    "gibbs_ig_mixture",
+    "ideal_gas_coeffs",
     "joback_estimate",
     "ln_phi_mixture",
     "ln_phi_pure",
     "margules_excess_gibbs",
     "margules_gamma",
     "margules_ln_gamma",
+    "mixture_enthalpy",
+    "mixture_entropy",
+    "molar_cp",
+    "molar_enthalpy",
+    "molar_entropy",
+    "molar_gibbs",
     "molar_volume",
     "names",
     "nrtl_gamma",
@@ -108,7 +154,14 @@ __all__ = [
     "pressure",
     "psat_eos",
     "rachford_rice",
+    "residual_cp",
+    "residual_enthalpy",
+    "residual_entropy",
+    "residual_gibbs",
+    "residual_properties",
+    "speed_of_sound_ideal",
     "stability_analysis",
+    "stable_phase",
     "unifac_activity",
     "uniquac_gamma",
     "uniquac_ln_gamma",

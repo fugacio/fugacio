@@ -14,10 +14,19 @@ than through unrolled iterations.
 - **Curated open component database** (`DATABASE`, `get`, `component_arrays`):
   critical constants, acentric factors, Antoine coefficients, and ideal-gas heat
   capacities for common species.
-- **Ideal-gas properties**: `cp_ig`, `enthalpy_ig`, `entropy_ig`, `gibbs_ig`.
+- **Ideal-gas properties**: `cp_ig`, `enthalpy_ig`, `entropy_ig`, `gibbs_ig`
+  (plus mixture variants).
 - **Cubic equations of state** — van der Waals, Redlich-Kwong, SRK, Peng-Robinson
   (`VDW`, `RK`, `SRK`, `PR`) — with mixing rules, a differentiable compressibility
-  solver, and fugacity coefficients (`ln_phi_mixture`, `ln_phi_pure`).
+  solver, fugacity coefficients (`ln_phi_mixture`, `ln_phi_pure`), and molar
+  volume.
+- **Real-fluid energy properties**: residual/departure functions
+  (`residual_enthalpy`, `residual_entropy`, `residual_gibbs`, `residual_cp`),
+  real-fluid molar properties (`molar_enthalpy`, `molar_entropy`, `molar_gibbs`,
+  `molar_cp`, `stable_phase`), two-phase `mixture_enthalpy` / `mixture_entropy`,
+  and energy-specified flashes `flash_ph` (isenthalpic) and `flash_ps`
+  (isentropic) — the backbone of adiabatic units, valves, compressors, and
+  turbines.
 - **Activity-coefficient models**: Margules, van Laar, Wilson, NRTL, UNIQUAC.
 - **Group contribution**: predictive `unifac_activity` and `joback_estimate`
   (pure-component constants from a structure).
