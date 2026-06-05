@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from fugacio.sim import Stream, flash_drum, mix
+from fugacio.sim import Stream, enthalpy_flow, flash_drum, mix
 
 
 def test_stream_total_and_fractions() -> None:
@@ -47,14 +47,27 @@ def test_flash_drum_recovery_is_differentiable_in_temperature() -> None:
     assert grad > 0.0  # heating the drum makes more vapor
 
 
-def test_mix_material_balance() -> None:
+def test_mix_material_balance_with_fixed_temperature() -> None:
+    a = Stream.from_fractions(("methane", "propane"), jnp.array([1.0, 0.0]), 4.0, 300.0, 5e5)
+    b = Stream.from_fractions(("methane", "propane"), jnp.array([0.0, 1.0]), 6.0, 310.0, 4e5)
+    out = mix([a, b], t=305.0)
+    assert float(out.total) == pytest.approx(10.0)
+    assert float(out.z[0]) == pytest.approx(0.4)
+    assert float(out.p) == pytest.approx(4e5)  # lowest inlet pressure
+    assert float(out.t) == pytest.approx(305.0)
+
+
+def test_mix_adiabatic_conserves_enthalpy() -> None:
     a = Stream.from_fractions(("methane", "propane"), jnp.array([1.0, 0.0]), 4.0, 300.0, 5e5)
     b = Stream.from_fractions(("methane", "propane"), jnp.array([0.0, 1.0]), 6.0, 310.0, 4e5)
     out = mix([a, b])
     assert float(out.total) == pytest.approx(10.0)
     assert float(out.z[0]) == pytest.approx(0.4)
-    assert float(out.p) == pytest.approx(4e5)  # lowest inlet pressure
-    assert float(out.t) == pytest.approx((4.0 * 300.0 + 6.0 * 310.0) / 10.0)
+    assert float(out.p) == pytest.approx(4e5)
+    h_in = float(enthalpy_flow(a) + enthalpy_flow(b))
+    assert float(enthalpy_flow(out)) == pytest.approx(h_in, rel=1e-6)
+    # adiabatic mixing temperature sits between the two inlet temperatures
+    assert 300.0 <= float(out.t) <= 310.0
 
 
 def test_mix_rejects_mismatched_components() -> None:

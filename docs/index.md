@@ -9,14 +9,19 @@ Fugacio is built as three layered packages (strict direction
 
 - **`fugacio.thermo`** — differentiable properties + phase equilibrium: a curated
   open component database, ideal-gas correlations, cubic equations of state
-  (vdW / RK / SRK / PR) with fugacity coefficients, activity-coefficient models
-  (Margules, van Laar, Wilson, NRTL, UNIQUAC), group contribution (UNIFAC,
-  Joback), and equilibrium solvers (Rachford-Rice, PT flash, saturation,
-  bubble/dew, tangent-plane stability).
+  (vdW / RK / SRK / PR) with fugacity coefficients, real-fluid energy properties
+  (residual/departure functions, enthalpy/entropy, isenthalpic & isentropic
+  flashes), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
+  UNIQUAC), group contribution (UNIFAC, Joback), and equilibrium solvers
+  (Rachford-Rice, PT flash, saturation, bubble/dew, tangent-plane stability).
 - **`fugacio.sim`** — flowsheet / unit-operation engine (depends on `thermo`):
-  a differentiable `Stream` pytree and unit operations (`flash_drum`, `mix`).
+  a differentiable `Stream` pytree, energy-balanced unit operations (`flash_drum`,
+  `heater`, `valve`, `pump`, `compressor`, `turbine`, `mix`, `splitter`), a
+  recycle/tear solver with implicit-diff gradients (`tear_solve`, `Flowsheet`),
+  and distillation columns (shortcut FUG and a rigorous equilibrium-stage model).
 - **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
-  registry over the engine and a model-agnostic agent loop.
+  registry over the engine — properties, unit operations, distillation, and
+  gradient-based optimizers — plus a model-agnostic agent loop.
 
 Everything is written in [JAX](https://github.com/jax-ml/jax) and the iterative
 solvers carry implicit-function-theorem gradient rules, so an entire flowsheet is
