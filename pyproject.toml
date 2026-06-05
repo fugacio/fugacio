@@ -13,6 +13,12 @@ dependencies = []
 # The root is the workspace/aggregator only; it is never built or published.
 [tool.uv]
 package = false
+# Supply-chain cooldown: ignore distributions published in the last 7 days so a
+# malicious release has time to be detected and yanked before we adopt it. This
+# is a rolling window applied when the lockfile is (re)resolved; it is recorded
+# in uv.lock as `exclude-newer-span` and only moves forward on `uv lock --upgrade`,
+# keeping `uv sync --locked` reproducible in CI.
+exclude-newer = "7 days"
 
 [tool.uv.workspace]
 members = ["packages/*"]
