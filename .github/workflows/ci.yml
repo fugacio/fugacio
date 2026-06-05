@@ -19,6 +19,12 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
+    env:
+      # Pin every uv invocation (sync + run) to the matrix interpreter. Otherwise
+      # `.python-version` (3.12) wins on the `uv run` steps, which rebuilds .venv
+      # on 3.12 and drops the workspace packages (jax) the sync step installed --
+      # so 3.11/3.13 silently retest 3.12 and mypy fails on the missing jax types.
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,18 +34,18 @@ jobs:
           enable-cache: true
 
       - name: Sync workspace
-        run: uv sync --locked --all-packages --python ${{ matrix.python-version }}
+        run: uv sync --locked --all-packages
 
       - name: Lint (ruff)
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
 
       - name: Type check (mypy)
-        run: uv run mypy
+        run: uv run --no-sync mypy
 
       - name: Import boundaries (import-linter)
-        run: uv run lint-imports
+        run: uv run --no-sync lint-imports
 
       - name: Tests (pytest)
-        run: uv run pytest
+        run: uv run --no-sync pytest
