@@ -46,6 +46,33 @@ count. `Flowsheet` is a small declarative builder on top of it.
   bubble-point, constant molar overflow) with EOS K-values on every stage,
   differentiable through the fixed-point iteration.
 
+## Non-ideal separations & diagrams
+
+Built on the `fugacio.thermo` γ–φ property system (via the `eos_model_for`,
+`nrtl_model_for`, `uniquac_model_for`, `unifac_model_for` bridges):
+
+- `flash_vle`, `decanter`, `three_phase_flash` — activity-based VLE / LLE / VLLE
+  drums for real, non-ideal mixtures.
+- `pxy_diagram`, `txy_diagram`, `azeotrope_pressure`, `azeotrope_temperature` —
+  binary phase diagrams and azeotrope finders.
+- `residue_curve`, `residue_curve_map` — ternary open-evaporation trajectories for
+  laying out distillation boundaries.
+
+## Reactors
+
+Energy-balanced reactor unit operations over one or more `fugacio.thermo`
+`Reaction`s, each runnable isothermally (reporting the heat `duty`) or
+adiabatically (solving the outlet temperature) and returning a `ReactorResult`:
+`equilibrium_reactor` (chemical equilibrium), `stoichiometric_reactor` (specified
+extent or conversion), and kinetic `cstr`, `pfr`, and `batch_reactor` sized by
+volume (and time). `conversion` is a small helper on the inlet/outlet streams.
+
+## Reactive separations
+
+Reaction coupled to phase separation, both differentiable through the joint solve:
+`reactive_flash` (simultaneous chemical + vapour-liquid equilibrium in a drum) and
+`reactive_distillation` (a rate-based column with per-stage reaction source terms).
+
 ## Example: differentiate a flash drum
 
 ```python

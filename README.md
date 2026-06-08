@@ -33,8 +33,8 @@ workspace:
 
 | Package | Import | Responsibility |
 | --- | --- | --- |
-| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS, activity models, energy (enthalpy/entropy) and PT/PH/PS flashes (the foundation). |
-| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, and distillation columns (depends on `thermo`). |
+| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, energy/PT-PH-PS flashes, rigorous LLE/VLLE, parameter regression, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
+| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, and reactive separations (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
 The dependency direction is strict — **`thermo` < `sim` < `copilot`** — and is
@@ -107,9 +107,12 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 
 `just test` runs the fast, hermetic unit suite. The differential-testing oracles
 (graded against [CoolProp](https://github.com/CoolProp/CoolProp) and
-[`chemicals`](https://github.com/CalebBell/chemicals)) are marked `oracle` and
-excluded from the default run; install those optional packages and run them
-explicitly with `just oracles`.
+[`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties,
+[`thermo`](https://github.com/CalebBell/thermo) /
+[Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) for activity
+coefficients, and [Cantera](https://github.com/Cantera/cantera) for reaction
+equilibrium) are marked `oracle` and excluded from the default run; install those
+optional packages and run them explicitly with `just oracles`.
 
 ## Layout
 

@@ -23,25 +23,46 @@ import jax.numpy as jnp
 
 from fugacio.sim import (
     Stream,
+    azeotrope_pressure,
+    azeotrope_temperature,
     compressor,
+    cstr,
+    equilibrium_reactor,
     flash_drum,
     heater,
+    nrtl_model_for,
+    pfr,
     pump,
+    pxy_diagram,
+    reactive_flash,
     relative_volatility,
+    residue_curve_map,
     shortcut_column,
     solve_column,
+    stoichiometric_reactor,
     turbine,
+    txy_diagram,
+    unifac_model_for,
+    uniquac_model_for,
     valve,
 )
 from fugacio.thermo import (
     PR,
+    PowerLaw,
+    Reaction,
     bubble_pressure_eos,
     component_arrays,
+    fit_nrtl_binary,
+    flash_lle,
     flash_pt,
+    flash_vlle,
     get,
+    liquid_stability,
     names,
     psat_eos,
+    reaction_properties,
 )
+from fugacio.thermo.reaction_equilibrium import equilibrium as _reaction_equilibrium_solve
 
 JsonDict = dict[str, Any]
 
@@ -356,6 +377,462 @@ def _optimize_column_reflux(
     }
 
 
+_ACTIVITY_METHODS = ("nrtl", "uniquac", "unifac", "dortmund")
+
+
+def _gamma_phi(components: list[str], method: str) -> Any:
+    """Build a gamma-phi model for ``components`` by activity ``method`` name."""
+    key = method.lower()
+    if key == "nrtl":
+        return nrtl_model_for(components)
+    if key == "uniquac":
+        return uniquac_model_for(components)
+    if key == "unifac":
+        return unifac_model_for(components)
+    if key in ("dortmund", "modified_unifac"):
+        return unifac_model_for(components, dortmund=True)
+    raise ValueError(f"unknown method {method!r}; use one of {_ACTIVITY_METHODS}")
+
+
+def _ln_gamma_values(components: list[str], x: list[float], temperature: float, method: str) -> Any:
+    """Log activity coefficients via the chosen activity method."""
+    model = _gamma_phi(components, method)
+    return model.activity.ln_gamma(jnp.asarray(x), float(temperature))
+
+
+def _activity_coefficients(
+    components: list[str], x: list[float], temperature: float, method: str = "unifac"
+) -> JsonDict:
+    ln_g = _ln_gamma_values(components, x, temperature, method)
+    return {
+        "components": list(components),
+        "x": [float(v) for v in x],
+        "temperature_k": float(temperature),
+        "method": method,
+        "activity_coefficients": [float(jnp.exp(v)) for v in ln_g],
+        "ln_gamma": [float(v) for v in ln_g],
+    }
+
+
+def _vle_diagram(
+    components: list[str],
+    method: str = "nrtl",
+    kind: str = "Pxy",
+    temperature: float | None = None,
+    pressure: float | None = None,
+    points: int = 21,
+    t_min: float = 200.0,
+    t_max: float = 600.0,
+) -> JsonDict:
+    if len(components) != 2:
+        raise ValueError("vle_diagram requires exactly two components")
+    model = _gamma_phi(components, method)
+    kind_l = kind.lower()
+    if kind_l == "pxy":
+        if temperature is None:
+            raise ValueError("a Pxy diagram requires 'temperature'")
+        pxy = pxy_diagram(model, float(temperature), n=int(points))
+        return {
+            "kind": "Pxy",
+            "components": list(components),
+            "method": method,
+            "temperature_k": float(temperature),
+            "x1": [float(v) for v in pxy.x1],
+            "y1": [float(v) for v in pxy.y1],
+            "pressure_pa": [float(v) for v in pxy.p],
+        }
+    if kind_l == "txy":
+        if pressure is None:
+            raise ValueError("a Txy diagram requires 'pressure'")
+        txy = txy_diagram(model, float(pressure), n=int(points), t_min=t_min, t_max=t_max)
+        return {
+            "kind": "Txy",
+            "components": list(components),
+            "method": method,
+            "pressure_pa": float(pressure),
+            "x1": [float(v) for v in txy.x1],
+            "y1": [float(v) for v in txy.y1],
+            "temperature_k": [float(v) for v in txy.t],
+        }
+    raise ValueError("kind must be 'Pxy' or 'Txy'")
+
+
+def _find_azeotrope(
+    components: list[str],
+    method: str = "nrtl",
+    temperature: float | None = None,
+    pressure: float | None = None,
+    t_min: float = 200.0,
+    t_max: float = 600.0,
+) -> JsonDict:
+    if len(components) != 2:
+        raise ValueError("find_azeotrope requires exactly two components")
+    model = _gamma_phi(components, method)
+    if temperature is not None:
+        az = azeotrope_pressure(model, float(temperature))
+    elif pressure is not None:
+        az = azeotrope_temperature(model, float(pressure), t_min=t_min, t_max=t_max)
+    else:
+        raise ValueError("provide exactly one of 'temperature' or 'pressure'")
+    x1 = float(az.x1)
+    return {
+        "components": list(components),
+        "method": method,
+        "exists": bool(az.exists),
+        "x_azeotrope": [x1, 1.0 - x1],
+        "temperature_k": float(az.t),
+        "pressure_pa": float(az.p),
+    }
+
+
+def _liquid_liquid_split(
+    components: list[str], z: list[float], temperature: float, method: str = "unifac"
+) -> JsonDict:
+    model = _gamma_phi(components, method)
+    t = float(temperature)
+    z_arr = jnp.asarray(z)
+    stab = liquid_stability(model.activity, t, z_arr)
+    res = flash_lle(model.activity, t, z_arr)
+    return {
+        "components": list(components),
+        "temperature_k": t,
+        "method": method,
+        "splits_into_two_liquids": (not bool(stab.stable)),
+        "tangent_plane_distance": float(stab.tpd),
+        "phase_I": {
+            "fraction": float(1.0 - res.psi),
+            "composition": [float(v) for v in res.x_i],
+        },
+        "phase_II": {
+            "fraction": float(res.psi),
+            "composition": [float(v) for v in res.x_ii],
+        },
+    }
+
+
+def _three_phase_flash(
+    components: list[str],
+    z: list[float],
+    temperature: float,
+    pressure: float,
+    method: str = "nrtl",
+) -> JsonDict:
+    model = _gamma_phi(components, method)
+    res = flash_vlle(
+        model.activity,
+        float(temperature),
+        float(pressure),
+        jnp.asarray(z),
+        model.tc,
+        model.pc,
+        model.omega,
+        eos=model.eos,
+        kij=model.kij,
+        vapor=model.vapor,
+        poynting=model.poynting,
+        phi_saturation=model.phi_saturation,
+    )
+    return {
+        "components": list(components),
+        "method": method,
+        "three_phase": bool(res.three_phase),
+        "vapor": {"fraction": float(res.beta_v), "composition": [float(v) for v in res.y]},
+        "liquid_I": {"fraction": float(res.beta_l1), "composition": [float(v) for v in res.x_i]},
+        "liquid_II": {"fraction": float(res.beta_l2), "composition": [float(v) for v in res.x_ii]},
+    }
+
+
+def _residue_curve_map(
+    components: list[str],
+    pressure: float,
+    method: str = "unifac",
+    starts: list[list[float]] | None = None,
+    steps: int = 60,
+    t_min: float = 250.0,
+    t_max: float = 500.0,
+    max_points: int = 41,
+) -> JsonDict:
+    """Residue-curve map for a ternary at fixed pressure (simple-distillation paths).
+
+    Each curve is the still-pot liquid composition during open distillation; the
+    family of curves (and the vertices/azeotropes they emanate from or collapse to)
+    is the master diagram for ternary distillation sequencing. Curves are thinned to
+    ``max_points`` for a compact payload.
+    """
+    if len(components) != 3:
+        raise ValueError("residue_curve_map requires exactly three components")
+    model = _gamma_phi(components, method)
+    if starts is None:
+        seeds = [
+            [0.8, 0.1, 0.1],
+            [0.1, 0.8, 0.1],
+            [0.1, 0.1, 0.8],
+            [0.34, 0.33, 0.33],
+            [0.45, 0.45, 0.10],
+        ]
+    else:
+        seeds = [list(s) for s in starts]
+    curves = residue_curve_map(
+        model,
+        jnp.asarray(seeds, dtype=float),
+        float(pressure),
+        steps=int(steps),
+        t_min=float(t_min),
+        t_max=float(t_max),
+    )
+    out_curves: list[JsonDict] = []
+    for curve in curves:
+        n = curve.x.shape[0]
+        idx = [round(float(p)) for p in jnp.linspace(0, n - 1, min(int(max_points), n))]
+        out_curves.append(
+            {
+                "x": [[float(v) for v in curve.x[i]] for i in idx],
+                "temperature_k": [float(curve.t[i]) for i in idx],
+            }
+        )
+    return {
+        "components": list(components),
+        "method": method,
+        "pressure_pa": float(pressure),
+        "curves": out_curves,
+    }
+
+
+def _solvent_screening(
+    solute: str, solvents: list[str], temperature: float = 298.15, method: str = "unifac"
+) -> JsonDict:
+    """Rank candidate solvents by the solute's infinite-dilution activity coefficient.
+
+    A lower ``gamma_inf`` means stronger solute-solvent affinity (higher solubility),
+    so the ranking is ascending. Predictive UNIFAC is the sensible default because it
+    needs no fitted binary parameters for novel solute/solvent pairs.
+    """
+    scored: list[tuple[str, float]] = []
+    for solvent in solvents:
+        ln_g = _ln_gamma_values([solute, solvent], [1e-4, 1.0 - 1e-4], temperature, method)
+        scored.append((solvent, float(jnp.exp(ln_g[0]))))
+    scored.sort(key=lambda r: r[1])
+    return {
+        "solute": solute,
+        "temperature_k": float(temperature),
+        "method": method,
+        "ranking": [{"solvent": s, "gamma_inf_solute": g} for s, g in scored],
+    }
+
+
+def _fit_activity_parameters(
+    components: list[str],
+    x1: list[float],
+    temperature: list[float],
+    bubble_pressure: list[float],
+    alpha: float = 0.3,
+    max_iter: int = 80,
+) -> JsonDict:
+    """Fit binary NRTL ``b`` parameters to isothermal/isobaric bubble-pressure data."""
+    if len(components) != 2:
+        raise ValueError("fit_activity_parameters supports binary systems")
+    arr = component_arrays(components)
+    x1_arr = jnp.asarray(x1)
+    x = jnp.stack([x1_arr, 1.0 - x1_arr], axis=1)
+    t = jnp.asarray(temperature, dtype=float)
+    p_exp = jnp.asarray(bubble_pressure, dtype=float)
+    model, cost = fit_nrtl_binary(
+        t, x, p_exp, arr["tc"], arr["pc"], arr["omega"], alpha=alpha, max_iter=int(max_iter)
+    )
+    m = x1_arr.shape[0]
+    rmse_pa = float((2.0 * float(cost) / m) ** 0.5 * float(jnp.mean(p_exp)))
+    return {
+        "model": "nrtl",
+        "components": list(components),
+        "alpha": float(alpha),
+        "b12": float(model.b[0, 1]),
+        "b21": float(model.b[1, 0]),
+        "final_cost": float(cost),
+        "rmse_pa": rmse_pa,
+    }
+
+
+def _heat_of_reaction(
+    equation: str, components: list[str], temperature: float = 298.15
+) -> JsonDict:
+    """Standard enthalpy/entropy/Gibbs of reaction and ``K(T)`` for one reaction."""
+    rxn = Reaction.parse(equation, components)
+    props = reaction_properties(rxn, float(temperature))
+    return {
+        "equation": equation,
+        "components": list(components),
+        "temperature_k": float(temperature),
+        "delta_h_rxn_j_mol": float(props.delta_h),
+        "delta_s_rxn_j_mol_k": float(props.delta_s),
+        "delta_g_rxn_j_mol": float(props.delta_g),
+        "ln_k": float(props.ln_k),
+        "k": float(props.k),
+        "exothermic": bool(float(props.delta_h) < 0.0),
+    }
+
+
+def _reaction_equilibrium(
+    components: list[str],
+    equations: list[str],
+    n: list[float],
+    temperature: float,
+    pressure: float,
+    basis: str = "ideal-gas",
+) -> JsonDict:
+    """Gas-phase chemical-equilibrium composition for one or more reactions."""
+    rxns = [Reaction.parse(e, components) for e in equations]
+    reactions: Any = rxns[0] if len(rxns) == 1 else rxns
+    kwargs: JsonDict = {"basis": basis}
+    if basis == "phi":
+        arr = component_arrays(components)
+        kwargs.update(tc=arr["tc"], pc=arr["pc"], omega=arr["omega"])
+    res = _reaction_equilibrium_solve(
+        reactions, jnp.asarray(n, dtype=float), float(temperature), float(pressure), **kwargs
+    )
+    return {
+        "components": list(components),
+        "equations": list(equations),
+        "temperature_k": float(temperature),
+        "pressure_pa": float(pressure),
+        "basis": basis,
+        "extent": [float(v) for v in jnp.atleast_1d(res.extent)],
+        "moles": [float(v) for v in res.moles],
+        "mole_fractions": [float(v) for v in res.y],
+        "k": [float(v) for v in jnp.atleast_1d(res.k)],
+    }
+
+
+def _reaction_conversions(n_in: jnp.ndarray, n_out: jnp.ndarray) -> list[float]:
+    """Per-component fractional conversion ``(in - out)/in`` (0 where nothing fed)."""
+    out = []
+    for a, b in zip(n_in.tolist(), n_out.tolist(), strict=True):
+        out.append((a - b) / a if a > 0.0 else 0.0)
+    return out
+
+
+def _reactor(
+    components: list[str],
+    equation: str,
+    n: list[float],
+    temperature: float,
+    pressure: float,
+    mode: str = "equilibrium",
+    adiabatic: bool = False,
+    t_out: float | None = None,
+    conversion: float | None = None,
+    extent: list[float] | None = None,
+    a: float | None = None,
+    ea: float | None = None,
+    orders: list[float] | None = None,
+    volume: float | None = None,
+) -> JsonDict:
+    """Single-reaction reactor with material and energy balances.
+
+    ``mode`` selects the model: ``equilibrium`` (chemical-equilibrium outlet),
+    ``stoichiometric`` (specified ``conversion`` or ``extent``), or a kinetic
+    ``cstr``/``pfr`` (needs power-law ``a``, ``ea``, ``orders`` and a ``volume``).
+    Run isothermally at ``t_out`` (default feed T) and get the duty, or set
+    ``adiabatic`` and get the outlet temperature.
+    """
+    rxn = Reaction.parse(equation, components)
+    feed = Stream(
+        jnp.asarray(n, dtype=float),
+        jnp.asarray(temperature),
+        jnp.asarray(pressure),
+        tuple(components),
+    )
+    if mode == "equilibrium":
+        res = equilibrium_reactor(feed, rxn, t_out=t_out, adiabatic=adiabatic)
+    elif mode == "stoichiometric":
+        extent_arr = None if extent is None else jnp.asarray(extent, dtype=float)
+        res = stoichiometric_reactor(
+            feed, rxn, extent=extent_arr, conversion=conversion, t_out=t_out, adiabatic=adiabatic
+        )
+    elif mode in ("cstr", "pfr"):
+        if a is None or ea is None or orders is None or volume is None:
+            raise ValueError(f"mode={mode!r} needs power-law 'a', 'ea', 'orders' and 'volume'")
+        law = PowerLaw(
+            a=jnp.asarray(a), ea=jnp.asarray(ea), orders=jnp.asarray(orders, dtype=float)
+        )
+        unit = cstr if mode == "cstr" else pfr
+        res = unit(feed, rxn, law, float(volume), t_out=t_out, adiabatic=adiabatic)
+    else:
+        raise ValueError(f"unknown reactor mode {mode!r}")
+    return {
+        "mode": mode,
+        "outlet_flow_mol_s": float(res.outlet.total),
+        "outlet_composition": [float(v) for v in res.outlet.z],
+        "outlet_temperature_k": float(res.outlet.t),
+        "duty_w": float(res.duty),
+        "extent": [float(v) for v in jnp.atleast_1d(res.extent)],
+        "conversion": _reaction_conversions(feed.n, res.outlet.n),
+    }
+
+
+def _reactive_flash(
+    components: list[str],
+    equation: str,
+    n: list[float],
+    temperature: float,
+    pressure: float,
+    method: str = "nrtl",
+) -> JsonDict:
+    """Flash with simultaneous chemical and vapour-liquid equilibrium (gamma-phi)."""
+    model = _gamma_phi(components, method)
+    rxn = Reaction.parse(equation, components)
+    feed = Stream(
+        jnp.asarray(n, dtype=float),
+        jnp.asarray(temperature),
+        jnp.asarray(pressure),
+        tuple(components),
+    )
+    res = reactive_flash(feed, rxn, float(temperature), float(pressure), model)
+    return {
+        "components": list(components),
+        "equation": equation,
+        "temperature_k": float(temperature),
+        "pressure_pa": float(pressure),
+        "method": method,
+        "vapor_fraction": float(res.beta),
+        "extent": [float(v) for v in jnp.atleast_1d(res.extent)],
+        "vapor": {
+            "flow_mol_s": float(res.vapor.total),
+            "composition": [float(v) for v in res.vapor.z],
+        },
+        "liquid": {
+            "flow_mol_s": float(res.liquid.total),
+            "composition": [float(v) for v in res.liquid.z],
+        },
+    }
+
+
+def _fit_kinetics(temperature: list[float], rate_constant: list[float]) -> JsonDict:
+    """Fit Arrhenius ``k = A exp(-Ea/RT)`` to ``(T, k)`` data (log-linear least squares).
+
+    ``ln k = ln A - Ea/(R T)`` is linear in ``(ln A, Ea)``, so the fit is the exact
+    closed-form regression; returns ``A``, ``Ea`` and the coefficient of
+    determination ``R^2`` of the ``ln k`` fit.
+    """
+    from fugacio.thermo.constants import R as _R
+
+    t = jnp.asarray(temperature, dtype=float)
+    k = jnp.asarray(rate_constant, dtype=float)
+    ln_k = jnp.log(k)
+    design = jnp.stack([jnp.ones_like(t), -1.0 / (_R * t)], axis=1)
+    coeffs, *_ = jnp.linalg.lstsq(design, ln_k, rcond=None)
+    ln_a, ea = coeffs
+    pred = design @ coeffs
+    ss_res = float(jnp.sum((ln_k - pred) ** 2))
+    ss_tot = float(jnp.sum((ln_k - jnp.mean(ln_k)) ** 2))
+    r_squared = 1.0 - ss_res / ss_tot if ss_tot > 0.0 else 1.0
+    return {
+        "pre_exponential_a": float(jnp.exp(ln_a)),
+        "activation_energy_j_mol": float(ea),
+        "r_squared": r_squared,
+        "n_points": int(t.shape[0]),
+    }
+
+
 def default_registry() -> dict[str, ToolSpec]:
     """Return the built-in tool registry keyed by tool name."""
     specs = [
@@ -619,6 +1096,282 @@ def default_registry() -> dict[str, ToolSpec]:
                 ],
             },
             run=_optimize_column_reflux,
+        ),
+        ToolSpec(
+            name="activity_coefficients",
+            description=(
+                "Liquid-phase activity coefficients (non-ideality) at a composition and "
+                "temperature using NRTL/UNIQUAC (curated) or UNIFAC/Dortmund (predictive)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "x": {"type": "array", "items": {"type": "number"}},
+                    "temperature": {"type": "number"},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                },
+                "required": ["components", "x", "temperature"],
+            },
+            run=_activity_coefficients,
+        ),
+        ToolSpec(
+            name="vle_diagram",
+            description=(
+                "Binary P-x-y (fixed T) or T-x-y (fixed P) phase-envelope data from a "
+                "gamma-phi model; returns the liquid x1, vapour y1, and P or T arrays."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                    "kind": {"type": "string", "enum": ["Pxy", "Txy"]},
+                    "temperature": {"type": "number", "description": "Required for Pxy (K)"},
+                    "pressure": {"type": "number", "description": "Required for Txy (Pa)"},
+                    "points": {"type": "integer", "description": "Grid resolution"},
+                },
+                "required": ["components"],
+            },
+            run=_vle_diagram,
+        ),
+        ToolSpec(
+            name="find_azeotrope",
+            description=(
+                "Locate a binary azeotrope (where vapour = liquid composition) at a fixed "
+                "temperature or pressure; reports whether one exists and its composition."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                    "temperature": {"type": "number", "description": "Fix T (K); finds P"},
+                    "pressure": {"type": "number", "description": "Fix P (Pa); finds T"},
+                },
+                "required": ["components"],
+            },
+            run=_find_azeotrope,
+        ),
+        ToolSpec(
+            name="liquid_liquid_split",
+            description=(
+                "Test a liquid mixture for a miscibility gap and, if it splits, return the "
+                "two conjugate liquid compositions and phase fractions (decanter design)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "z": {"type": "array", "items": {"type": "number"}},
+                    "temperature": {"type": "number"},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                },
+                "required": ["components", "z", "temperature"],
+            },
+            run=_liquid_liquid_split,
+        ),
+        ToolSpec(
+            name="three_phase_flash",
+            description=(
+                "Vapour-liquid-liquid (V-L-L) flash for heterogeneous systems; returns the "
+                "vapour and two liquid phases with their fractions and compositions."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "z": {"type": "array", "items": {"type": "number"}},
+                    "temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                },
+                "required": ["components", "z", "temperature", "pressure"],
+            },
+            run=_three_phase_flash,
+        ),
+        ToolSpec(
+            name="residue_curve_map",
+            description=(
+                "Ternary residue-curve map at fixed pressure: simple-distillation liquid "
+                "paths (and their boiling temperatures) used to sequence distillation and "
+                "spot distillation boundaries. Defaults to predictive UNIFAC."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "pressure": {"type": "number", "description": "Fixed pressure (Pa)"},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                    "starts": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "number"}},
+                        "description": "Optional list of starting compositions (each sums to 1)",
+                    },
+                    "steps": {"type": "integer", "description": "Steps per direction"},
+                    "t_min": {"type": "number"},
+                    "t_max": {"type": "number"},
+                },
+                "required": ["components", "pressure"],
+            },
+            run=_residue_curve_map,
+        ),
+        ToolSpec(
+            name="solvent_screening",
+            description=(
+                "Rank candidate solvents for a solute by the solute's infinite-dilution "
+                "activity coefficient (lower = more soluble); predictive UNIFAC by default."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "solute": {"type": "string"},
+                    "solvents": {"type": "array", "items": {"type": "string"}},
+                    "temperature": {"type": "number"},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                },
+                "required": ["solute", "solvents"],
+            },
+            run=_solvent_screening,
+        ),
+        ToolSpec(
+            name="fit_activity_parameters",
+            description=(
+                "Regress binary NRTL interaction parameters (b12, b21) to measured "
+                "bubble-pressure data by differentiable least squares; returns the fit."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "x1": {"type": "array", "items": {"type": "number"}},
+                    "temperature": {"type": "array", "items": {"type": "number"}},
+                    "bubble_pressure": {"type": "array", "items": {"type": "number"}},
+                    "alpha": {"type": "number", "description": "NRTL non-randomness (fixed)"},
+                },
+                "required": ["components", "x1", "temperature", "bubble_pressure"],
+            },
+            run=_fit_activity_parameters,
+        ),
+        ToolSpec(
+            name="heat_of_reaction",
+            description=(
+                "Standard enthalpy, entropy and Gibbs energy of reaction and the "
+                "equilibrium constant K(T) for a reaction equation, from ideal-gas "
+                "formation data (e.g. 'nitrogen + 3 hydrogen = 2 ammonia')."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "equation": {"type": "string", "description": "Reaction, sides split by '='"},
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "temperature": {"type": "number", "description": "Temperature (K)"},
+                },
+                "required": ["equation", "components"],
+            },
+            run=_heat_of_reaction,
+        ),
+        ToolSpec(
+            name="reaction_equilibrium",
+            description=(
+                "Gas-phase chemical-equilibrium composition for one or more reactions "
+                "at (T, P) from a feed (moles). Use basis='phi' for EOS fugacity "
+                "corrections at high pressure."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "equations": {"type": "array", "items": {"type": "string"}},
+                    "n": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Feed amounts per component (mol)",
+                    },
+                    "temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                    "basis": {"type": "string", "enum": ["ideal-gas", "phi"]},
+                },
+                "required": ["components", "equations", "n", "temperature", "pressure"],
+            },
+            run=_reaction_equilibrium,
+        ),
+        ToolSpec(
+            name="reactor",
+            description=(
+                "Single-reaction reactor with energy balance. mode='equilibrium' "
+                "(equilibrium outlet), 'stoichiometric' (give conversion or extent), "
+                "or 'cstr'/'pfr' (give power-law a, ea, orders and volume). Isothermal "
+                "(t_out) returns duty; adiabatic=true returns the outlet temperature."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "equation": {"type": "string"},
+                    "n": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Feed amounts/flows per component",
+                    },
+                    "temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                    "mode": {
+                        "type": "string",
+                        "enum": ["equilibrium", "stoichiometric", "cstr", "pfr"],
+                    },
+                    "adiabatic": {"type": "boolean"},
+                    "t_out": {"type": "number"},
+                    "conversion": {
+                        "type": "number",
+                        "description": "Limiting-reactant conversion (stoichiometric)",
+                    },
+                    "extent": {"type": "array", "items": {"type": "number"}},
+                    "a": {"type": "number", "description": "Power-law pre-exponential (cstr/pfr)"},
+                    "ea": {"type": "number", "description": "Activation energy J/mol (cstr/pfr)"},
+                    "orders": {"type": "array", "items": {"type": "number"}},
+                    "volume": {"type": "number", "description": "Reactor volume m^3 (cstr/pfr)"},
+                },
+                "required": ["components", "equation", "n", "temperature", "pressure"],
+            },
+            run=_reactor,
+        ),
+        ToolSpec(
+            name="reactive_flash",
+            description=(
+                "Flash with simultaneous chemical and vapour-liquid equilibrium for a "
+                "non-ideal (gamma-phi) liquid -- e.g. esterification. Returns the V/L "
+                "split, product compositions and the reaction extent."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "equation": {"type": "string"},
+                    "n": {"type": "array", "items": {"type": "number"}},
+                    "temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                    "method": {"type": "string", "enum": list(_ACTIVITY_METHODS)},
+                },
+                "required": ["components", "equation", "n", "temperature", "pressure"],
+            },
+            run=_reactive_flash,
+        ),
+        ToolSpec(
+            name="fit_kinetics",
+            description=(
+                "Fit Arrhenius parameters (pre-exponential A, activation energy Ea) to "
+                "measured rate constants k(T) by exact log-linear least squares."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "temperature": {"type": "array", "items": {"type": "number"}},
+                    "rate_constant": {"type": "array", "items": {"type": "number"}},
+                },
+                "required": ["temperature", "rate_constant"],
+            },
+            run=_fit_kinetics,
         ),
     ]
     return {spec.name: spec for spec in specs}

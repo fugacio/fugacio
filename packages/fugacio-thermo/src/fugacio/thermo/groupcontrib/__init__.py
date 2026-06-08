@@ -10,6 +10,10 @@ These let Fugacio cover mixtures and species for which curated, fitted parameter
 are unavailable -- the role the project README assigns to group contribution.
 """
 
+from fugacio.thermo.groupcontrib.dortmund import (
+    modified_unifac_activity,
+    modified_unifac_ln_gamma,
+)
 from fugacio.thermo.groupcontrib.joback import GROUPS, JobackGroup, joback_estimate
 from fugacio.thermo.groupcontrib.unifac import (
     COMPONENT_GROUPS,
@@ -26,6 +30,8 @@ __all__ = [
     "SUBGROUPS",
     "JobackGroup",
     "joback_estimate",
+    "modified_unifac_activity",
+    "modified_unifac_ln_gamma",
     "unifac_activity",
     "unifac_ln_gamma",
 ]

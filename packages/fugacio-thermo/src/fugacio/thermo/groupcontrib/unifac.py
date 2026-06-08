@@ -12,8 +12,9 @@ the UNIQUAC size/shape term and the residual part is a sum over group residual
 activity coefficients ``Gamma_k`` evaluated in the mixture and in the pure fluid.
 
 The bundled :data:`SUBGROUPS`, :data:`INTERACTIONS`, and :data:`COMPONENT_GROUPS`
-tables are a curated subset of the public Hansen VLE parameter set, sufficient
-for alkane / aromatic / alcohol / water / ketone systems. The numerical kernel
+tables live in :mod:`fugacio.thermo.groupcontrib._unifac_data`, generated from the
+public UNIFAC (Hansen VLE) parameters and DDBST group assignments for the curated
+component database (see ``scripts/gen_parameters.py``). The numerical kernel
 :func:`unifac_ln_gamma` is general and differentiable, so it works with any
 parameter tables you supply.
 """
@@ -24,89 +25,24 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
+from fugacio.thermo.groupcontrib._unifac_data import (
+    COMPONENT_GROUPS,
+    INTERACTIONS,
+    SUBGROUPS,
+)
+
 ArrayLike = Array | float
 
 #: Lattice coordination number.
 _Z = 10.0
 
-
-# subgroup id -> (name, main-group id, R_k, Q_k). Public Hansen VLE values.
-SUBGROUPS: dict[int, tuple[str, int, float, float]] = {
-    1: ("CH3", 1, 0.9011, 0.848),
-    2: ("CH2", 1, 0.6744, 0.540),
-    3: ("CH", 1, 0.4469, 0.228),
-    4: ("C", 1, 0.2195, 0.000),
-    9: ("ACH", 3, 0.5313, 0.400),
-    10: ("AC", 3, 0.3652, 0.120),
-    11: ("ACCH3", 4, 1.2663, 0.968),
-    12: ("ACCH2", 4, 1.0396, 0.660),
-    13: ("ACCH", 4, 0.8121, 0.348),
-    14: ("OH", 5, 1.0000, 1.200),
-    15: ("CH3OH", 6, 1.4311, 1.432),
-    16: ("H2O", 7, 0.9200, 1.400),
-    19: ("CH3CO", 9, 1.6724, 1.488),
-    20: ("CH2CO", 9, 1.4457, 1.180),
-}
-
-# Main-group interaction parameters a_mn (Kelvin); curated subset of the public
-# Hansen VLE table. Missing ordered pairs default to 0 (athermal interaction).
-INTERACTIONS: dict[tuple[int, int], float] = {
-    (1, 3): 61.13,
-    (3, 1): -11.12,
-    (1, 4): 76.50,
-    (4, 1): -69.70,
-    (1, 5): 986.5,
-    (5, 1): 156.4,
-    (1, 6): 697.2,
-    (6, 1): 16.51,
-    (1, 7): 1318.0,
-    (7, 1): 300.0,
-    (1, 9): 476.4,
-    (9, 1): 26.76,
-    (3, 4): 167.0,
-    (4, 3): -146.8,
-    (3, 5): 636.1,
-    (5, 3): 89.60,
-    (3, 7): 903.8,
-    (7, 3): 362.3,
-    (3, 9): 25.77,
-    (9, 3): 140.1,
-    (4, 5): 803.2,
-    (5, 4): 25.82,
-    (4, 7): 5695.0,
-    (7, 4): 377.6,
-    (5, 6): -137.1,
-    (6, 5): 249.1,
-    (5, 7): 353.5,
-    (7, 5): -229.1,
-    (5, 9): 84.0,
-    (9, 5): 164.5,
-    (6, 7): 289.6,
-    (7, 6): -181.0,
-    (6, 9): 108.7,
-    (9, 6): 23.39,
-    (7, 9): -195.4,
-    (9, 7): 472.5,
-}
-
-# Component -> {subgroup id: count}. Canonical names match the component database.
-COMPONENT_GROUPS: dict[str, dict[int, int]] = {
-    "propane": {1: 2, 2: 1},
-    "n-butane": {1: 2, 2: 2},
-    "isobutane": {1: 3, 3: 1},
-    "n-pentane": {1: 2, 2: 3},
-    "n-hexane": {1: 2, 2: 4},
-    "n-heptane": {1: 2, 2: 5},
-    "n-octane": {1: 2, 2: 6},
-    "cyclohexane": {2: 6},
-    "benzene": {9: 6},
-    "toluene": {9: 5, 11: 1},
-    "water": {16: 1},
-    "methanol": {15: 1},
-    "ethanol": {1: 1, 2: 1, 14: 1},
-    "2-propanol": {1: 2, 3: 1, 14: 1},
-    "acetone": {1: 1, 19: 1},
-}
+__all__ = [
+    "COMPONENT_GROUPS",
+    "INTERACTIONS",
+    "SUBGROUPS",
+    "unifac_activity",
+    "unifac_ln_gamma",
+]
 
 
 def _main_interaction_matrix() -> tuple[list[int], Array]:

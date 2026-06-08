@@ -12,16 +12,23 @@ Fugacio is built as three layered packages (strict direction
   (vdW / RK / SRK / PR) with fugacity coefficients, real-fluid energy properties
   (residual/departure functions, enthalpy/entropy, isenthalpic & isentropic
   flashes), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
-  UNIQUAC), group contribution (UNIFAC, Joback), and equilibrium solvers
-  (Rachford-Rice, PT flash, saturation, bubble/dew, tangent-plane stability).
+  UNIQUAC), group contribution (UNIFAC + Dortmund, Joback), EOS *and* γ–φ
+  equilibrium solvers (Rachford-Rice, PT flash, saturation, bubble/dew), rigorous
+  [LLE / VLLE and tangent-plane stability](phase-equilibrium.md), parameter
+  regression, and [reaction thermochemistry, equilibrium, and
+  kinetics](reactions.md).
 - **`fugacio.sim`** — flowsheet / unit-operation engine (depends on `thermo`):
   a differentiable `Stream` pytree, energy-balanced unit operations (`flash_drum`,
   `heater`, `valve`, `pump`, `compressor`, `turbine`, `mix`, `splitter`), a
   recycle/tear solver with implicit-diff gradients (`tear_solve`, `Flowsheet`),
-  and distillation columns (shortcut FUG and a rigorous equilibrium-stage model).
+  distillation columns (shortcut FUG and a rigorous equilibrium-stage model),
+  binary diagrams / azeotropes / residue-curve maps,
+  [reactors](reactions.md) (equilibrium, stoichiometric, CSTR, PFR, batch), and
+  reactive separations (reactive flash & distillation).
 - **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
-  registry over the engine — properties, unit operations, distillation, and
-  gradient-based optimizers — plus a model-agnostic agent loop.
+  registry over the engine — properties, unit operations, distillation, reactors,
+  reaction equilibrium, and gradient-based optimizers — plus a model-agnostic
+  agent loop.
 
 Everything is written in [JAX](https://github.com/jax-ml/jax) and the iterative
 solvers carry implicit-function-theorem gradient rules, so an entire flowsheet is
@@ -49,5 +56,9 @@ Physical correctness is continuously machine-checked: first-principles
 consistency laws that need no external data (Gibbs-Duhem, equifugacity,
 fugacity-pressure identity, phase stability), automatic-differentiation gradients
 checked against finite differences, and opt-in differential testing against open
-reference codes ([CoolProp](https://github.com/CoolProp/CoolProp) and
-[`chemicals`](https://github.com/CalebBell/chemicals)).
+reference codes — [CoolProp](https://github.com/CoolProp/CoolProp) and
+[`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties,
+[`thermo`](https://github.com/CalebBell/thermo) /
+[Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) for activity
+coefficients, and [Cantera](https://github.com/Cantera/cantera) for
+reaction equilibrium and standard-state thermochemistry.

@@ -35,6 +35,13 @@ dev = [
 docs = [
     "mkdocs-material>=9.5",
 ]
+# Optional reference packages for the differential-testing oracles and the data
+# generation scripts. Not runtime dependencies of any Fugacio package; install
+# with `uv sync --group oracles` (CI does this only for the opt-in oracle run).
+oracles = [
+    "thermo>=0.2",
+    "chemicals>=1.1",
+]
 
 [tool.ruff]
 line-length = 100
@@ -77,7 +84,7 @@ ignore_missing_imports = true
 # never runtime dependencies and ship no type stubs, so ignore them whether or
 # not they happen to be installed in a given environment.
 [[tool.mypy.overrides]]
-module = ["CoolProp.*", "thermo.*", "chemicals.*"]
+module = ["CoolProp.*", "thermo.*", "chemicals.*", "cantera.*", "juliacall.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

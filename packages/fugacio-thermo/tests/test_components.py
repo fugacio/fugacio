@@ -6,8 +6,18 @@ import pytest
 from fugacio.thermo import components as comp
 from fugacio.thermo.constants import ATM, R
 
+# Species for which "Antoine reproduces 1 atm at the normal boiling point" does not
+# physically hold, so they are excluded from that consistency check:
+#   * helium    -- a quantum cryogen (Tb = 4.2 K); the Antoine fit cannot be trusted
+#                  in that regime.
+#   * acetylene -- its triple point (~1.27 atm) lies above 1 atm, so it sublimes and
+#                  has no normal (1 atm) boiling point; the tabulated "Tb" is a
+#                  sublimation temperature.
+_ANTOINE_TB_EXCLUDE = {"helium", "acetylene"}
 WITH_ANTOINE = [
-    name for name, c in comp.DATABASE.items() if c.antoine is not None and c.tb is not None
+    name
+    for name, c in comp.DATABASE.items()
+    if c.antoine is not None and c.tb is not None and name not in _ANTOINE_TB_EXCLUDE
 ]
 WITH_CP = [name for name, c in comp.DATABASE.items() if c.cp_ig is not None]
 WITH_VC_ZC = [name for name, c in comp.DATABASE.items() if c.vc is not None and c.zc is not None]

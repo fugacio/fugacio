@@ -29,9 +29,9 @@ imports:
 test:
     uv run pytest
 
-# Opt-in differential tests against external references (CoolProp / chemicals).
+# Opt-in differential tests against external references (thermo / chemicals).
 oracles:
-    uv run pytest -m oracle
+    uv run --group oracles pytest -m oracle
 
 # Everything CI runs, in order.
 check: lint types imports test
