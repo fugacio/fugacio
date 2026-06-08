@@ -75,15 +75,24 @@ def decanter(
     if that matters.
 
     Returns:
-        ``(liquid_I, liquid_II)`` product streams.
+        ``(liquid_I, liquid_II)`` product streams. The two isoactivity LLE roots
+        are symmetric, so which phase the solver labels ``I`` vs ``II`` is not
+        stable across platforms/precision; the order here is made deterministic by
+        returning the product richest in the first component (index 0) as
+        ``liquid_I``.
     """
     t_arr = feed.t if t is None else jnp.asarray(t)
     res = flash_lle(model.activity, t_arr, feed.z, tol=tol, max_iter=max_iter)
     total = feed.total
-    liquid_i = Stream(
-        n=res.x_i * (1.0 - res.psi) * total, t=t_arr, p=feed.p, components=feed.components
-    )
-    liquid_ii = Stream(n=res.x_ii * res.psi * total, t=t_arr, p=feed.p, components=feed.components)
+    n_a = res.x_i * (1.0 - res.psi) * total
+    n_b = res.x_ii * res.psi * total
+    # Canonical phase order: the component-0-rich product is liquid_I. Swapping the
+    # whole stream (not just the composition) preserves the material balance.
+    i_first = res.x_i[0] >= res.x_ii[0]
+    n_i = jnp.where(i_first, n_a, n_b)
+    n_ii = jnp.where(i_first, n_b, n_a)
+    liquid_i = Stream(n=n_i, t=t_arr, p=feed.p, components=feed.components)
+    liquid_ii = Stream(n=n_ii, t=t_arr, p=feed.p, components=feed.components)
     return liquid_i, liquid_ii
 
 
