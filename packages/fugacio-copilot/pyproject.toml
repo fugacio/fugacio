@@ -26,8 +26,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Add your LLM SDK(s)/agent framework here, e.g. "anthropic" or "openai".
-llm = []
+# LLM provider SDKs. The copilot core works without these (e.g. via the mock
+# provider); install the relevant extra to talk to a real model.
+openai = ["openai>=1.40"]
+anthropic = ["anthropic>=0.34"]
+llm = ["openai>=1.40", "anthropic>=0.34"]
 
 [build-system]
 requires = ["hatchling"]

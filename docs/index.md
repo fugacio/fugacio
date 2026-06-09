@@ -23,12 +23,15 @@ Fugacio is built as three layered packages (strict direction
   recycle/tear solver with implicit-diff gradients (`tear_solve`, `Flowsheet`),
   distillation columns (shortcut FUG and a rigorous equilibrium-stage model),
   binary diagrams / azeotropes / residue-curve maps,
-  [reactors](reactions.md) (equilibrium, stoichiometric, CSTR, PFR, batch), and
-  reactive separations (reactive flash & distillation).
+  [reactors](reactions.md) (equilibrium, stoichiometric, CSTR, PFR, batch),
+  reactive separations (reactive flash & distillation), and
+  [differentiable optimization, design specs & process economics](optimization.md)
+  (constrained NLP with implicit-diff `argmin`, controllers, Turton costing, TAC/NPV).
 - **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
   registry over the engine — properties, unit operations, distillation, reactors,
-  reaction equilibrium, and gradient-based optimizers — plus a model-agnostic
-  agent loop.
+  reaction equilibrium, [optimization, sizing & costing](optimization.md) — plus a
+  vendor-neutral provider layer (OpenAI / Anthropic / mock) and a multi-turn,
+  tool-calling [agent loop](optimization.md#the-ai-design-copilot).
 
 Everything is written in [JAX](https://github.com/jax-ml/jax) and the iterative
 solvers carry implicit-function-theorem gradient rules, so an entire flowsheet is

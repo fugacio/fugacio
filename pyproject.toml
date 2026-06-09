@@ -87,6 +87,12 @@ ignore_missing_imports = true
 module = ["CoolProp.*", "thermo.*", "chemicals.*", "cantera.*", "juliacall.*"]
 ignore_missing_imports = true
 
+# Optional LLM provider SDKs (fugacio.copilot.llm extras). Lazily imported and
+# only needed to talk to a live model, so ignore them when not installed.
+[[tool.mypy.overrides]]
+module = ["openai.*", "anthropic.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 # Oracle (differential-testing) tests are opt-in: they require heavy optional
 # packages (CoolProp / chemicals) and are excluded from the default run so the

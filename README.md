@@ -88,6 +88,32 @@ guess = Stream.from_fractions(feed.components, jnp.array([0.1, 0.3, 0.6]), 30.0,
 recycle = tear_solve(one_pass, guess, {"T": 320.0, "P": 20e5, "r": 0.5})
 ```
 
+Because the converged flowsheet is differentiable, optimization, design specs, and
+process economics are just more differentiable layers. `argmin` returns the
+*solution* of a constrained problem and differentiates it through the optimality
+conditions (implicit function theorem), so a real screening economics objective —
+Turton bare-module capital plus utilities — optimizes end to end, gradients and
+all (see [the optimization & economics guide](docs/optimization.md)):
+
+```python
+import jax
+from fugacio.sim import heat_exchanger_area, bare_module_cost, total_annual_cost, utility_cost
+
+# Size a cooler from its duty (LMTD), cost it (Turton), and get the total annual cost —
+# then the exact sensitivity of TAC to the temperature approach, by autodiff.
+def tac(dt_cold):
+    area = heat_exchanger_area(duty=1.0e6, u=500.0, dt_hot=60.0, dt_cold=dt_cold)
+    capex = bare_module_cost("heat_exchanger", area).bare_module
+    return total_annual_cost(capex, utility_cost(1.0e6, "cooling_water"))
+
+tac(40.0), jax.grad(tac)(40.0)   # $/yr and d(TAC)/d(approach)
+```
+
+The `fugacio.copilot` agent exposes all of this — properties, unit ops,
+distillation, reactors, optimization, sizing, and costing — as a JSON tool
+registry, driven by a vendor-neutral provider layer (OpenAI / Anthropic / mock)
+through a multi-turn, tool-calling loop.
+
 ## Development
 
 ```bash
