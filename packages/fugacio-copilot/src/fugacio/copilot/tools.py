@@ -23,13 +23,22 @@ import jax.numpy as jnp
 
 from fugacio.sim import (
     Stream,
+    annualized_capital,
     azeotrope_pressure,
     azeotrope_temperature,
+    bare_module_cost,
+    capital_recovery_factor,
+    column_diameter,
+    column_height,
     compressor,
     cstr,
+    cylinder_volume,
     equilibrium_reactor,
     flash_drum,
+    heat_exchanger_area,
     heater,
+    lmtd,
+    npv,
     nrtl_model_for,
     pfr,
     pump,
@@ -40,11 +49,14 @@ from fugacio.sim import (
     shortcut_column,
     solve_column,
     stoichiometric_reactor,
+    total_annual_cost,
     turbine,
     txy_diagram,
     unifac_model_for,
     uniquac_model_for,
+    utility_cost,
     valve,
+    vapor_molar_volume_ideal,
 )
 from fugacio.thermo import (
     PR,
@@ -833,6 +845,146 @@ def _fit_kinetics(temperature: list[float], rate_constant: list[float]) -> JsonD
     }
 
 
+_EQUIPMENT_KINDS = ("heat_exchanger", "pump", "compressor", "vessel", "tray", "fired_heater")
+
+
+def _flash_sensitivity(
+    components: list[str],
+    z: list[float],
+    flow: float,
+    temperature: float,
+    pressure: float,
+) -> JsonDict:
+    """Exact sensitivities of a flash to temperature and pressure (via autodiff).
+
+    Showcases the differentiable core: the derivatives are computed by
+    differentiating straight through the equation-of-state phase equilibrium,
+    not by finite differences.
+    """
+    feed = _stream(components, z, flow, temperature, pressure)
+    total = float(feed.total)
+
+    def vapor_fraction(t: float, p: float) -> Any:
+        vap, _liq = flash_drum(feed, t, p)
+        return vap.total / feed.total
+
+    d_beta_dt = jax.grad(lambda t: vapor_fraction(t, pressure))(temperature)
+    d_beta_dp = jax.grad(lambda p: vapor_fraction(temperature, p))(pressure)
+    d_flow_dt = jax.grad(lambda t: vapor_fraction(t, pressure) * total)(temperature)
+    return {
+        "vapor_fraction": float(vapor_fraction(temperature, pressure)),
+        "d_vapor_fraction_dT_per_k": float(d_beta_dt),
+        "d_vapor_fraction_dP_per_pa": float(d_beta_dp),
+        "d_vapor_flow_dT_mol_s_per_k": float(d_flow_dt),
+    }
+
+
+def _equipment_cost(
+    kind: str,
+    size: float,
+    pressure_barg: float = 0.0,
+    material: str = "CS",
+) -> JsonDict:
+    """Turton purchased and installed (bare-module) cost of one equipment item."""
+    item = bare_module_cost(kind, size, pressure_barg=pressure_barg, material=material)
+    return {
+        "kind": kind,
+        "size": float(size),
+        "material": material,
+        "purchased_usd": float(item.purchased),
+        "bare_module_usd": float(item.bare_module),
+    }
+
+
+def _heat_exchanger_cost(
+    duty: float,
+    u: float,
+    dt_hot: float,
+    dt_cold: float,
+    pressure_barg: float = 0.0,
+    material: str = "CS",
+) -> JsonDict:
+    """Size a heat exchanger from its duty and approaches, then cost it (Turton)."""
+    area = heat_exchanger_area(duty, u, dt_hot, dt_cold)
+    item = bare_module_cost("heat_exchanger", area, pressure_barg=pressure_barg, material=material)
+    return {
+        "area_m2": float(area),
+        "lmtd_k": float(lmtd(dt_hot, dt_cold)),
+        "purchased_usd": float(item.purchased),
+        "bare_module_usd": float(item.bare_module),
+    }
+
+
+def _utility_cost(duty: float, utility: str, hours_per_year: float = 8000.0) -> JsonDict:
+    """Annual cost of a heating/cooling duty for a named utility."""
+    annual = utility_cost(duty, utility, hours_per_year=hours_per_year)
+    return {
+        "utility": utility,
+        "duty_w": float(duty),
+        "hours_per_year": float(hours_per_year),
+        "annual_cost_usd": float(annual),
+    }
+
+
+def _annual_cost(
+    capex: float,
+    opex: float,
+    interest_rate: float = 0.1,
+    years: float = 10.0,
+) -> JsonDict:
+    """Annualized capital and total annual cost (TAC) for a capex/opex split."""
+    return {
+        "annualized_capital_usd_per_year": float(
+            annualized_capital(capex, rate=interest_rate, years=years)
+        ),
+        "operating_cost_usd_per_year": float(opex),
+        "total_annual_cost_usd_per_year": float(
+            total_annual_cost(capex, opex, rate=interest_rate, years=years)
+        ),
+        "capital_recovery_factor": float(capital_recovery_factor(interest_rate, years)),
+    }
+
+
+def _net_present_value(cash_flows: list[float], discount_rate: float = 0.1) -> JsonDict:
+    """Net present value of a yearly cash-flow stream (index 0 is now)."""
+    return {
+        "npv_usd": float(npv(jnp.asarray(cash_flows), rate=discount_rate)),
+        "discount_rate": float(discount_rate),
+        "periods": len(cash_flows),
+    }
+
+
+def _size_column(
+    vapor_molar_flow: float,
+    temperature: float,
+    pressure: float,
+    n_stages: int,
+    molar_mass: float = 0.06,
+    liquid_density: float = 700.0,
+    pressure_barg: float = 0.0,
+    material: str = "CS",
+) -> JsonDict:
+    """Size a distillation column (diameter, height) and cost the shell + trays."""
+    vapor_density = float(molar_mass / vapor_molar_volume_ideal(temperature, pressure))
+    diameter = column_diameter(
+        vapor_molar_flow, vapor_density, liquid_density, molar_mass=molar_mass
+    )
+    height = column_height(n_stages)
+    shell_volume = cylinder_volume(diameter, height)
+    shell = bare_module_cost("vessel", shell_volume, pressure_barg=pressure_barg, material=material)
+    tray_area = float(jnp.pi * diameter**2 / 4.0)
+    tray = bare_module_cost("tray", tray_area, material=material)
+    trays_total = float(tray.bare_module) * n_stages
+    return {
+        "diameter_m": float(diameter),
+        "height_m": float(height),
+        "shell_volume_m3": float(shell_volume),
+        "shell_cost_usd": float(shell.bare_module),
+        "trays_cost_usd": trays_total,
+        "installed_cost_usd": float(shell.bare_module) + trays_total,
+    }
+
+
 def default_registry() -> dict[str, ToolSpec]:
     """Return the built-in tool registry keyed by tool name."""
     specs = [
@@ -1372,6 +1524,138 @@ def default_registry() -> dict[str, ToolSpec]:
                 "required": ["temperature", "rate_constant"],
             },
             run=_fit_kinetics,
+        ),
+        ToolSpec(
+            name="flash_sensitivity",
+            description=(
+                "Exact sensitivities of an isothermal-isobaric flash to temperature "
+                "and pressure, differentiated straight through the equation-of-state "
+                "phase equilibrium (autodiff, not finite differences)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "z": {"type": "array", "items": {"type": "number"}},
+                    "flow": {"type": "number", "description": "Total feed flow (mol/s)"},
+                    "temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                },
+                "required": ["components", "z", "flow", "temperature", "pressure"],
+            },
+            run=_flash_sensitivity,
+        ),
+        ToolSpec(
+            name="equipment_cost",
+            description=(
+                "Turton purchased and installed (bare-module) cost of one equipment "
+                f"item. kind is one of {list(_EQUIPMENT_KINDS)}; size is the capacity "
+                "attribute (area m^2 for heat_exchanger/tray, power kW for pump/"
+                "compressor, volume m^3 for vessel, duty kW for fired_heater)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "kind": {"type": "string", "enum": list(_EQUIPMENT_KINDS)},
+                    "size": {"type": "number"},
+                    "pressure_barg": {"type": "number"},
+                    "material": {"type": "string", "enum": ["CS", "SS", "Ni", "Ti"]},
+                },
+                "required": ["kind", "size"],
+            },
+            run=_equipment_cost,
+        ),
+        ToolSpec(
+            name="heat_exchanger_cost",
+            description=(
+                "Size a heat exchanger from its duty, overall U and terminal "
+                "temperature approaches (via the log-mean DT), then cost it (Turton)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "duty": {"type": "number", "description": "Heat duty (W)"},
+                    "u": {"type": "number", "description": "Overall U (W/m^2/K)"},
+                    "dt_hot": {"type": "number", "description": "Hot-end approach (K)"},
+                    "dt_cold": {"type": "number", "description": "Cold-end approach (K)"},
+                    "pressure_barg": {"type": "number"},
+                    "material": {"type": "string", "enum": ["CS", "SS", "Ni", "Ti"]},
+                },
+                "required": ["duty", "u", "dt_hot", "dt_cold"],
+            },
+            run=_heat_exchanger_cost,
+        ),
+        ToolSpec(
+            name="utility_cost",
+            description=(
+                "Annual cost of a heating or cooling duty for a named utility "
+                "(cooling_water, chilled_water, refrigeration, lp/mp/hp_steam, "
+                "fired_heat, electricity)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "duty": {"type": "number", "description": "Duty (W)"},
+                    "utility": {"type": "string"},
+                    "hours_per_year": {"type": "number"},
+                },
+                "required": ["duty", "utility"],
+            },
+            run=_utility_cost,
+        ),
+        ToolSpec(
+            name="annual_cost",
+            description=(
+                "Annualized capital and total annual cost (TAC = CRF*CAPEX + OPEX) "
+                "from a capital/operating split, interest rate and project life."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "capex": {"type": "number", "description": "Installed capital ($)"},
+                    "opex": {"type": "number", "description": "Operating cost ($/yr)"},
+                    "interest_rate": {"type": "number"},
+                    "years": {"type": "number"},
+                },
+                "required": ["capex", "opex"],
+            },
+            run=_annual_cost,
+        ),
+        ToolSpec(
+            name="net_present_value",
+            description="Net present value of a yearly cash-flow stream (index 0 is now).",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "cash_flows": {"type": "array", "items": {"type": "number"}},
+                    "discount_rate": {"type": "number"},
+                },
+                "required": ["cash_flows"],
+            },
+            run=_net_present_value,
+        ),
+        ToolSpec(
+            name="size_column",
+            description=(
+                "Size a distillation column: diameter from the Souders-Brown "
+                "flooding velocity, height from the stage count, then cost the shell "
+                "(vessel) and trays."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "vapor_molar_flow": {"type": "number", "description": "Vapor load (mol/s)"},
+                    "temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                    "n_stages": {"type": "integer"},
+                    "molar_mass": {"type": "number", "description": "Vapor molar mass (kg/mol)"},
+                    "liquid_density": {"type": "number", "description": "Liquid density (kg/m^3)"},
+                    "pressure_barg": {"type": "number"},
+                    "material": {"type": "string", "enum": ["CS", "SS", "Ni", "Ti"]},
+                },
+                "required": ["vapor_molar_flow", "temperature", "pressure", "n_stages"],
+            },
+            run=_size_column,
         ),
     ]
     return {spec.name: spec for spec in specs}

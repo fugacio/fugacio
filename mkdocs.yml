@@ -6,3 +6,4 @@ nav:
   - Home: index.md
   - Non-ideal phase equilibrium: phase-equilibrium.md
   - Reactions & reactors: reactions.md
+  - Optimization, design & economics: optimization.md
