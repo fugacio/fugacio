@@ -33,7 +33,7 @@ workspace:
 
 | Package | Import | Responsibility |
 | --- | --- | --- |
-| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, energy/PT-PH-PS flashes, rigorous LLE/VLLE, parameter regression, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
+| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
 | `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, and reactive separations (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
@@ -138,7 +138,9 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 [Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) for activity
 coefficients, and [Cantera](https://github.com/Cantera/cantera) for reaction
 equilibrium) are marked `oracle` and excluded from the default run; install those
-optional packages and run them explicitly with `just oracles`.
+optional packages and run them explicitly with `just oracles`. CI runs the same
+oracle suite on every pull request, on pushes to `main`, and on a weekly
+schedule (`.github/workflows/oracles.yml`).
 
 ## Layout
 

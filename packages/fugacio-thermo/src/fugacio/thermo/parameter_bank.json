@@ -1,0 +1,81 @@
+{
+  "format": "fugacio-parameter-bank",
+  "version": 1,
+  "entries": [
+    {
+      "components": [
+        "2-propanol",
+        "water"
+      ],
+      "model": "nrtl",
+      "alpha": 0.3,
+      "b12": 169.99949910979808,
+      "b21": 680.0006951983245,
+      "t_min": 353.15,
+      "t_max": 353.15,
+      "n_points": 11,
+      "rmse": 3.0661686287737756e-07,
+      "source": "isopropanol_water_vle_353K"
+    },
+    {
+      "components": [
+        "acetone",
+        "chloroform"
+      ],
+      "model": "nrtl",
+      "alpha": 0.3,
+      "b12": -149.99958992810554,
+      "b21": -129.9997386101386,
+      "t_min": 318.15,
+      "t_max": 318.15,
+      "n_points": 11,
+      "rmse": 4.1593109117063397e-07,
+      "source": "acetone_chloroform_vle_318K"
+    },
+    {
+      "components": [
+        "benzene",
+        "toluene"
+      ],
+      "model": "nrtl",
+      "alpha": 0.3,
+      "b12": 19.998754332269,
+      "b21": 15.001078456181178,
+      "t_min": 363.15,
+      "t_max": 363.15,
+      "n_points": 11,
+      "rmse": 2.8616344031743354e-07,
+      "source": "benzene_toluene_vle_363K"
+    },
+    {
+      "components": [
+        "ethanol",
+        "water"
+      ],
+      "model": "nrtl",
+      "alpha": 0.3,
+      "b12": 330.0012237107092,
+      "b21": 599.9985397831535,
+      "t_min": 323.15,
+      "t_max": 323.15,
+      "n_points": 11,
+      "rmse": 8.089867964269556e-07,
+      "source": "ethanol_water_vle_323K"
+    },
+    {
+      "components": [
+        "methanol",
+        "water"
+      ],
+      "model": "nrtl",
+      "alpha": 0.3,
+      "b12": 79.99985354101075,
+      "b21": 219.99962450428484,
+      "t_min": 338.15,
+      "t_max": 338.15,
+      "n_points": 11,
+      "rmse": 2.9118562659374624e-07,
+      "source": "methanol_water_vle_338K"
+    }
+  ]
+}

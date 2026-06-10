@@ -68,11 +68,22 @@ from fugacio.thermo import (
     flash_lle,
     flash_pt,
     flash_vlle,
+    gas_diffusivity,
+    gas_mixture_thermal_conductivity,
+    gas_mixture_viscosity,
     get,
+    heat_of_vaporization,
+    liquid_density,
+    liquid_diffusivity,
+    liquid_heat_capacity,
+    liquid_mixture_thermal_conductivity,
+    liquid_mixture_viscosity,
     liquid_stability,
+    mixture_surface_tension,
     names,
     psat_eos,
     reaction_properties,
+    vapor_density,
 )
 from fugacio.thermo.reaction_equilibrium import equilibrium as _reaction_equilibrium_solve
 
@@ -108,8 +119,10 @@ def _component_properties(component: str) -> JsonDict:
         "molar_mass_g_mol": c.mw,
         "critical_temperature_k": c.tc,
         "critical_pressure_pa": c.pc,
+        "critical_volume_m3_mol": c.vc,
         "acentric_factor": c.omega,
         "normal_boiling_point_k": c.tb,
+        "dipole_moment_debye": c.dipole,
     }
 
 
@@ -117,6 +130,64 @@ def _saturation_pressure(component: str, temperature: float) -> JsonDict:
     c = get(component)
     psat = float(psat_eos(PR, temperature, c.tc, c.pc, c.omega))
     return {"component": c.name, "temperature_k": temperature, "psat_pa": psat}
+
+
+def _physical_properties(
+    components: list[str],
+    x: list[float],
+    temperature: float,
+    pressure: float = 101325.0,
+) -> JsonDict:
+    """Sizing-grade physical and transport properties of a mixture at ``T`` (and ``P``).
+
+    Liquid properties are at saturation (composition-averaged through the curated
+    correlations and mixture rules); the vapour density comes from the EOS at the
+    given pressure. Heat of vaporization and liquid heat capacity are returned
+    per component (J/mol basis).
+    """
+    t = float(temperature)
+    p = float(pressure)
+    x_arr = jnp.asarray(x, dtype=float)
+    hvap = heat_of_vaporization(components, t)
+    cp_l = liquid_heat_capacity(components, t)
+    return {
+        "components": list(components),
+        "x": [float(v) for v in x],
+        "temperature_k": t,
+        "pressure_pa": p,
+        "liquid_density_kg_m3": float(liquid_density(components, t, x_arr)),
+        "vapor_density_kg_m3": float(vapor_density(components, t, p, x_arr)),
+        "liquid_viscosity_pa_s": float(liquid_mixture_viscosity(components, t, x_arr)),
+        "vapor_viscosity_pa_s": float(gas_mixture_viscosity(components, t, x_arr)),
+        "liquid_thermal_conductivity_w_m_k": float(
+            liquid_mixture_thermal_conductivity(components, t, x_arr)
+        ),
+        "vapor_thermal_conductivity_w_m_k": float(
+            gas_mixture_thermal_conductivity(components, t, x_arr)
+        ),
+        "surface_tension_n_m": float(mixture_surface_tension(components, t, x_arr)),
+        "heat_of_vaporization_j_mol": [float(v) for v in hvap],
+        "liquid_heat_capacity_j_mol_k": [float(v) for v in cp_l],
+    }
+
+
+def _binary_diffusivity(
+    solute: str,
+    solvent: str,
+    temperature: float,
+    pressure: float = 101325.0,
+) -> JsonDict:
+    """Binary diffusion coefficients: Fuller (gas) and Wilke-Chang (liquid)."""
+    t = float(temperature)
+    p = float(pressure)
+    return {
+        "solute": solute,
+        "solvent": solvent,
+        "temperature_k": t,
+        "pressure_pa": p,
+        "gas_diffusivity_m2_s": float(gas_diffusivity(solute, solvent, t, p)),
+        "liquid_diffusivity_m2_s": float(liquid_diffusivity(solute, solvent, t)),
+    }
 
 
 def _bubble_pressure(components: list[str], x: list[float], temperature: float) -> JsonDict:
@@ -1003,6 +1074,51 @@ def default_registry() -> dict[str, ToolSpec]:
                 "required": ["component"],
             },
             run=_component_properties,
+        ),
+        ToolSpec(
+            name="physical_properties",
+            description=(
+                "Physical and transport properties of a mixture at T (and P): liquid "
+                "and vapour density, viscosity, thermal conductivity, surface tension, "
+                "heat of vaporization, and liquid heat capacity -- the inputs for "
+                "equipment sizing and heat-transfer calculations."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "x": {"type": "array", "items": {"type": "number"}},
+                    "temperature": {"type": "number", "description": "Temperature (K)"},
+                    "pressure": {
+                        "type": "number",
+                        "description": "Pressure (Pa) for the vapour density; default 1 atm",
+                    },
+                },
+                "required": ["components", "x", "temperature"],
+            },
+            run=_physical_properties,
+        ),
+        ToolSpec(
+            name="binary_diffusivity",
+            description=(
+                "Binary diffusion coefficients of a solute in a solvent: gas-phase "
+                "D_AB by Fuller at (T, P) and infinite-dilution liquid D_AB by "
+                "Wilke-Chang at T (mass-transfer and column-efficiency inputs)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "solute": {"type": "string"},
+                    "solvent": {"type": "string"},
+                    "temperature": {"type": "number", "description": "Temperature (K)"},
+                    "pressure": {
+                        "type": "number",
+                        "description": "Pressure (Pa) for the gas-phase value; default 1 atm",
+                    },
+                },
+                "required": ["solute", "solvent", "temperature"],
+            },
+            run=_binary_diffusivity,
         ),
         ToolSpec(
             name="saturation_pressure",

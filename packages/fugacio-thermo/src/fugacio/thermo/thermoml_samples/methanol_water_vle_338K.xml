@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Illustrative ThermoML sample bundled with fugacio.thermo for tests and examples.
+  Isothermal (338.15 K) bubble-pressure (P-x) data for methanol(1) + water(2).
+  Values are synthetic, generated from a two-parameter NRTL (tau = b/T,
+  alpha = 0.3, b12 = 80 K, b21 = 220 K) through Fugacio's
+  gamma-phi bubble-point solver, but the file follows the NIST/IUPAC ThermoML
+  schema so it exercises the real reader (positive deviations, no azeotrope at this temperature).
+  It is NOT a measured dataset; for real data use the NIST ThermoML Archive.
+  Regenerate with: uv run python scripts/gen_thermoml_samples.py
+-->
+<DataReport xmlns="http://www.iupac.org/namespaces/ThermoML">
+  <Version>
+    <nVersionMajor>4</nVersionMajor>
+    <nVersionMinor>0</nVersionMinor>
+  </Version>
+  <Citation>
+    <sTitle>Synthetic isothermal VLE for methanol + water at 338.15 K (illustrative)</sTitle>
+    <sAbstract>Bundled example dataset for the Fugacio ThermoML reader; generated from NRTL with alpha = 0.3, b12 = 80 K, b21 = 220 K.</sAbstract>
+  </Citation>
+  <Compound>
+    <RegNum>
+      <nOrgNum>1</nOrgNum>
+    </RegNum>
+    <sCommonName>methanol</sCommonName>
+    <sFormulaMolec>CH4O</sFormulaMolec>
+    <sStandardInChI>InChI=1S/CH4O/c1-2/h2H,1H3</sStandardInChI>
+    <sStandardInChIKey>OKKJLVBELUTLKV-UHFFFAOYSA-N</sStandardInChIKey>
+    <nCASRegistryNum>67-56-1</nCASRegistryNum>
+  </Compound>
+  <Compound>
+    <RegNum>
+      <nOrgNum>2</nOrgNum>
+    </RegNum>
+    <sCommonName>water</sCommonName>
+    <sFormulaMolec>H2O</sFormulaMolec>
+    <sStandardInChI>InChI=1S/H2O/h1H2</sStandardInChI>
+    <sStandardInChIKey>XLYOFNOQVPJJNP-UHFFFAOYSA-N</sStandardInChIKey>
+    <nCASRegistryNum>7732-18-5</nCASRegistryNum>
+  </Compound>
+  <PureOrMixtureData>
+    <nPureOrMixtureDataNumber>1</nPureOrMixtureDataNumber>
+    <Component>
+      <RegNum>
+        <nOrgNum>1</nOrgNum>
+      </RegNum>
+    </Component>
+    <Component>
+      <RegNum>
+        <nOrgNum>2</nOrgNum>
+      </RegNum>
+    </Component>
+    <PhaseID>
+      <ePhase>Liquid</ePhase>
+    </PhaseID>
+    <Variable>
+      <nVarNumber>1</nVarNumber>
+      <VariableID>
+        <VariableType>
+          <eTemperature>Temperature, K</eTemperature>
+        </VariableType>
+      </VariableID>
+    </Variable>
+    <Variable>
+      <nVarNumber>2</nVarNumber>
+      <VariableID>
+        <VariableType>
+          <eComponentComposition>Mole fraction</eComponentComposition>
+        </VariableType>
+        <RegNum>
+          <nOrgNum>1</nOrgNum>
+        </RegNum>
+      </VariableID>
+    </Variable>
+    <Property>
+      <nPropNumber>1</nPropNumber>
+      <Property-MethodID>
+        <PropertyGroup>
+          <PhaseTransition>
+            <ePropName>Pressure, kPa</ePropName>
+          </PhaseTransition>
+        </PropertyGroup>
+      </Property-MethodID>
+    </Property>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.05</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>32.7837</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.10</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>41.0561</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.20</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>53.7270</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.30</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>63.0038</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.40</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>70.2709</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.50</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>76.3857</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.60</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>81.8887</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.70</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>87.1224</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.80</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>92.2985</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.90</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>97.5338</nPropValue></PropertyValue>
+    </NumValues>
+    <NumValues>
+      <VariableValue><nVarNumber>1</nVarNumber><nVarValue>338.15</nVarValue></VariableValue>
+      <VariableValue><nVarNumber>2</nVarNumber><nVarValue>0.95</nVarValue></VariableValue>
+      <PropertyValue><nPropNumber>1</nPropNumber><nPropValue>100.1885</nPropValue></PropertyValue>
+    </NumValues>
+  </PureOrMixtureData>
+</DataReport>

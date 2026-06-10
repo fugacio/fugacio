@@ -11,12 +11,15 @@ Fugacio is built as three layered packages (strict direction
   open component database, ideal-gas correlations, cubic equations of state
   (vdW / RK / SRK / PR) with fugacity coefficients, real-fluid energy properties
   (residual/departure functions, enthalpy/entropy, isenthalpic & isentropic
-  flashes), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
+  flashes), [liquid & transport properties](physical-properties.md) (density,
+  viscosity, thermal conductivity, surface tension, diffusivity — pure and
+  mixture), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
   UNIQUAC), group contribution (UNIFAC + Dortmund, Joback), EOS *and* γ–φ
   equilibrium solvers (Rachford-Rice, PT flash, saturation, bubble/dew), rigorous
   [LLE / VLLE and tangent-plane stability](phase-equilibrium.md), parameter
-  regression, and [reaction thermochemistry, equilibrium, and
-  kinetics](reactions.md).
+  regression with a bundled [ThermoML parameter
+  bank](physical-properties.md#the-thermoml-parameter-bank), and [reaction
+  thermochemistry, equilibrium, and kinetics](reactions.md).
 - **`fugacio.sim`** — flowsheet / unit-operation engine (depends on `thermo`):
   a differentiable `Stream` pytree, energy-balanced unit operations (`flash_drum`,
   `heater`, `valve`, `pump`, `compressor`, `turbine`, `mix`, `splitter`), a

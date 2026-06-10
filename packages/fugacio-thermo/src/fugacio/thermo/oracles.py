@@ -202,7 +202,169 @@ def modified_raoult_bubble_pressure(
     return float(jnp.sum(x_arr * gamma_arr * psat))
 
 
-# --- Cantera reaction oracle --------------------------------------------------
+# --- CoolProp property oracles --------------------------------------------------
+# CoolProp wraps the reference multiparameter (Helmholtz-energy) equations of
+# state and the associated transport/surface-tension correlations for ~120 pure
+# fluids. That makes it the most independent oracle available for Fugacio's
+# correlation stack: its property values come from entirely different functional
+# forms fitted by different groups, so agreement is evidence about *accuracy*,
+# not just transcription. Fluids are matched by CAS number, never by name.
+
+_COOLPROP_BY_CAS: dict[str, str] | None = None
+
+
+def _coolprop_index() -> dict[str, str]:
+    """Map CAS registry number -> CoolProp fluid name for every shipped fluid."""
+    global _COOLPROP_BY_CAS
+    if _COOLPROP_BY_CAS is None:
+        from CoolProp.CoolProp import get_fluid_param_string, get_global_param_string
+
+        _COOLPROP_BY_CAS = {
+            get_fluid_param_string(fluid, "CAS"): fluid
+            for fluid in get_global_param_string("fluids_list").split(",")
+        }
+    return _COOLPROP_BY_CAS
+
+
+def coolprop_fluid(name: str) -> str:
+    """CoolProp fluid name for a database component, matched by CAS number.
+
+    Raises :class:`KeyError` if CoolProp has no reference EOS for the component,
+    so tests can build their fluid lists with :func:`coolprop_supports`.
+    """
+    _require("CoolProp", HAVE_COOLPROP)
+    comp = get(name)
+    index = _coolprop_index()
+    if comp.cas is None or comp.cas not in index:
+        raise KeyError(f"CoolProp has no pure-fluid EOS for {name!r} (CAS {comp.cas})")
+    return index[comp.cas]
+
+
+def coolprop_supports(name: str) -> bool:
+    """Whether CoolProp ships a reference EOS for the named component."""
+    if not HAVE_COOLPROP:
+        return False
+    try:
+        coolprop_fluid(name)
+    except KeyError:
+        return False
+    return True
+
+
+def coolprop_triple_temperature(name: str) -> float:
+    """Triple-point temperature (K) from CoolProp, for picking valid test states."""
+    _require("CoolProp", HAVE_COOLPROP)
+    from CoolProp.CoolProp import PropsSI
+
+    return float(PropsSI("Ttriple", coolprop_fluid(name)))
+
+
+def coolprop_saturation(name: str, t: float) -> dict[str, float]:
+    """Reference saturation-state properties at ``t`` (K) from CoolProp.
+
+    Always returns ``psat`` (Pa), ``rho_liquid``/``rho_vapor`` (kg/m^3),
+    ``hvap`` (J/mol), and ``cp_liquid`` (J/mol/K). Transport keys
+    (``mu_liquid``, ``mu_vapor``, ``k_liquid``, ``k_vapor``) and ``sigma`` (N/m)
+    are included only when CoolProp has the corresponding model for the fluid.
+    """
+    _require("CoolProp", HAVE_COOLPROP)
+    from CoolProp.CoolProp import PropsSI
+
+    fluid = coolprop_fluid(name)
+    t = float(t)
+    out = {
+        "psat": float(PropsSI("P", "T", t, "Q", 0, fluid)),
+        "rho_liquid": float(PropsSI("D", "T", t, "Q", 0, fluid)),
+        "rho_vapor": float(PropsSI("D", "T", t, "Q", 1, fluid)),
+        "hvap": float(
+            PropsSI("Hmolar", "T", t, "Q", 1, fluid) - PropsSI("Hmolar", "T", t, "Q", 0, fluid)
+        ),
+        "cp_liquid": float(PropsSI("Cpmolar", "T", t, "Q", 0, fluid)),
+    }
+    optional = {
+        "mu_liquid": ("V", 0),
+        "mu_vapor": ("V", 1),
+        "k_liquid": ("L", 0),
+        "k_vapor": ("L", 1),
+        "sigma": ("I", 0),
+    }
+    for key, (prop, q) in optional.items():
+        try:
+            out[key] = float(PropsSI(prop, "T", t, "Q", q, fluid))
+        except ValueError:
+            continue  # no transport/tension model for this fluid
+    return out
+
+
+def coolprop_gas_state(name: str, t: float, p: float) -> dict[str, float]:
+    """Reference single-phase gas properties at ``(t, p)`` from CoolProp.
+
+    Returns ``z`` (compressibility factor) and ``rho`` (kg/m^3), plus ``mu``
+    (Pa*s) and ``k`` (W/m/K) when CoolProp has transport models for the fluid.
+    The caller is responsible for choosing a state that is actually gas.
+    """
+    _require("CoolProp", HAVE_COOLPROP)
+    from CoolProp.CoolProp import PropsSI
+
+    fluid = coolprop_fluid(name)
+    t, p = float(t), float(p)
+    out = {
+        "z": float(PropsSI("Z", "T", t, "P", p, fluid)),
+        "rho": float(PropsSI("D", "T", t, "P", p, fluid)),
+    }
+    for key, prop in (("mu", "V"), ("k", "L")):
+        try:
+            out[key] = float(PropsSI(prop, "T", t, "P", p, fluid))
+        except ValueError:
+            continue
+    return out
+
+
+# --- chemicals kernel-isolation oracles ------------------------------------------
+# These reuse the ``chemicals`` library's implementation of the *same named
+# correlation* with the *same inputs*, so a mismatch isolates Fugacio's kernel
+# algebra (rather than data or model choice). They complement the CoolProp
+# oracles above, which test accuracy against independent reference models.
+
+
+def chemicals_wilke_viscosity(
+    y: Sequence[float], mu: Sequence[float], mw: Sequence[float]
+) -> float:
+    """Reference Wilke gas-mixture viscosity (Pa*s) from ``chemicals``."""
+    _require("chemicals", HAVE_CHEMICALS)
+    from chemicals.viscosity import Wilke
+
+    return float(Wilke([float(v) for v in y], [float(v) for v in mu], [float(v) for v in mw]))
+
+
+def chemicals_dippr9h_conductivity(w: Sequence[float], k: Sequence[float]) -> float:
+    """Reference DIPPR9H liquid-mixture thermal conductivity (W/m/K) from ``chemicals``.
+
+    Note ``w`` are *mass* fractions, per the DIPPR9H definition.
+    """
+    _require("chemicals", HAVE_CHEMICALS)
+    from chemicals.thermal_conductivity import DIPPR9H
+
+    return float(DIPPR9H([float(v) for v in w], [float(v) for v in k]))
+
+
+def chemicals_winterfeld_scriven_davis(
+    x: Sequence[float], sigma: Sequence[float], rhom: Sequence[float]
+) -> float:
+    """Reference Winterfeld-Scriven-Davis mixture surface tension (N/m) from ``chemicals``.
+
+    ``rhom`` are liquid molar densities (mol/m^3).
+    """
+    _require("chemicals", HAVE_CHEMICALS)
+    from chemicals.interface import Winterfeld_Scriven_Davis
+
+    return float(
+        Winterfeld_Scriven_Davis(
+            [float(v) for v in x], [float(v) for v in sigma], [float(v) for v in rhom]
+        )
+    )
+
+
 # Cantera is an independent, widely used reference for chemical-reaction
 # thermochemistry. Rather than rely on Cantera's own species database (whose
 # formation data differ slightly from Fugacio's), we build an ideal-gas phase
@@ -349,7 +511,15 @@ __all__ = [
     "cantera_equilibrium_composition",
     "cantera_reaction_properties",
     "cas_for",
+    "chemicals_dippr9h_conductivity",
+    "chemicals_wilke_viscosity",
+    "chemicals_winterfeld_scriven_davis",
     "clapeyron_gamma",
+    "coolprop_fluid",
+    "coolprop_gas_state",
+    "coolprop_saturation",
+    "coolprop_supports",
+    "coolprop_triple_temperature",
     "modified_raoult_bubble_pressure",
     "thermo_nrtl_gamma",
     "thermo_unifac_gamma",
