@@ -1,0 +1,43 @@
+name: Oracles
+
+# Differential testing against external reference codes (CoolProp, thermo,
+# chemicals, Cantera). The reference packages are pinned in uv.lock and nothing
+# touches the network at test time, so the suite is deterministic and fast
+# enough to run on every pull request alongside the unit suite. The weekly
+# schedule is a canary for environment drift on quiet periods. Clapeyron.jl
+# checks are skipped here (they need a Julia install); run them locally with
+# `just oracles` when Julia is present.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracles-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  oracles:
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync workspace (with oracle reference packages)
+        run: uv sync --locked --all-packages --group oracles
+
+      - name: Differential tests vs reference codes
+        run: uv run --no-sync pytest -m oracle

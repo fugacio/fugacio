@@ -50,8 +50,10 @@ def test_ideal_gas_cp_is_physical(name: str) -> None:
     cp = c.cp_ig
     assert cp is not None
     value = R * (cp.a + cp.b * 298.15 + cp.c * 298.15**2 + cp.d / 298.15**2 + cp.e * 298.15**3)
-    # Cp must exceed the monatomic ideal-gas floor (5/2 R) and stay sane.
-    assert 2.5 * R <= value < 400.0
+    # Cp must not dip below the monatomic ideal-gas floor (5/2 R; the fitted
+    # polynomials for the noble gases sit exactly on it, so allow float wiggle)
+    # and must stay sane -- the database tops out near n-eicosane's ~466 J/mol/K.
+    assert 2.5 * R * (1.0 - 1e-6) <= value < 600.0
 
 
 def test_all_components_have_positive_critical_constants() -> None:

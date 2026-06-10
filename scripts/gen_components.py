@@ -8,13 +8,22 @@ fits the database's ideal-gas heat-capacity polynomial to the ``chemicals``
 Poling correlation. It then injects the formatted entries into ``components.py``
 just before the close of the ``_COMPONENTS`` tuple.
 
-Run once with ``uv run python scripts/gen_components.py`` (requires the optional
-``chemicals`` package). The emitted values are plain reference data baked into
-the source tree; the dependency is not needed at runtime.
+The first wave (``SECTIONS``) was authored as explicit ``(name, formula, CAS)``
+triplets; the second wave (``SECTIONS2``) lists only canonical names (plus an
+optional lookup query when the canonical name is not what ``chemicals`` indexes),
+and resolves CAS numbers, formulas, and molar masses through
+``chemicals.search_chemical`` so nothing is transcribed by hand. Each wave is
+guarded by its own sentinel comment, so re-running the script after adding a
+wave only injects the missing entries.
+
+Run with ``uv run --group oracles python scripts/gen_components.py`` (requires
+the optional ``chemicals`` package). The emitted values are plain reference data
+baked into the source tree; the dependency is not needed at runtime.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 
 import chemicals as ch
@@ -28,6 +37,7 @@ R = 8.314462618
 
 COMPONENTS_PY = "packages/fugacio-thermo/src/fugacio/thermo/components.py"
 SENTINEL = "# --- Extended set (generated from the open `chemicals` dataset) ---"
+SENTINEL2 = "# --- Extended set 2 (generated from the open `chemicals` dataset) ---"
 
 # (canonical name, formula, CAS), grouped into the section headers we emit.
 SECTIONS: list[tuple[str, list[tuple[str, str, str]]]] = [
@@ -201,6 +211,445 @@ SECTIONS: list[tuple[str, list[tuple[str, str, str]]]] = [
 ]
 
 
+# Wave 2: canonical name, or (canonical name, chemicals lookup query). Organized
+# by family; entries that cannot be resolved (or lack Tc/Pc/omega) are skipped
+# with a message, so this list errs on the side of inclusion.
+Entry = str | tuple[str, str]
+
+SECTIONS2: list[tuple[str, list[Entry]]] = [
+    (
+        "Long n-alkanes & waxes",
+        [
+            "n-tridecane",
+            "n-tetradecane",
+            "n-pentadecane",
+            "n-hexadecane",
+            "n-heptadecane",
+            "n-octadecane",
+            "n-nonadecane",
+            "n-eicosane",
+            "n-docosane",
+            "n-tetracosane",
+            "n-octacosane",
+            "n-triacontane",
+            "squalane",
+        ],
+    ),
+    (
+        "Branched alkanes",
+        [
+            "3-methylpentane",
+            "2,2-dimethylbutane",
+            "2,3-dimethylbutane",
+            "2-methylhexane",
+            "3-methylhexane",
+            "2,3-dimethylpentane",
+            "2,4-dimethylpentane",
+            "2-methylheptane",
+            "2,5-dimethylhexane",
+            "2,3,4-trimethylpentane",
+        ],
+    ),
+    (
+        "Cycloalkanes",
+        [
+            "cyclopropane",
+            "cyclobutane",
+            "cycloheptane",
+            "cyclooctane",
+            "ethylcyclopentane",
+            "ethylcyclohexane",
+            ("cis-decalin", "cis-decahydronaphthalene"),
+            ("trans-decalin", "trans-decahydronaphthalene"),
+        ],
+    ),
+    (
+        "Alkenes, dienes & alkynes",
+        [
+            "1-heptene",
+            "1-octene",
+            "1-decene",
+            "1-dodecene",
+            "2-methyl-2-butene",
+            "cyclopentene",
+            "cyclohexene",
+            "propyne",
+            "1-butyne",
+            ("alpha-methylstyrene", "alpha-methyl styrene"),
+        ],
+    ),
+    (
+        "Aromatics & polycyclics",
+        [
+            "1,2,3-trimethylbenzene",
+            "1,2,4-trimethylbenzene",
+            ("mesitylene", "1,3,5-trimethylbenzene"),
+            ("durene", "1,2,4,5-tetramethylbenzene"),
+            "n-propylbenzene",
+            "n-butylbenzene",
+            "sec-butylbenzene",
+            "tert-butylbenzene",
+            ("p-cymene", "4-isopropyltoluene"),
+            "indane",
+            "indene",
+            ("tetralin", "1,2,3,4-tetrahydronaphthalene"),
+            "1-methylnaphthalene",
+            "2-methylnaphthalene",
+            "biphenyl",
+            "diphenylmethane",
+            "anthracene",
+            "phenanthrene",
+            "fluorene",
+            "acenaphthene",
+            "pyrene",
+        ],
+    ),
+    (
+        "Phenols & cresols",
+        [
+            "o-cresol",
+            "m-cresol",
+            "p-cresol",
+            ("2,6-xylenol", "2,6-dimethylphenol"),
+            "catechol",
+            "resorcinol",
+            "hydroquinone",
+        ],
+    ),
+    (
+        "Alcohols",
+        [
+            "2-pentanol",
+            "3-pentanol",
+            "2-methyl-1-butanol",
+            ("isoamyl alcohol", "3-methyl-1-butanol"),
+            "1-heptanol",
+            "1-octanol",
+            "2-octanol",
+            "2-ethyl-1-hexanol",
+            "1-nonanol",
+            "1-decanol",
+            "1-dodecanol",
+            "1-tetradecanol",
+            "1-hexadecanol",
+            "1-octadecanol",
+            "benzyl alcohol",
+            "allyl alcohol",
+            "furfuryl alcohol",
+            "cyclopentanol",
+        ],
+    ),
+    (
+        "Glycols, diols & glycol ethers",
+        [
+            "diethylene glycol",
+            "triethylene glycol",
+            "tetraethylene glycol",
+            "dipropylene glycol",
+            "1,3-propanediol",
+            "1,4-butanediol",
+            "1,3-butanediol",
+            "neopentyl glycol",
+            "1,6-hexanediol",
+            "2-methoxyethanol",
+            "2-ethoxyethanol",
+            "2-butoxyethanol",
+            ("1-methoxy-2-propanol", "propylene glycol methyl ether"),
+        ],
+    ),
+    (
+        "Ethers & acetals",
+        [
+            ("tame", "tert-amyl methyl ether"),
+            ("etbe", "ethyl tert-butyl ether"),
+            "diisopropyl ether",
+            "di-n-butyl ether",
+            "anisole",
+            "phenetole",
+            "diphenyl ether",
+            ("methylal", "dimethoxymethane"),
+            "2-methyltetrahydrofuran",
+            "1,3-dioxolane",
+            ("monoglyme", "1,2-dimethoxyethane"),
+            ("diglyme", "diethylene glycol dimethyl ether"),
+            "tetrahydropyran",
+            "2,5-dimethylfuran",
+        ],
+    ),
+    (
+        "Aldehydes",
+        [
+            "propionaldehyde",
+            ("n-butyraldehyde", "butyraldehyde"),
+            "isobutyraldehyde",
+            ("valeraldehyde", "pentanal"),
+            "hexanal",
+            "2-ethylhexanal",
+            "benzaldehyde",
+            "acrolein",
+            "crotonaldehyde",
+        ],
+    ),
+    (
+        "Ketones & lactones",
+        [
+            "2-pentanone",
+            "3-pentanone",
+            ("methyl isopropyl ketone", "3-methyl-2-butanone"),
+            ("pinacolone", "3,3-dimethyl-2-butanone"),
+            "2-hexanone",
+            "2-heptanone",
+            "diisobutyl ketone",
+            "acetophenone",
+            "cyclopentanone",
+            "isophorone",
+            "mesityl oxide",
+            "methyl vinyl ketone",
+            "diacetone alcohol",
+            "acetylacetone",
+            "gamma-butyrolactone",
+            "gamma-valerolactone",
+        ],
+    ),
+    (
+        "Carboxylic acids & anhydrides",
+        [
+            ("n-butyric acid", "butyric acid"),
+            "isobutyric acid",
+            ("valeric acid", "pentanoic acid"),
+            ("caproic acid", "hexanoic acid"),
+            ("caprylic acid", "octanoic acid"),
+            ("capric acid", "decanoic acid"),
+            "lauric acid",
+            "myristic acid",
+            "palmitic acid",
+            "stearic acid",
+            "oleic acid",
+            "benzoic acid",
+            "methacrylic acid",
+            "acetic anhydride",
+            "maleic anhydride",
+            "phthalic anhydride",
+        ],
+    ),
+    (
+        "Esters & carbonates",
+        [
+            "n-propyl acetate",
+            "isopropyl acetate",
+            "isobutyl acetate",
+            "n-amyl acetate",
+            "isoamyl acetate",
+            "methyl propionate",
+            "ethyl propionate",
+            "methyl butyrate",
+            "ethyl butyrate",
+            "ethyl formate",
+            "methyl methacrylate",
+            "methyl acrylate",
+            "ethyl acrylate",
+            "n-butyl acrylate",
+            "2-ethylhexyl acrylate",
+            "methyl benzoate",
+            "dimethyl phthalate",
+            "diethyl phthalate",
+            "dibutyl phthalate",
+            ("dioctyl phthalate", "bis(2-ethylhexyl) phthalate"),
+            "dimethyl carbonate",
+            "diethyl carbonate",
+            "ethylene carbonate",
+            "propylene carbonate",
+            "methyl lactate",
+            "ethyl lactate",
+            ("methyl laurate", "methyl dodecanoate"),
+            ("methyl myristate", "methyl tetradecanoate"),
+            ("methyl palmitate", "methyl hexadecanoate"),
+            ("methyl stearate", "methyl octadecanoate"),
+            ("methyl oleate", "methyl cis-9-octadecenoate"),
+        ],
+    ),
+    (
+        "Amines & alkanolamines",
+        [
+            "ethylamine",
+            "diethylamine",
+            "n-propylamine",
+            "isopropylamine",
+            "n-butylamine",
+            "tert-butylamine",
+            "di-n-propylamine",
+            "di-n-butylamine",
+            "cyclohexylamine",
+            "ethylenediamine",
+            "diethylenetriamine",
+            "hexamethylenediamine",
+            "morpholine",
+            "piperidine",
+            "pyrrolidine",
+            "piperazine",
+            ("mdea", "methyldiethanolamine"),
+            "triethanolamine",
+            ("dipa", "diisopropanolamine"),
+            ("amp", "2-amino-2-methyl-1-propanol"),
+            ("diglycolamine", "2-(2-aminoethoxy)ethanol"),
+            "n,n-dimethylaniline",
+            "o-toluidine",
+            "pyrrole",
+            "quinoline",
+            ("2-picoline", "2-methylpyridine"),
+            ("3-picoline", "3-methylpyridine"),
+            ("4-picoline", "4-methylpyridine"),
+        ],
+    ),
+    (
+        "Nitriles, nitro & amides",
+        [
+            "propionitrile",
+            "butyronitrile",
+            "benzonitrile",
+            "acrylonitrile",
+            "adiponitrile",
+            "nitroethane",
+            "1-nitropropane",
+            "2-nitropropane",
+            "nitrobenzene",
+            "formamide",
+            "n-methylformamide",
+            ("dimethylacetamide", "n,n-dimethylacetamide"),
+            "caprolactam",
+            "2-pyrrolidone",
+        ],
+    ),
+    (
+        "Halogenated organics",
+        [
+            "bromomethane",
+            "iodomethane",
+            "chloroethane",
+            "bromoethane",
+            "1,1-dichloroethane",
+            "1,1,1-trichloroethane",
+            "1,1,2-trichloroethane",
+            "tetrachloroethylene",
+            ("vinylidene chloride", "1,1-dichloroethylene"),
+            "cis-1,2-dichloroethylene",
+            "trans-1,2-dichloroethylene",
+            "allyl chloride",
+            "epichlorohydrin",
+            "benzyl chloride",
+            "o-dichlorobenzene",
+            "p-dichlorobenzene",
+            "1,2,4-trichlorobenzene",
+            "bromobenzene",
+            "fluorobenzene",
+            "hexafluorobenzene",
+            "1-chlorobutane",
+            ("chloroprene", "2-chloro-1,3-butadiene"),
+            "phosgene",
+            "1,2-dibromoethane",
+            "perfluorohexane",
+        ],
+    ),
+    (
+        "Refrigerants & fluorocarbons",
+        [
+            ("r11", "trichlorofluoromethane"),
+            ("r13", "chlorotrifluoromethane"),
+            ("r14", "tetrafluoromethane"),
+            ("r21", "dichlorofluoromethane"),
+            ("r23", "trifluoromethane"),
+            ("r41", "fluoromethane"),
+            ("r113", "1,1,2-trichloro-1,2,2-trifluoroethane"),
+            ("r114", "1,2-dichloro-1,1,2,2-tetrafluoroethane"),
+            ("r115", "chloropentafluoroethane"),
+            ("r116", "hexafluoroethane"),
+            ("r123", "2,2-dichloro-1,1,1-trifluoroethane"),
+            ("r124", "1-chloro-1,2,2,2-tetrafluoroethane"),
+            ("r125", "pentafluoroethane"),
+            ("r141b", "1,1-dichloro-1-fluoroethane"),
+            ("r142b", "1-chloro-1,1-difluoroethane"),
+            ("r143a", "1,1,1-trifluoroethane"),
+            ("r218", "octafluoropropane"),
+            ("r227ea", "1,1,1,2,3,3,3-heptafluoropropane"),
+            ("r236fa", "1,1,1,3,3,3-hexafluoropropane"),
+            ("r245fa", "1,1,1,3,3-pentafluoropropane"),
+            ("r365mfc", "1,1,1,3,3-pentafluorobutane"),
+            ("r1234yf", "2,3,3,3-tetrafluoropropene"),
+            ("r1234ze", "trans-1,3,3,3-tetrafluoropropene"),
+            ("rc318", "octafluorocyclobutane"),
+            "sulfur hexafluoride",
+            "nitrogen trifluoride",
+        ],
+    ),
+    (
+        "Siloxanes & silanes",
+        [
+            ("mm", "hexamethyldisiloxane"),
+            ("mdm", "octamethyltrisiloxane"),
+            ("md2m", "decamethyltetrasiloxane"),
+            ("md3m", "dodecamethylpentasiloxane"),
+            ("d3", "hexamethylcyclotrisiloxane"),
+            ("d4", "octamethylcyclotetrasiloxane"),
+            ("d5", "decamethylcyclopentasiloxane"),
+            ("d6", "dodecamethylcyclohexasiloxane"),
+            "tetramethylsilane",
+        ],
+    ),
+    (
+        "Sulfur compounds",
+        [
+            ("methyl mercaptan", "methanethiol"),
+            ("ethyl mercaptan", "ethanethiol"),
+            "dimethyl disulfide",
+            "diethyl sulfide",
+            "thiophene",
+            "tetrahydrothiophene",
+            "sulfolane",
+            "carbonyl sulfide",
+            "sulfur trioxide",
+        ],
+    ),
+    (
+        "Inorganic & light gases",
+        [
+            "krypton",
+            "xenon",
+            "deuterium",
+            "ozone",
+            "hydrogen bromide",
+            "hydrogen fluoride",
+            "hydrogen cyanide",
+            "phosphine",
+            "hydrazine",
+            "hydrogen peroxide",
+            "bromine",
+        ],
+    ),
+    (
+        "Terpenes & naturals",
+        [
+            "alpha-pinene",
+            "beta-pinene",
+            ("limonene", "d-limonene"),
+            "menthol",
+            ("eucalyptol", "1,8-cineole"),
+            "alpha-terpineol",
+            "linalool",
+            "camphor",
+        ],
+    ),
+    (
+        "Other industrial solvents & monomers",
+        [
+            ("ethyl methyl carbonate", "methyl ethyl carbonate"),
+            "trioxane",
+            "vinyl toluene",
+            "1-octanethiol",
+        ],
+    ),
+]
+
+
 def _try(fn: Callable[..., float | None], *a: str) -> float | None:
     try:
         return fn(*a)
@@ -240,25 +689,46 @@ def fit_cp(cas: str) -> tuple[float, float, float, float, float, float] | None:
     return a, b, c, e, lo, hi
 
 
-def antoine(cas: str) -> tuple[float, float, float, float, float] | None:
-    """Transcribe Antoine constants (Pa -> bar via ``A -= 5``)."""
+def antoine(cas: str, tb: float | None) -> tuple[float, float, float, float, float] | None:
+    """Transcribe Antoine constants (Pa -> bar via ``A -= 5``).
+
+    Rows that fail to reproduce 1 atm at the normal boiling point within 3% are
+    rejected (some source rows cover only a low-temperature window); the
+    property-data backfill then fits a consistent row from the Wagner/Perry
+    correlations instead.
+    """
     if cas not in vp.Psat_data_AntoinePoling.index:
         return None
     row = vp.Psat_data_AntoinePoling.loc[cas]
     a = float(row["A"]) - 5.0
-    return a, float(row["B"]), float(row["C"]), float(row["Tmin"]), float(row["Tmax"])
+    b, c = float(row["B"]), float(row["C"])
+    if tb is not None:
+        p = 1.0e5 * 10.0 ** (a - b / (tb + c))
+        if not math.isfinite(p) or abs(p - 101325.0) / 101325.0 > 0.03:
+            return None
+    return a, b, c, float(row["Tmin"]), float(row["Tmax"])
 
 
 def fnum(x: float, nd: int) -> str:
     return f"{round(float(x), nd)!r}"
 
 
+#: Critical temperatures overriding corrupt upstream rows (e.g. phenanthrene's
+#: ``chemicals`` Tc of 0.869 K, a clear kK transcription error; value from NIST).
+MANUAL_TC: dict[str, float] = {
+    "phenanthrene": 869.25,
+}
+
+
 def emit(name: str, formula: str, cas: str) -> str | None:
-    tc = _try(ch.Tc, cas)
+    tc = MANUAL_TC.get(name, _try(ch.Tc, cas))
     pc = _try(ch.Pc, cas)
     omega = _try(ch.omega, cas)
     if tc is None or pc is None or omega is None:
         print(f"  SKIP {name}: missing Tc/Pc/omega")
+        return None
+    if not 2.0 < tc < 2000.0:
+        print(f"  SKIP {name}: implausible Tc={tc} (corrupt source row?)")
         return None
     mw = _try(ch.MW, cas)
     tb = _try(ch.Tb, cas)
@@ -285,7 +755,7 @@ def emit(name: str, formula: str, cas: str) -> str | None:
         lines.append(f"        vc_cm3={fnum(vc * 1e6, 1)},")
     if zc is not None:
         lines.append(f"        zc={fnum(zc, 3)},")
-    ant = antoine(cas)
+    ant = antoine(cas, tb)
     if ant is not None:
         a, b, c, tmn, tmx = ant
         lines.append(
@@ -305,39 +775,80 @@ def emit(name: str, formula: str, cas: str) -> str | None:
     return "\n".join(lines)
 
 
+def resolve(query: str) -> tuple[str, str] | None:
+    """Resolve a lookup query to ``(cas, formula)`` via ``chemicals``, or ``None``."""
+    try:
+        meta = ch.search_chemical(query)
+    except Exception:
+        return None
+    cas = getattr(meta, "CASs", None)
+    formula = getattr(meta, "formula", None)
+    if not cas or not formula:
+        return None
+    return str(cas), str(formula)
+
+
+def _inject(src: str, generated: str) -> str:
+    anchor = "    ),\n)\n\n\ndef _with_supplements"
+    if anchor not in src:
+        raise SystemExit("anchor not found; cannot inject")
+    return src.replace(anchor, "    ),\n" + generated + ")\n\n\ndef _with_supplements", 1)
+
+
 def main() -> None:
     with open(COMPONENTS_PY) as f:
         src = f.read()
-    if SENTINEL in src:
-        print("Sentinel already present; aborting to avoid double insertion.")
-        return
 
     import fugacio.thermo.components as comp
 
-    existing = set(comp.DATABASE)
+    existing_names = set(comp.DATABASE)
+    existing_cas = {c.cas for c in comp.DATABASE.values() if c.cas}
 
-    blocks: list[str] = [f"    {SENTINEL}"]
+    waves: list[tuple[str, list[tuple[str, list[tuple[str, str, str]]]]]] = []
+    if SENTINEL not in src:
+        waves.append((SENTINEL, [(h, list(items)) for h, items in SECTIONS]))
+    if SENTINEL2 not in src:
+        resolved_sections: list[tuple[str, list[tuple[str, str, str]]]] = []
+        for header, entries in SECTIONS2:
+            triples: list[tuple[str, str, str]] = []
+            for entry in entries:
+                name, query = entry if isinstance(entry, tuple) else (entry, entry)
+                meta = resolve(query)
+                if meta is None:
+                    print(f"  SKIP {name}: cannot resolve {query!r}")
+                    continue
+                cas, formula = meta
+                triples.append((name, formula, cas))
+            resolved_sections.append((header, triples))
+        waves.append((SENTINEL2, resolved_sections))
+    if not waves:
+        print("All sentinels already present; nothing to do.")
+        return
+
     n_added = 0
-    for header, items in SECTIONS:
-        section_blocks: list[str] = []
-        for name, formula, cas in items:
-            if name in existing:
-                print(f"  skip {name}: already in database")
-                continue
-            block = emit(name, formula, cas)
-            if block is not None:
-                section_blocks.append(block)
-                n_added += 1
-        if section_blocks:
-            dashes = "-" * max(3, 72 - len(header))
-            blocks.append(f"    # --- {header} {dashes}")
-            blocks.extend(section_blocks)
+    for sentinel, sections in waves:
+        blocks: list[str] = [f"    {sentinel}"]
+        for header, items in sections:
+            section_blocks: list[str] = []
+            for name, formula, cas in items:
+                if name in existing_names:
+                    print(f"  skip {name}: already in database")
+                    continue
+                if cas in existing_cas:
+                    print(f"  skip {name}: CAS {cas} already in database")
+                    continue
+                block = emit(name, formula, cas)
+                if block is not None:
+                    section_blocks.append(block)
+                    existing_names.add(name)
+                    existing_cas.add(cas)
+                    n_added += 1
+            if section_blocks:
+                dashes = "-" * max(3, 72 - len(header))
+                blocks.append(f"    # --- {header} {dashes}")
+                blocks.extend(section_blocks)
+        src = _inject(src, "\n".join(blocks) + "\n")
 
-    generated = "\n".join(blocks) + "\n"
-    anchor = "    ),\n)\n\n#: Canonical-name"
-    if anchor not in src:
-        raise SystemExit("anchor not found; cannot inject")
-    src = src.replace(anchor, "    ),\n" + generated + ")\n\n#: Canonical-name", 1)
     with open(COMPONENTS_PY, "w") as f:
         f.write(src)
     print(f"Injected {n_added} components into {COMPONENTS_PY}")

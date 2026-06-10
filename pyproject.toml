@@ -19,6 +19,12 @@ package = false
 # in uv.lock as `exclude-newer-span` and only moves forward on `uv lock --upgrade`,
 # keeping `uv sync --locked` reproducible in CI.
 exclude-newer = "7 days"
+# Recent jaxlib releases ship no Intel-macOS wheels, so make the resolver keep a
+# compatible (older) jax/jaxlib fork for x86_64 Macs instead of producing a lock
+# that cannot be synced there.
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -41,6 +47,9 @@ docs = [
 oracles = [
     "thermo>=0.2",
     "chemicals>=1.1",
+    "coolprop>=6.6",
+    # No Intel-macOS wheels for current Cantera, so restrict it to Linux (CI).
+    "cantera>=3.0; sys_platform == 'linux'",
 ]
 
 [tool.ruff]
