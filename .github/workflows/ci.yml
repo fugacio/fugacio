@@ -36,6 +36,16 @@ jobs:
       - name: Sync workspace
         run: uv sync --locked --all-packages
 
+      # The reference Helmholtz EOS tests jit-compile solver loops whose XLA
+      # compilation takes minutes cold; the persistent JAX cache (conftest.py)
+      # makes warm runs cheap.
+      - name: Restore JAX compilation cache
+        uses: actions/cache@v4
+        with:
+          path: .jax_cache
+          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          restore-keys: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-
+
       - name: Lint (ruff)
         run: |
           uv run --no-sync ruff check .

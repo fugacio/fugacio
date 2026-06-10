@@ -22,6 +22,7 @@ import jax
 import jax.numpy as jnp
 
 from fugacio.sim import (
+    STEAM_LEVELS,
     Stream,
     annualized_capital,
     azeotrope_pressure,
@@ -31,6 +32,7 @@ from fugacio.sim import (
     column_diameter,
     column_height,
     compressor,
+    cooling_water,
     cstr,
     cylinder_volume,
     equilibrium_reactor,
@@ -48,6 +50,8 @@ from fugacio.sim import (
     residue_curve_map,
     shortcut_column,
     solve_column,
+    steam_heating,
+    steam_turbine,
     stoichiometric_reactor,
     total_annual_cost,
     turbine,
@@ -85,6 +89,7 @@ from fugacio.thermo import (
     reaction_properties,
     vapor_density,
 )
+from fugacio.thermo import helmholtz as _helmholtz
 from fugacio.thermo.reaction_equilibrium import equilibrium as _reaction_equilibrium_solve
 
 JsonDict = dict[str, Any]
@@ -1056,6 +1061,174 @@ def _size_column(
     }
 
 
+def _finite(value: float) -> float | None:
+    """JSON-safe float: ``nan`` (e.g. quality outside the dome) becomes ``None``."""
+    number = float(value)
+    return None if math.isnan(number) else number
+
+
+def _fluid_state_dict(fluid: object, state: object) -> JsonDict:
+    """Serialize a :class:`fugacio.thermo.FluidState` on a mass basis (steam-table units)."""
+    assert isinstance(fluid, _helmholtz.HelmholtzFluid)
+    assert isinstance(state, _helmholtz.FluidState)
+    m = fluid.molar_mass
+    return {
+        "temperature_k": float(state.t),
+        "pressure_pa": float(state.p),
+        "density_kg_m3": float(state.rho) * m,
+        "compressibility_factor": float(state.z),
+        "enthalpy_kj_kg": float(state.h) / m / 1e3,
+        "entropy_kj_kg_k": float(state.s) / m / 1e3,
+        "internal_energy_kj_kg": float(state.u) / m / 1e3,
+        "cp_kj_kg_k": _finite(float(state.cp) / m / 1e3),
+        "cv_kj_kg_k": _finite(float(state.cv) / m / 1e3),
+        "speed_of_sound_m_s": _finite(float(state.w)),
+        "quality": _finite(float(state.q)),
+        "two_phase": bool(state.two_phase),
+    }
+
+
+def _steam_state(
+    pressure: float,
+    temperature: float | None = None,
+    quality: float | None = None,
+    enthalpy_kj_kg: float | None = None,
+    entropy_kj_kg_k: float | None = None,
+) -> JsonDict:
+    """IAPWS-95 steam-table lookup at a pressure plus one other specification."""
+    water = _helmholtz.reference_fluid("water")
+    given = [v is not None for v in (temperature, quality, enthalpy_kj_kg, entropy_kj_kg_k)]
+    if sum(given) != 1:
+        raise ValueError(
+            "specify exactly one of temperature, quality, enthalpy_kj_kg, entropy_kj_kg_k"
+        )
+    m = water.molar_mass
+    if temperature is not None:
+        state = _helmholtz.state_tp(water, float(temperature), float(pressure))
+    elif quality is not None:
+        state = _helmholtz.state_pq(water, float(pressure), float(quality))
+    elif enthalpy_kj_kg is not None:
+        state = _helmholtz.state_ph(water, float(pressure), float(enthalpy_kj_kg) * 1e3 * m)
+    else:
+        assert entropy_kj_kg_k is not None
+        state = _helmholtz.state_ps(water, float(pressure), float(entropy_kj_kg_k) * 1e3 * m)
+    result = _fluid_state_dict(water, state)
+    if not bool(state.two_phase):
+        result["viscosity_pa_s"] = float(_helmholtz.water_viscosity(state.t, state.rho))
+        result["thermal_conductivity_w_m_k"] = float(
+            _helmholtz.water_thermal_conductivity(state.t, state.rho)
+        )
+    return result
+
+
+def _reference_fluid_state(fluid: str, temperature: float, pressure: float) -> JsonDict:
+    """Reference-EOS single-phase state for any vendored fluid."""
+    ref = _helmholtz.reference_fluid(fluid)
+    state = _helmholtz.state_tp(ref, float(temperature), float(pressure))
+    result = _fluid_state_dict(ref, state)
+    result["fluid"] = ref.name
+    result["equation_of_state"] = ref.bibtex_eos
+    if ref.name == "water":
+        result["viscosity_pa_s"] = float(_helmholtz.water_viscosity(state.t, state.rho))
+        result["thermal_conductivity_w_m_k"] = float(
+            _helmholtz.water_thermal_conductivity(state.t, state.rho)
+        )
+    return result
+
+
+def _reference_saturation(
+    fluid: str, temperature: float | None = None, pressure: float | None = None
+) -> JsonDict:
+    """Reference-EOS saturation state at a temperature or a pressure."""
+    ref = _helmholtz.reference_fluid(fluid)
+    if (temperature is None) == (pressure is None):
+        raise ValueError("specify exactly one of temperature or pressure")
+    if temperature is not None:
+        sat = _helmholtz.saturation_state(ref, t=float(temperature))
+    else:
+        assert pressure is not None
+        sat = _helmholtz.saturation_state(ref, p=float(pressure))
+    m = ref.molar_mass
+    return {
+        "fluid": ref.name,
+        "temperature_k": float(sat.t),
+        "pressure_pa": float(sat.p),
+        "liquid_density_kg_m3": float(sat.rho_liquid) * m,
+        "vapor_density_kg_m3": float(sat.rho_vapor) * m,
+        "heat_of_vaporization_kj_kg": float(sat.h_vaporization) / m / 1e3,
+        "heat_of_vaporization_j_mol": float(sat.h_vaporization),
+        "surface_tension_n_m": float(_helmholtz.surface_tension(ref, sat.t)),
+        "critical_temperature_k": ref.t_critical,
+        "critical_pressure_pa": ref.p_critical,
+    }
+
+
+_STEAM_UTILITIES = {"lp_steam": "lp", "mp_steam": "mp", "hp_steam": "hp"}
+
+
+def _steam_utility_requirements(
+    duty: float, utility: str = "lp_steam", hours_per_year: float = 8000.0
+) -> JsonDict:
+    """Physical utility sizing (IAPWS-95) plus the priced annual cost."""
+    if utility not in (*_STEAM_UTILITIES, "cooling_water"):
+        raise ValueError(
+            f"unknown utility {utility!r}; use one of "
+            f"{sorted([*_STEAM_UTILITIES, 'cooling_water'])}"
+        )
+    result: JsonDict = {
+        "utility": utility,
+        "duty_w": abs(float(duty)),
+        "annual_cost_usd": float(utility_cost(duty, utility, hours_per_year=hours_per_year)),
+    }
+    if utility in _STEAM_UTILITIES:
+        level = STEAM_LEVELS[_STEAM_UTILITIES[utility]]
+        steam = steam_heating(duty, pressure=level)
+        result |= {
+            "pressure_pa": float(steam.p),
+            "steam_mass_flow_kg_s": float(steam.mass_flow),
+            "steam_temperature_k": float(steam.t_steam),
+            "condensate_temperature_k": float(steam.t_condensate),
+            "latent_heat_kj_kg": float(steam.dh_specific) / 1e3,
+        }
+    else:
+        water = cooling_water(duty)
+        result |= {
+            "water_mass_flow_kg_s": float(water.mass_flow),
+            "supply_temperature_k": float(water.t_supply),
+            "return_temperature_k": float(water.t_return),
+        }
+    return result
+
+
+def _steam_turbine_tool(
+    mass_flow_kg_s: float,
+    inlet_pressure_pa: float,
+    inlet_temperature_k: float,
+    outlet_pressure_pa: float,
+    isentropic_efficiency: float = 0.75,
+) -> JsonDict:
+    """Steam-turbine expansion through IAPWS-95 with an isentropic efficiency."""
+    water = _helmholtz.reference_fluid("water")
+    m = water.molar_mass
+    result = steam_turbine(
+        float(mass_flow_kg_s),
+        p_in=float(inlet_pressure_pa),
+        t_in=float(inlet_temperature_k),
+        p_out=float(outlet_pressure_pa),
+        isentropic_efficiency=float(isentropic_efficiency),
+    )
+    return {
+        "power_w": float(result.power),
+        "mass_flow_kg_s": float(result.mass_flow),
+        "outlet_temperature_k": float(result.t_out),
+        "outlet_quality": _finite(float(result.q_out)),
+        "outlet_two_phase": bool(result.two_phase),
+        "inlet_enthalpy_kj_kg": float(result.h_in) / m / 1e3,
+        "outlet_enthalpy_kj_kg": float(result.h_out) / m / 1e3,
+        "isentropic_outlet_enthalpy_kj_kg": float(result.h_out_isentropic) / m / 1e3,
+    }
+
+
 def default_registry() -> dict[str, ToolSpec]:
     """Return the built-in tool registry keyed by tool name."""
     specs = [
@@ -1772,6 +1945,115 @@ def default_registry() -> dict[str, ToolSpec]:
                 "required": ["vapor_molar_flow", "temperature", "pressure", "n_stages"],
             },
             run=_size_column,
+        ),
+        ToolSpec(
+            name="steam_state",
+            description=(
+                "IAPWS-95 steam tables: resolve a water/steam state from pressure "
+                "plus exactly one of temperature (K), quality (0-1), enthalpy "
+                "(kJ/kg) or entropy (kJ/kg/K). Returns density, h, s, cp, speed of "
+                "sound, quality and (single-phase) IAPWS viscosity/conductivity. "
+                "Reference-grade accuracy, identical to REFPROP/CoolProp."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "pressure": {"type": "number", "description": "Pressure (Pa)"},
+                    "temperature": {"type": "number", "description": "Temperature (K)"},
+                    "quality": {"type": "number", "description": "Vapor quality (0-1)"},
+                    "enthalpy_kj_kg": {"type": "number"},
+                    "entropy_kj_kg_k": {"type": "number"},
+                },
+                "required": ["pressure"],
+            },
+            run=_steam_state,
+        ),
+        ToolSpec(
+            name="reference_fluid_state",
+            description=(
+                "Reference multiparameter-EOS (REFPROP-class) single-phase state for "
+                "a pure fluid at (T, P): density, Z, h, s, cp, cv, speed of sound. "
+                "Available fluids include water/steam, CO2, ammonia, light "
+                "hydrocarbons (methane..octane), H2, N2, O2, Ar, refrigerants "
+                "(R134a, R32, R1234yf). Use steam_state for two-phase water."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fluid": {"type": "string", "description": "Fluid name, e.g. 'co2'"},
+                    "temperature": {"type": "number", "description": "Temperature (K)"},
+                    "pressure": {"type": "number", "description": "Pressure (Pa)"},
+                },
+                "required": ["fluid", "temperature", "pressure"],
+            },
+            run=_reference_fluid_state,
+        ),
+        ToolSpec(
+            name="reference_saturation",
+            description=(
+                "Reference-EOS vapor-liquid saturation state of a pure fluid at a "
+                "temperature or a pressure (exactly one): psat/Tsat, phase "
+                "densities, latent heat, surface tension. Solved from the EOS by a "
+                "Maxwell construction, not an Antoine fit."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fluid": {"type": "string"},
+                    "temperature": {"type": "number", "description": "Temperature (K)"},
+                    "pressure": {"type": "number", "description": "Pressure (Pa)"},
+                },
+                "required": ["fluid"],
+            },
+            run=_reference_saturation,
+        ),
+        ToolSpec(
+            name="steam_utility_requirements",
+            description=(
+                "Size a heating/cooling utility for a duty on real IAPWS-95 water: "
+                "steam mass flow at the lp/mp/hp header (real latent heat at "
+                "pressure) or cooling-water circulation, plus the priced annual "
+                "cost. Accepts duties of either sign."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "duty": {"type": "number", "description": "Duty (W), any sign"},
+                    "utility": {
+                        "type": "string",
+                        "enum": ["lp_steam", "mp_steam", "hp_steam", "cooling_water"],
+                    },
+                    "hours_per_year": {"type": "number"},
+                },
+                "required": ["duty", "utility"],
+            },
+            run=_steam_utility_requirements,
+        ),
+        ToolSpec(
+            name="steam_turbine",
+            description=(
+                "Expand steam through a turbine (IAPWS-95): shaft power from an "
+                "isentropic-efficiency expansion, with wet-outlet quality from the "
+                "two-phase dome logic. The workhorse of Rankine-cycle and "
+                "letdown-train design."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "mass_flow_kg_s": {"type": "number"},
+                    "inlet_pressure_pa": {"type": "number"},
+                    "inlet_temperature_k": {"type": "number"},
+                    "outlet_pressure_pa": {"type": "number"},
+                    "isentropic_efficiency": {"type": "number"},
+                },
+                "required": [
+                    "mass_flow_kg_s",
+                    "inlet_pressure_pa",
+                    "inlet_temperature_k",
+                    "outlet_pressure_pa",
+                ],
+            },
+            run=_steam_turbine_tool,
         ),
     ]
     return {spec.name: spec for spec in specs}

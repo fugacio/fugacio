@@ -15,6 +15,7 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .import_linter_cache/
+.jax_cache/
 .coverage
 coverage.xml
 htmlcov/

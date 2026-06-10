@@ -31,6 +31,10 @@ The layer provides:
   metrics (:func:`heat_exchanger_area`, :func:`bare_module_cost`,
   :func:`utility_cost`, :func:`total_annual_cost`, :func:`npv`) for money-valued
   design objectives;
+* physical steam/cooling-water utilities on IAPWS-95 steam tables
+  (:func:`steam_heating`, :func:`cooling_water`, :func:`steam_turbine`,
+  :func:`condensate_flash_fraction`) for utility balances with real latent
+  heats, differentiable end to end;
 * the original lightweight modified-Raoult helpers (:func:`bubble_pressure`,
   :func:`antoine_psat`).
 """
@@ -153,13 +157,28 @@ from fugacio.sim.units import (
     turbine,
     valve,
 )
+from fugacio.sim.utilities import (
+    STEAM_LEVELS,
+    CoolingWaterResult,
+    SteamHeatingResult,
+    SteamTurbineResult,
+    condensate_flash_fraction,
+    cooling_water,
+    saturated_steam_temperature,
+    steam_enthalpy,
+    steam_heating,
+    steam_quality_after_letdown,
+    steam_turbine,
+)
 from fugacio.sim.vle import antoine_psat, bubble_pressure
 
 __all__ = [
     "CEPCI_DEFAULT",
     "CEPCI_REF",
+    "STEAM_LEVELS",
     "AzeotropeResult",
     "ColumnResult",
+    "CoolingWaterResult",
     "DesignSpec",
     "EquipmentCost",
     "Flowsheet",
@@ -174,6 +193,8 @@ __all__ = [
     "ResidueCurve",
     "ShortcutResult",
     "SpecResult",
+    "SteamHeatingResult",
+    "SteamTurbineResult",
     "Stream",
     "TxyDiagram",
     "UnifacModel",
@@ -193,8 +214,10 @@ __all__ = [
     "column_height",
     "component_separator",
     "compressor",
+    "condensate_flash_fraction",
     "controller",
     "conversion",
+    "cooling_water",
     "cstr",
     "cylinder_volume",
     "decanter",
@@ -237,10 +260,15 @@ __all__ = [
     "relative_volatility",
     "residue_curve",
     "residue_curve_map",
+    "saturated_steam_temperature",
     "shortcut_column",
     "solve_column",
     "solve_design",
     "splitter",
+    "steam_enthalpy",
+    "steam_heating",
+    "steam_quality_after_letdown",
+    "steam_turbine",
     "stoichiometric_reactor",
     "surface_tension",
     "tear_solve",

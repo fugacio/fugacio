@@ -33,7 +33,7 @@ workspace:
 
 | Package | Import | Responsibility |
 | --- | --- | --- |
-| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
+| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
 | `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, and reactive separations (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
@@ -109,10 +109,32 @@ def tac(dt_cold):
 tac(40.0), jax.grad(tac)(40.0)   # $/yr and d(TAC)/d(approach)
 ```
 
-The `fugacio.copilot` agent exposes all of this — properties, unit ops,
-distillation, reactors, optimization, sizing, and costing — as a JSON tool
-registry, driven by a vendor-neutral provider layer (OpenAI / Anthropic / mock)
-through a multi-turn, tool-calling loop.
+Pure-fluid properties come at *reference grade* where it matters: water/steam is
+the full IAPWS-95 formulation (the same model behind REFPROP and CoolProp),
+implemented as one scalar Helmholtz energy whose every property — and every
+*solver*, density to Maxwell construction — is an exact `jax.grad` derivative
+(see [the reference-fluids guide](docs/reference-fluids.md)):
+
+```python
+import jax
+from fugacio.thermo import reference_fluid, saturation_state
+from fugacio.sim import steam_heating, steam_turbine
+
+steam = reference_fluid("water")                     # IAPWS-95
+sat = saturation_state(steam, p=10e5)                # 10 bar: 453.03 K, Δh_vap 2014.6 kJ/kg
+
+# d(Tsat)/dP through the solved Maxwell construction — the Clausius-Clapeyron
+# slope by autodiff, not finite differences:
+jax.grad(lambda p: saturation_state(steam, p=p).t)(10e5)
+
+steam_heating(2.5e6, pressure=11e5).mass_flow        # kg/s of MP steam for a reboiler
+steam_turbine(10.0, p_in=40e5, t_in=723.15, p_out=1e5).power  # Rankine shaft power
+```
+
+The `fugacio.copilot` agent exposes all of this — properties, steam tables,
+unit ops, distillation, reactors, optimization, sizing, and costing — as a JSON
+tool registry, driven by a vendor-neutral provider layer (OpenAI / Anthropic /
+mock) through a multi-turn, tool-calling loop.
 
 ## Development
 
@@ -133,7 +155,8 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 
 `just test` runs the fast, hermetic unit suite. The differential-testing oracles
 (graded against [CoolProp](https://github.com/CoolProp/CoolProp) and
-[`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties,
+[`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties
+and the reference Helmholtz EOS / IAPWS transport implementations,
 [`thermo`](https://github.com/CalebBell/thermo) /
 [Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) for activity
 coefficients, and [Cantera](https://github.com/Cantera/cantera) for reaction
