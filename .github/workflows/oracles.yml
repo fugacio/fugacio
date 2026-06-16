@@ -39,5 +39,13 @@ jobs:
       - name: Sync workspace (with oracle reference packages)
         run: uv sync --locked --all-packages --group oracles
 
+      # See ci.yml: reuses jit-compiled Helmholtz solver binaries across runs.
+      - name: Restore JAX compilation cache
+        uses: actions/cache@v4
+        with:
+          path: .jax_cache
+          key: jax-oracles-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: jax-oracles-${{ runner.os }}-
+
       - name: Differential tests vs reference codes
         run: uv run --no-sync pytest -m oracle

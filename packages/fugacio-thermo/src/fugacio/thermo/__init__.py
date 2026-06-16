@@ -16,6 +16,11 @@ The public surface is grouped as:
 * **group contribution** -- :func:`unifac_activity`, :func:`joback_estimate`;
 * **reference state** -- :func:`liquid_reference_fugacity`,
   :func:`poynting_factor`, :func:`henry_constant`;
+* **reference fluids** -- :mod:`fugacio.thermo.helmholtz`, multiparameter
+  Helmholtz EOS of the REFPROP/CoolProp class (IAPWS-95 water/steam,
+  Span-Wagner CO2, ...) with differentiable saturation lines, steam-table
+  state functions (:func:`state_tp`, :func:`state_ph`, ...), and the IAPWS
+  transport formulations for water;
 * **property correlations** -- DIPPR-form kernels and corresponding-states
   estimators for enthalpy of vaporization and liquid heat capacity
   (:func:`heat_of_vaporization`, :func:`liquid_heat_capacity`), liquid/vapour
@@ -168,6 +173,25 @@ from fugacio.thermo.groupcontrib import (
     joback_estimate,
     modified_unifac_activity,
     unifac_activity,
+)
+from fugacio.thermo.helmholtz import (
+    FluidState,
+    HelmholtzFluid,
+    SaturationState,
+    has_reference_fluid,
+    reference_fluid,
+    reference_fluid_names,
+    saturation_state,
+    state_ph,
+    state_pq,
+    state_ps,
+    state_tp,
+    state_tq,
+    water_thermal_conductivity,
+    water_viscosity,
+)
+from fugacio.thermo.helmholtz import (
+    surface_tension as reference_surface_tension,
 )
 from fugacio.thermo.ideal import (
     cp_ig,
@@ -339,7 +363,9 @@ __all__ = [
     "FittedBinary",
     "FlashResult",
     "FloryHuggins",
+    "FluidState",
     "GammaPhiModel",
+    "HelmholtzFluid",
     "HeterogeneousAzeotrope",
     "Hildebrand",
     "LLEResult",
@@ -352,6 +378,7 @@ __all__ = [
     "ReactionProperties",
     "RegularSolution",
     "ResidualProperties",
+    "SaturationState",
     "StabilityResult",
     "TangentPlaneResult",
     "ThermoMLData",
@@ -424,6 +451,7 @@ __all__ = [
     "gradient_descent",
     "grunberg_nissan_viscosity",
     "has_nrtl",
+    "has_reference_fluid",
     "has_uniquac",
     "heat_of_vaporization",
     "henry_constant",
@@ -487,6 +515,9 @@ __all__ = [
     "reaction_arrays",
     "reaction_properties",
     "read_thermoml",
+    "reference_fluid",
+    "reference_fluid_names",
+    "reference_surface_tension",
     "regular_solution_gamma",
     "regular_solution_ln_gamma",
     "residual_cp",
@@ -499,10 +530,16 @@ __all__ = [
     "sato_riedel_thermal_conductivity",
     "saturation_fugacity_coefficient",
     "saturation_pressures",
+    "saturation_state",
     "speed_of_sound_ideal",
     "stability_analysis",
     "stability_analysis_general",
     "stable_phase",
+    "state_ph",
+    "state_pq",
+    "state_ps",
+    "state_tp",
+    "state_tq",
     "stoichiometry",
     "surface_tensions",
     "tangent_plane_distance",
@@ -526,6 +563,8 @@ __all__ = [
     "vapor_density",
     "volume_fractions",
     "wassiljewa_mixture",
+    "water_thermal_conductivity",
+    "water_viscosity",
     "watson_hvap",
     "wilke_chang_diffusivity",
     "wilke_mixture_viscosity",

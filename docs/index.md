@@ -9,7 +9,10 @@ Fugacio is built as three layered packages (strict direction
 
 - **`fugacio.thermo`** — differentiable properties + phase equilibrium: a curated
   open component database, ideal-gas correlations, cubic equations of state
-  (vdW / RK / SRK / PR) with fugacity coefficients, real-fluid energy properties
+  (vdW / RK / SRK / PR) with fugacity coefficients,
+  [reference multiparameter Helmholtz EOS](reference-fluids.md) (IAPWS-95
+  water/steam, Span–Wagner CO₂, 26 fluids, with steam-table state functions and
+  IAPWS transport), real-fluid energy properties
   (residual/departure functions, enthalpy/entropy, isenthalpic & isentropic
   flashes), [liquid & transport properties](physical-properties.md) (density,
   viscosity, thermal conductivity, surface tension, diffusivity — pure and
@@ -27,11 +30,14 @@ Fugacio is built as three layered packages (strict direction
   distillation columns (shortcut FUG and a rigorous equilibrium-stage model),
   binary diagrams / azeotropes / residue-curve maps,
   [reactors](reactions.md) (equilibrium, stoichiometric, CSTR, PFR, batch),
-  reactive separations (reactive flash & distillation), and
+  reactive separations (reactive flash & distillation),
+  [steam & cooling-water utilities](reference-fluids.md#steam-cooling-water-utilities-fugaciosim)
+  on IAPWS-95, and
   [differentiable optimization, design specs & process economics](optimization.md)
   (constrained NLP with implicit-diff `argmin`, controllers, Turton costing, TAC/NPV).
 - **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
-  registry over the engine — properties, unit operations, distillation, reactors,
+  registry over the engine — properties, [steam tables &
+  reference fluids](reference-fluids.md), unit operations, distillation, reactors,
   reaction equilibrium, [optimization, sizing & costing](optimization.md) — plus a
   vendor-neutral provider layer (OpenAI / Anthropic / mock) and a multi-turn,
   tool-calling [agent loop](optimization.md#the-ai-design-copilot).
@@ -63,7 +69,8 @@ consistency laws that need no external data (Gibbs-Duhem, equifugacity,
 fugacity-pressure identity, phase stability), automatic-differentiation gradients
 checked against finite differences, and opt-in differential testing against open
 reference codes — [CoolProp](https://github.com/CoolProp/CoolProp) and
-[`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties,
+[`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties
+and the reference Helmholtz EOS layer (IAPWS-95, Span–Wagner),
 [`thermo`](https://github.com/CalebBell/thermo) /
 [Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) for activity
 coefficients, and [Cantera](https://github.com/Cantera/cantera) for

@@ -5,6 +5,7 @@ theme:
 nav:
   - Home: index.md
   - Non-ideal phase equilibrium: phase-equilibrium.md
+  - Reference fluids & steam tables: reference-fluids.md
   - Physical & transport properties: physical-properties.md
   - Reactions & reactors: reactions.md
   - Optimization, design & economics: optimization.md
