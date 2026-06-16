@@ -40,6 +40,7 @@ from fugacio.copilot.report import (
     summarize_bubble_point,
     summarize_economics,
     summarize_optimization,
+    summarize_pid_tuning,
     summarize_transcript,
 )
 from fugacio.copilot.tools import (
@@ -71,6 +72,7 @@ __all__ = [
     "summarize_bubble_point",
     "summarize_economics",
     "summarize_optimization",
+    "summarize_pid_tuning",
     "summarize_transcript",
     "tool_schemas",
 ]

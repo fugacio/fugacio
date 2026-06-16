@@ -34,7 +34,7 @@ workspace:
 | Package | Import | Responsibility |
 | --- | --- | --- |
 | `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
-| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, and reactive separations (depends on `thermo`). |
+| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, and time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`) (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
 The dependency direction is strict — **`thermo` < `sim` < `copilot`** — and is
@@ -131,10 +131,42 @@ steam_heating(2.5e6, pressure=11e5).mass_flow        # kg/s of MP steam for a re
 steam_turbine(10.0, p_in=40e5, t_in=723.15, p_out=1e5).power  # Rankine shaft power
 ```
 
+Steady state is only half of a plant. The `fugacio.sim.dynamics` and
+`fugacio.sim.control` layers add **time** while keeping everything
+differentiable: a `jax.lax.scan` ODE integrator (and an adaptive one with a
+continuous-adjoint `custom_vjp`), a filtered anti-windup `PID` whose gains are a
+differentiable pytree, dynamic unit operations carried as holdup ODEs, and a
+`DynamicFlowsheet` that assembles units and control loops into one global ODE. You
+can take a gradient of a closed-loop performance index straight through the
+simulated loop — so tuning is exact first-order, not a grid search (see
+[the dynamics & control guide](docs/dynamics.md)):
+
+```python
+import jax
+import jax.numpy as jnp
+from fugacio.sim import pi, odeint, iae
+
+# A PI loop on a first-order plant, integrated as one ODE (plant state + controller state).
+kp, taup, sp = 2.0, 5.0, 1.0
+ts = jnp.linspace(0.0, 40.0, 401)
+
+def response(gains):
+    c = pi(kc=gains["kc"], tau_i=gains["tau_i"], u_min=-10.0, u_max=10.0)
+    def loop(t, st, _):
+        y, ctrl = st["y"], st["c"]
+        u = c.output(ctrl, sp, y)
+        return {"y": (-y + kp * u) / taup, "c": c.derivative(ctrl, sp, y)}
+    st0 = {"y": jnp.asarray(0.0), "c": c.init_state(0.0)}
+    return odeint(loop, st0, ts, method="rk4", substeps=3)["y"]
+
+# Gradient of the closed-loop IAE with respect to the PID gains — through the whole sim:
+jax.grad(lambda g: iae(ts, response(g), sp))({"kc": jnp.asarray(0.5), "tau_i": jnp.asarray(8.0)})
+```
+
 The `fugacio.copilot` agent exposes all of this — properties, steam tables,
-unit ops, distillation, reactors, optimization, sizing, and costing — as a JSON
-tool registry, driven by a vendor-neutral provider layer (OpenAI / Anthropic /
-mock) through a multi-turn, tool-calling loop.
+unit ops, distillation, reactors, optimization, sizing, costing, and FOPDT
+identification / PID tuning — as a JSON tool registry, driven by a vendor-neutral
+provider layer (OpenAI / Anthropic / mock) through a multi-turn, tool-calling loop.
 
 ## Development
 
