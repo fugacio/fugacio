@@ -137,6 +137,34 @@ def summarize_economics(
     return "\n".join(lines)
 
 
+def summarize_pid_tuning(recommendation: Mapping[str, Any]) -> str:
+    """Render a :func:`recommend_pid_tuning` result as a Markdown comparison table.
+
+    Accepts the dict returned by the ``recommend_pid_tuning`` copilot tool (a list
+    of candidate rules with their gains and closed-loop metrics) and renders the
+    comparison plus the recommended rule.
+    """
+    candidates = list(recommendation.get("candidates", []))
+    controller = recommendation.get("controller", "PI")
+    recommended = recommendation.get("recommended_rule")
+    lines = [
+        f"### PID tuning comparison ({controller})",
+        "",
+        "| Rule | kc | tau_i (s) | tau_d (s) | IAE | Overshoot | Settling (s) |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for c in candidates:
+        star = " *" if c.get("rule") == recommended else ""
+        lines.append(
+            f"| {c['rule']}{star} | {float(c['kc']):.4g} | {float(c['tau_i_s']):.4g} | "
+            f"{float(c['tau_d_s']):.4g} | {float(c['iae']):.4g} | "
+            f"{float(c['overshoot_fraction']):.1%} | {float(c['settling_time_s']):.4g} |"
+        )
+    if recommended is not None:
+        lines += ["", f"**Recommended:** `{recommended}` (lowest closed-loop IAE)."]
+    return "\n".join(lines)
+
+
 def summarize_transcript(result: AgentResult, *, max_chars: int = 200) -> str:
     """Render an agent run (its tool calls and final answer) as a Markdown report."""
     lines = ["### Copilot run", ""]

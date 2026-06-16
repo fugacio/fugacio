@@ -9,3 +9,4 @@ nav:
   - Physical & transport properties: physical-properties.md
   - Reactions & reactors: reactions.md
   - Optimization, design & economics: optimization.md
+  - Dynamics & process control: dynamics.md
