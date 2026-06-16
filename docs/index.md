@@ -35,14 +35,18 @@ Fugacio is built as three layered packages (strict direction
   on IAPWS-95,
   [differentiable optimization, design specs & process economics](optimization.md)
   (constrained NLP with implicit-diff `argmin`, controllers, Turton costing, TAC/NPV),
-  and [time-domain dynamics & process control](dynamics.md) (differentiable ODE
+  [time-domain dynamics & process control](dynamics.md) (differentiable ODE
   integrators with a continuous adjoint, a filtered anti-windup PID, dynamic unit
-  operations, `DynamicFlowsheet`, and gradient-based controller tuning).
+  operations, `DynamicFlowsheet`, and gradient-based controller tuning), and
+  [heat integration & pinch analysis](heat-integration.md) (differentiable
+  minimum-utility/pinch targets, composite & grand composite curves, area/cost
+  supertargeting for the optimal `dt_min`, and heat-exchanger-network synthesis).
 - **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
   registry over the engine — properties, [steam tables &
   reference fluids](reference-fluids.md), unit operations, distillation, reactors,
   reaction equilibrium, [optimization, sizing & costing](optimization.md),
-  [FOPDT identification & PID tuning](dynamics.md#the-ai-copilot-dynamically) —
+  [FOPDT identification & PID tuning](dynamics.md#the-ai-copilot-dynamically),
+  [heat-integration targets & network synthesis](heat-integration.md#the-ai-copilot-integrated) —
   plus a vendor-neutral provider layer (OpenAI / Anthropic / mock) and a
   multi-turn, tool-calling [agent loop](optimization.md#the-ai-design-copilot).
 

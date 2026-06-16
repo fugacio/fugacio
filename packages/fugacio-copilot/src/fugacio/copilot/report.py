@@ -165,6 +165,42 @@ def summarize_pid_tuning(recommendation: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def summarize_heat_integration(targets: Mapping[str, Any]) -> str:
+    """Render heat-integration targets as a Markdown summary.
+
+    Accepts the dict returned by the ``heat_integration_targets`` copilot tool
+    (minimum utilities, pinch, recovery, area/unit/cost targets) and lays it out
+    as a compact engineer-facing report.
+    """
+    pinch = targets.get("pinch", {})
+    lines = [
+        f"### Heat integration (dt_min = {float(targets.get('dt_min', 0.0)):g} K)",
+        "",
+        "| Target | Value |",
+        "| --- | --- |",
+        f"| Hot utility | {float(targets.get('hot_utility_w', 0.0)):,.0f} W |",
+        f"| Cold utility | {float(targets.get('cold_utility_w', 0.0)):,.0f} W |",
+        f"| Heat recovery | {float(targets.get('heat_recovery_w', 0.0)):,.0f} W |",
+    ]
+    if "area_target_m2" in targets:
+        lines.append(f"| Area target | {float(targets['area_target_m2']):,.1f} m^2 |")
+    if "minimum_units" in targets:
+        lines.append(f"| Minimum units | {int(targets['minimum_units'])} |")
+    if "total_annual_cost_usd_yr" in targets:
+        lines.append(
+            f"| Total annual cost | {float(targets['total_annual_cost_usd_yr']):,.0f} $/yr |"
+        )
+    if pinch.get("exists"):
+        lines += [
+            "",
+            f"**Pinch:** {float(pinch['hot_temperature_k']):g} K (hot) / "
+            f"{float(pinch['cold_temperature_k']):g} K (cold).",
+        ]
+    else:
+        lines += ["", "**Threshold problem** (no pinch): a single utility suffices."]
+    return "\n".join(lines)
+
+
 def summarize_transcript(result: AgentResult, *, max_chars: int = 200) -> str:
     """Render an agent run (its tool calls and final answer) as a Markdown report."""
     lines = ["### Copilot run", ""]

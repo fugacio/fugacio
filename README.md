@@ -34,7 +34,7 @@ workspace:
 | Package | Import | Responsibility |
 | --- | --- | --- |
 | `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
-| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, and time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`) (depends on `thermo`). |
+| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
 The dependency direction is strict — **`thermo` < `sim` < `copilot`** — and is
@@ -163,10 +163,41 @@ def response(gains):
 jax.grad(lambda g: iae(ts, response(g), sp))({"kc": jnp.asarray(0.5), "tau_i": jnp.asarray(8.0)})
 ```
 
+The energy bill of a plant is fixed before any exchanger is drawn, so
+`fugacio.sim.integration` brings the whole **pinch-technology** workflow — and
+keeps it differentiable. The problem table algorithm gives the minimum hot/cold
+utility targets and the pinch; composite and grand composite curves give the
+T–H picture; a Bath-formula area target, a minimum-units target, and utility
+pricing combine into a total annual cost whose minimum over `dt_min` is the
+cost-optimal design point (**supertargeting**); and `synthesize_network` builds —
+and independently verifies — a minimum-utility heat-exchanger network by the pinch
+design method (see [the heat-integration guide](docs/heat-integration.md)):
+
+```python
+import jax
+from fugacio.sim import make_stream, pinch_analysis, optimal_dt_min, synthesize_network, minimum_utilities
+
+streams = [
+    make_stream(20.0, 135.0, cp=2.0, name="C1"), make_stream(170.0, 60.0, cp=3.0, name="H1"),
+    make_stream(80.0, 140.0, cp=4.0, name="C2"), make_stream(150.0, 30.0, cp=1.5, name="H2"),
+]
+
+res = pinch_analysis(streams, dt_min=10.0)
+res.hot_utility, res.cold_utility, res.hot_pinch_temperature   # 20.0 W, 60.0 W, pinch at 90 K
+
+# Differentiable target: d(min hot utility) / d(dt_min), exact and free:
+jax.grad(lambda dt: minimum_utilities(streams, dt)[0])(10.0)   # 0.5 W/K
+
+optimal_dt_min(streams, bounds=(1.0, 40.0)).dt_min             # cost-optimal approach (~5.6 K)
+net = synthesize_network(streams, dt_min=10.0)                 # MER network, verified
+net.feasible, net.achieves_mer, net.n_units
+```
+
 The `fugacio.copilot` agent exposes all of this — properties, steam tables,
-unit ops, distillation, reactors, optimization, sizing, costing, and FOPDT
-identification / PID tuning — as a JSON tool registry, driven by a vendor-neutral
-provider layer (OpenAI / Anthropic / mock) through a multi-turn, tool-calling loop.
+unit ops, distillation, reactors, optimization, sizing, costing, FOPDT
+identification / PID tuning, and heat-integration targeting & network synthesis —
+as a JSON tool registry, driven by a vendor-neutral provider layer
+(OpenAI / Anthropic / mock) through a multi-turn, tool-calling loop.
 
 ## Development
 
