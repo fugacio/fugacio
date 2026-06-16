@@ -105,7 +105,12 @@ def test_density_solve_gradient_matches_finite_difference() -> None:
     ad = float(jax.grad(rho_of_p)(jnp.asarray(p)))
     eps = p * 1e-6
     fd = float((rho_of_p(jnp.asarray(p + eps)) - rho_of_p(jnp.asarray(p - eps))) / (2 * eps))
-    assert abs(ad / fd - 1.0) < 1e-6
+    # Liquid water is nearly incompressible, so the difference quotient subtracts
+    # two densities that agree to ~9 figures: this cross-check is roundoff-limited
+    # (~1e-6 relative, and the exact figure is platform/jaxlib dependent) while
+    # the AD value itself is exact. The rho * kappa_T identity below, not the
+    # finite difference, is the strict correctness check.
+    assert abs(ad / fd - 1.0) < 1e-5
     # And it equals rho * kappa_T by definition of isothermal compressibility.
     rho = float(rho_of_p(jnp.asarray(p)))
     kappa_t = float(hh.isothermal_compressibility(WATER, rho, t))
