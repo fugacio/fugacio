@@ -1,7 +1,7 @@
 """Vapor-liquid equilibrium for binary mixtures (modified Raoult's law).
 
 A deliberately small but real vertical slice that sits on top of
-:mod:`fugacio.thermo`: it combines Antoine vapor pressures with Margules
+`fugacio.thermo`: it combines Antoine vapor pressures with Margules
 activity coefficients to compute a bubble-point pressure. Everything is
 differentiable end-to-end with respect to composition, temperature, and the
 activity-model parameters.

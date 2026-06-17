@@ -1,20 +1,20 @@
 """Differentiable dynamic (time-domain) process simulation for Fugacio.
 
-The :mod:`fugacio.sim` blocks elsewhere are steady-state; this subpackage adds the
+The `fugacio.sim` blocks elsewhere are steady-state; this subpackage adds the
 time dimension while keeping everything end-to-end differentiable:
 
-* :mod:`~fugacio.sim.dynamics.integrate` -- the ODE integration core: a fixed
-  output-grid :func:`odeint` (explicit and stiff implicit steppers, differentiable
-  in both modes) and an adaptive :func:`integrate` with a continuous-adjoint
+* `integrate` -- the ODE integration core: a fixed
+  output-grid `odeint` (explicit and stiff implicit steppers, differentiable
+  in both modes) and an adaptive `integrate` with a continuous-adjoint
   ``custom_vjp``;
-* :mod:`~fugacio.sim.dynamics.units` -- dynamic unit operations carried as ODEs in
+* `units` -- dynamic unit operations carried as ODEs in
   conserved holdups (buffer/level tanks, mixing tanks, dynamic CSTR, dynamic
   flash, lumped thermal mass / heat exchanger, gas receiver), reusing the
   steady-state thermodynamics for the instantaneous constitutive relations;
-* :mod:`~fugacio.sim.dynamics.flowsheet` -- :class:`DynamicFlowsheet`, a
+* `flowsheet` -- `DynamicFlowsheet`, a
   declarative assembly of dynamic units and controllers into one global ODE that
   is simulated over time and differentiated through;
-* :mod:`~fugacio.sim.dynamics.optimize` -- dynamic optimization and estimation
+* `optimize` -- dynamic optimization and estimation
   (optimal control over input trajectories, time-series parameter estimation),
   composing the existing optimizers with the integrator.
 """

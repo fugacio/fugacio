@@ -39,7 +39,7 @@ ArrayLike = Array | float
 def saturation_pressures(eos: CubicEOS, t: ArrayLike, tc: Array, pc: Array, omega: Array) -> Array:
     """Vector of pure-component saturation pressures ``Psat_i(T)`` (Pa) from the EOS.
 
-    Maps the differentiable :func:`fugacio.thermo.equilibrium.psat_eos` over every
+    Maps the differentiable `fugacio.thermo.equilibrium.psat_eos` over every
     component, so the result carries Clapeyron ``dPsat/dT`` derivatives.
     """
     tc = jnp.asarray(tc)

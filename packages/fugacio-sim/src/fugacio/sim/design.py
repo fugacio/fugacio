@@ -14,9 +14,9 @@ Because the whole engine is differentiable, a met spec is itself differentiable:
 the adjusted manipulated variable -- and everything computed from it -- carries
 exact gradients with respect to the *unmanipulated* parameters (feed, prices,
 model parameters). The spec solve reuses the implicit-function-theorem root
-finders in :mod:`fugacio.thermo.implicit`, so those gradients cost a single
+finders in `fugacio.thermo.implicit`, so those gradients cost a single
 linear solve regardless of how many iterations the spec took, and they compose
-with the recycle gradients from :func:`fugacio.sim.flowsheet.tear_solve`.
+with the recycle gradients from `fugacio.sim.flowsheet.tear_solve`.
 
 This is the steady-state, set-point form of control: a controller here drives a
 controlled variable to its set point at steady state. Dynamic controllers (PID
@@ -111,7 +111,8 @@ def meet_spec(
         target: Desired value.
         u0: Initial guess for the manipulated variable.
         theta: Differentiable parameter pytree forwarded to ``measure``.
-        lo, hi: Optional bracket; when both are given, bisection is used.
+        lo: Lower bracket bound; when both ``lo`` and ``hi`` are given, bisection is used.
+        hi: Upper bracket bound; when both ``lo`` and ``hi`` are given, bisection is used.
         tol: Convergence tolerance.
         max_iter: Iteration cap.
 
@@ -163,7 +164,7 @@ def solve_design(
         max_iter: Newton iteration cap.
 
     Returns:
-        A :class:`SpecResult`.
+        A `SpecResult`.
     """
     if not specs:
         streams = simulate(theta)
@@ -203,10 +204,10 @@ def controller(
     hi: float,
     name: str = "",
 ) -> DesignSpec:
-    """Convenience constructor for a single set-point controller as a :class:`DesignSpec`.
+    """Convenience constructor for a single set-point controller as a `DesignSpec`.
 
     Reads as control language: drive ``controlled`` to ``set_point`` by moving
-    ``manipulated`` within ``[lo, hi]``. Combine several with :func:`solve_design`.
+    ``manipulated`` within ``[lo, hi]``. Combine several with `solve_design`.
     """
     return DesignSpec(
         manipulated=manipulated,
@@ -254,7 +255,7 @@ def optimize_flowsheet(
     of ``theta``, holding the rest fixed. The flowsheet (recycles and all) is
     re-solved at every objective evaluation, and gradients flow through the
     converged flowsheet by implicit differentiation. With a money objective from
-    :mod:`fugacio.sim.economics` this is end-to-end design optimization.
+    `fugacio.sim.economics` this is end-to-end design optimization.
 
     Args:
         simulate: Runs the flowsheet for a parameter mapping; returns named streams.
@@ -269,7 +270,7 @@ def optimize_flowsheet(
         max_iter: Iteration cap.
 
     Returns:
-        A :class:`FlowsheetOptResult`.
+        A `FlowsheetOptResult`.
     """
     x0 = {k: jnp.asarray(theta0[k], dtype=float) for k in design_vars}
 

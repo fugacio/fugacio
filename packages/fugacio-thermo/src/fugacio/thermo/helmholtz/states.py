@@ -2,20 +2,20 @@
 
 Process specifications arrive as ``(T, P)``, ``(P, h)``, ``(P, s)`` or a
 saturation quality -- not as the ``(rho, T)`` a Helmholtz EOS natively speaks.
-This module resolves those specifications into a :class:`FluidState` snapshot
+This module resolves those specifications into a `FluidState` snapshot
 of every property, handling the two-phase dome:
 
-* :func:`state_tp` -- single-phase states (a ``(T, P)`` specification only
+* `state_tp` -- single-phase states (a ``(T, P)`` specification only
   pins a two-phase mixture on the saturation line itself, a measure-zero set);
-* :func:`state_ph` / :func:`state_ps` -- the energy-balance workhorses; inside
+* `state_ph` / `state_ps` -- the energy-balance workhorses; inside
   the dome they return the saturation temperature and vapor quality ``q``
   (this is exactly the "steam tables" calculation, e.g. finding the wetness at
   a steam-turbine exhaust);
-* :func:`state_tq` / :func:`state_pq` -- states on the dome by quality.
+* `state_tq` / `state_pq` -- states on the dome by quality.
 
 All solves are wrapped in implicit-differentiation rules, so the returned
 state is exactly differentiable with respect to the specification: the
-gradient of :func:`state_ph` temperature with respect to pressure inside the
+gradient of `state_ph` temperature with respect to pressure inside the
 dome *is* the Clausius-Clapeyron slope, with no finite differencing anywhere.
 
 In a two-phase state the bulk ``cp``, ``cv`` and speed of sound are undefined
@@ -318,7 +318,7 @@ def _state_ps(fluid: HelmholtzFluid, p: Array, s: Array) -> FluidState:
 def state_ps(fluid: HelmholtzFluid, p: ArrayLike, s: ArrayLike) -> FluidState:
     """The state at pressure ``p`` (Pa) and molar entropy ``s`` (J/mol/K).
 
-    The isentropic twin of :func:`state_ph` -- the building block of ideal
+    The isentropic twin of `state_ph` -- the building block of ideal
     compressor/turbine outlets. Same dome semantics.
     """
     return _state_ps(fluid, jnp.asarray(p, dtype=float), jnp.asarray(s, dtype=float))

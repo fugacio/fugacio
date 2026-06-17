@@ -10,7 +10,7 @@ the critical temperature the isotherm is monotonic and a bracketed bisection
 is unconditionally robust.
 
 All solves run in ``ln(delta)`` (scale-free, positivity-safe) through the
-implicit-differentiation helpers of :mod:`fugacio.thermo.implicit`, so the
+implicit-differentiation helpers of `fugacio.thermo.implicit`, so the
 returned density carries exact gradients with respect to ``T``, ``P``, and the
 EOS coefficients regardless of iteration count. The public solve is
 jit-compiled with the fluid as a pytree argument (eager re-tracing of solver

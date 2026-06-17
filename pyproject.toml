@@ -38,8 +38,15 @@ dev = [
     "import-linter>=2.1",
     "pre-commit>=4.0",
 ]
+# Documentation site (MkDocs + Material). mkdocstrings renders the API reference
+# straight from the package docstrings, so a docs build imports the workspace
+# packages: build with `uv sync --all-packages --group docs` (see .github/workflows/docs.yml).
 docs = [
-    "mkdocs-material>=9.5",
+    "mkdocs>=1.6",
+    "mkdocs-material[imaging]>=9.5",
+    "mkdocstrings[python]>=0.26",
+    "mkdocs-autorefs>=1.2",
+    "pymdown-extensions>=10.7",
 ]
 # Optional reference packages for the differential-testing oracles and the data
 # generation scripts. Not runtime dependencies of any Fugacio package; install
@@ -62,10 +69,37 @@ src = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# Docstring (D) rules use the Google convention; see [tool.ruff.lint.pydocstyle].
+# The public API is rendered on the docs site straight from these docstrings via
+# mkdocstrings, so the docstring is the single source of truth for the reference
+# and must never drift from the code.
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+# D105 (magic-method docstring): dunders (__repr__, __eq__, pytree hooks, ...) are
+#   self-explanatory and aren't rendered (mkdocstrings filters leading-underscore
+#   members).
+# D107 (missing __init__ docstring): mkdocstrings merges __init__ into the class
+#   docstring, so the class docstring is the source of truth for construction.
+# D203/D213: conflict with the Google convention defaults; ruff already suppresses
+#   these via `convention = "google"`, but we list them defensively.
+ignore = ["D105", "D107", "D203", "D213"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fugacio"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests, data-generation scripts, and conftest aren't part of the published API
+# surface and aren't rendered on the docs site, so they're exempt from docstrings.
+"**/tests/**/*.py" = ["D"]
+"scripts/**/*.py" = ["D"]
+"**/conftest.py" = ["D"]
+# Concrete dynamic units subclass the DynamicUnit ABC, which carries the canonical
+# docstrings on its abstract methods (initial_state / evaluate / measured). The
+# overrides are registered and consumed through the base interface, so requiring a
+# per-override docstring would only duplicate the base class.
+"packages/fugacio-sim/src/fugacio/sim/dynamics/units.py" = ["D102"]
 
 [tool.mypy]
 python_version = "3.11"

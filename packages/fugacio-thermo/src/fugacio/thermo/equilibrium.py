@@ -1,18 +1,18 @@
 """Phase equilibrium: K-values, Rachford-Rice, flash, saturation, and stability.
 
-This module turns the cubic equation of state (:mod:`fugacio.thermo.eos`) into
+This module turns the cubic equation of state (`fugacio.thermo.eos`) into
 the equilibrium calculations a process simulator actually calls:
 
-* :func:`wilson_k` -- the classic K-value initial guess;
-* :func:`rachford_rice` -- the material-balance root for the vapour fraction;
-* :func:`flash_pt` -- an isothermal-isobaric two-phase flash;
-* :func:`psat_eos` -- pure-component saturation pressure by equifugacity;
-* :func:`bubble_pressure_eos` / :func:`dew_pressure_eos` -- phase envelopes;
-* :func:`stability_analysis` -- Michelsen's tangent-plane-distance test.
+* `wilson_k` -- the classic K-value initial guess;
+* `rachford_rice` -- the material-balance root for the vapour fraction;
+* `flash_pt` -- an isothermal-isobaric two-phase flash;
+* `psat_eos` -- pure-component saturation pressure by equifugacity;
+* `bubble_pressure_eos` / `dew_pressure_eos` -- phase envelopes;
+* `stability_analysis` -- Michelsen's tangent-plane-distance test.
 
 Every iterative result is differentiable end-to-end: the scalar solves carry
-hand-written implicit-function-theorem rules (:func:`jax.custom_jvp`) and the
-flash/saturation loops reuse :func:`fugacio.thermo.implicit.fixed_point`. You can
+hand-written implicit-function-theorem rules (`jax.custom_jvp`) and the
+flash/saturation loops reuse `fugacio.thermo.implicit.fixed_point`. You can
 therefore take a gradient of *any* equilibrium output with respect to ``T``,
 ``P``, composition, or model parameters -- the property that makes Fugacio a
 differentiable core rather than just another flash package.

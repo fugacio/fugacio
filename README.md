@@ -1,6 +1,6 @@
 # Fugacio
 
-**Open, differentiable thermodynamics and process simulation — with an AI design copilot.**
+**Open, differentiable thermodynamics and process simulation, with an AI design copilot.**
 
 Fugacio is an open-source successor to closed, expensive process simulators. The
 numerical core is written in [JAX](https://github.com/jax-ml/jax), so an entire
@@ -8,7 +8,7 @@ flowsheet is *end-to-end differentiable*: you can take gradients through phase
 equilibrium and recycle loops for optimization, parameter estimation, and tight
 ML integration.
 
-Fugacio treats physical correctness as the baseline, not a stretch goal — and
+Fugacio treats physical correctness as the baseline, not a stretch goal, and
 because its reference data and models are open, that correctness stays
 *continuously machine-checkable* as the engine grows one model at a time. Every
 model is graded against free, authoritative oracles: differential testing against
@@ -19,11 +19,11 @@ open reference codes ([CoolProp](https://github.com/CoolProp/CoolProp),
 that need no external data (Gibbs-Duhem, Maxwell relations, mass- and
 energy-balance closure, equifugacity, and phase-stability tangent-plane tests);
 open experimental measurements from the [NIST ThermoML
-Archive](https://www.nist.gov/mml/acmd/trc/thermoml/thermoml-archive); and —
-uniquely for a differentiable core — automatic-differentiation gradients checked
+Archive](https://www.nist.gov/mml/acmd/trc/thermoml/thermoml-archive); and,
+uniquely for a differentiable core, automatic-differentiation gradients checked
 against finite differences, with group-contribution methods (UNIFAC, Joback)
 covering parameters where curated industrial datasets remain proprietary.
-Together these oracles act as an executable *acceptance harness* for physics —
+Together these oracles act as an executable *acceptance harness* for physics,
 turning "is this simulator correct?" into thousands of small, automatically
 graded checks: a fast, unambiguous feedback loop that makes the core tractable to
 grow incrementally, including via long-running, AI-assisted development.
@@ -37,7 +37,7 @@ workspace:
 | `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), **advanced control** (differentiable QP, offset-free linear MPC, Kalman/EKF/UKF/moving-horizon estimation, nonlinear & economic MPC, gradient-based tuning), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
-The dependency direction is strict — **`thermo` < `sim` < `copilot`** — and is
+The dependency direction is strict, **`thermo` < `sim` < `copilot`**, and is
 enforced in CI by [import-linter](https://github.com/seddonym/import-linter).
 All three distributions share the `fugacio`
 [PEP 420 namespace](https://peps.python.org/pep-0420/), so they publish to PyPI
@@ -51,7 +51,7 @@ uv sync --all-packages   # venv + lockfile; install all three packages (editable
 uv run pytest            # run the test suite
 ```
 
-A flash drum, and its gradient — differentiated straight through the
+A flash drum, and its gradient, differentiated straight through the
 equation-of-state phase equilibrium:
 
 ```python
@@ -72,7 +72,7 @@ d_vapor_dT(320.0)
 ```
 
 Unit operations close rigorous energy balances, and recycle loops are solved to a
-fixed point and differentiated by the implicit function theorem — so gradients
+fixed point and differentiated by the implicit function theorem, so gradients
 flow through the *converged* flowsheet, not the iteration:
 
 ```python
@@ -91,15 +91,15 @@ recycle = tear_solve(one_pass, guess, {"T": 320.0, "P": 20e5, "r": 0.5})
 Because the converged flowsheet is differentiable, optimization, design specs, and
 process economics are just more differentiable layers. `argmin` returns the
 *solution* of a constrained problem and differentiates it through the optimality
-conditions (implicit function theorem), so a real screening economics objective —
-Turton bare-module capital plus utilities — optimizes end to end, gradients and
+conditions (implicit function theorem), so a real screening economics objective
+(Turton bare-module capital plus utilities) optimizes end to end, gradients and
 all (see [the optimization & economics guide](docs/optimization.md)):
 
 ```python
 import jax
 from fugacio.sim import heat_exchanger_area, bare_module_cost, total_annual_cost, utility_cost
 
-# Size a cooler from its duty (LMTD), cost it (Turton), and get the total annual cost —
+# Size a cooler from its duty (LMTD), cost it (Turton), and get the total annual cost,
 # then the exact sensitivity of TAC to the temperature approach, by autodiff.
 def tac(dt_cold):
     area = heat_exchanger_area(duty=1.0e6, u=500.0, dt_hot=60.0, dt_cold=dt_cold)
@@ -111,8 +111,8 @@ tac(40.0), jax.grad(tac)(40.0)   # $/yr and d(TAC)/d(approach)
 
 Pure-fluid properties come at *reference grade* where it matters: water/steam is
 the full IAPWS-95 formulation (the same model behind REFPROP and CoolProp),
-implemented as one scalar Helmholtz energy whose every property — and every
-*solver*, density to Maxwell construction — is an exact `jax.grad` derivative
+implemented as one scalar Helmholtz energy whose every property (and every
+*solver*, density to Maxwell construction) is an exact `jax.grad` derivative
 (see [the reference-fluids guide](docs/reference-fluids.md)):
 
 ```python
@@ -123,7 +123,7 @@ from fugacio.sim import steam_heating, steam_turbine
 steam = reference_fluid("water")                     # IAPWS-95
 sat = saturation_state(steam, p=10e5)                # 10 bar: 453.03 K, Δh_vap 2014.6 kJ/kg
 
-# d(Tsat)/dP through the solved Maxwell construction — the Clausius-Clapeyron
+# d(Tsat)/dP through the solved Maxwell construction, the Clausius-Clapeyron
 # slope by autodiff, not finite differences:
 jax.grad(lambda p: saturation_state(steam, p=p).t)(10e5)
 
@@ -138,7 +138,7 @@ continuous-adjoint `custom_vjp`), a filtered anti-windup `PID` whose gains are a
 differentiable pytree, dynamic unit operations carried as holdup ODEs, and a
 `DynamicFlowsheet` that assembles units and control loops into one global ODE. You
 can take a gradient of a closed-loop performance index straight through the
-simulated loop — so tuning is exact first-order, not a grid search (see
+simulated loop, so tuning is exact first-order, not a grid search (see
 [the dynamics & control guide](docs/dynamics.md)):
 
 ```python
@@ -159,20 +159,20 @@ def response(gains):
     st0 = {"y": jnp.asarray(0.0), "c": c.init_state(0.0)}
     return odeint(loop, st0, ts, method="rk4", substeps=3)["y"]
 
-# Gradient of the closed-loop IAE with respect to the PID gains — through the whole sim:
+# Gradient of the closed-loop IAE with respect to the PID gains, through the whole sim:
 jax.grad(lambda g: iae(ts, response(g), sp))({"kc": jnp.asarray(0.5), "tau_i": jnp.asarray(8.0)})
 ```
 
-Single PID loops are not the whole control story. The `fugacio.sim.mpc` layer adds
+Single PID loops aren't the whole control story. The `fugacio.sim.mpc` layer adds
 **model predictive control** and **state estimation**, and keeps them
 differentiable through their own solvers. A differentiable OSQP-style QP (with an
 implicit-function-theorem `custom_vjp`) backs a condensed, offset-free **linear
-MPC** — LQR terminal cost, hard input / soft output constraints, and a
+MPC**: LQR terminal cost, hard input / soft output constraints, and a
 disturbance observer for zero steady-state offset; Kalman / extended / unscented
 filters and moving-horizon estimation reconstruct the state; and **nonlinear &
 economic MPC** optimize over the true model via `argmin`. Because the QP itself is
-differentiable, `tune_mpc` descends a closed-loop index on the controller weights
-— exact first-order tuning of the optimizer (see
+differentiable, `tune_mpc` descends a closed-loop index on the controller weights,
+exact first-order tuning of the optimizer (see
 [the advanced-control guide](docs/advanced-control.md)):
 
 ```python
@@ -190,13 +190,13 @@ u, state = mpc.step(state, jnp.array([0.0]), jnp.array([1.0]))   # first constra
 ```
 
 The energy bill of a plant is fixed before any exchanger is drawn, so
-`fugacio.sim.integration` brings the whole **pinch-technology** workflow — and
+`fugacio.sim.integration` brings the whole **pinch-technology** workflow, and
 keeps it differentiable. The problem table algorithm gives the minimum hot/cold
 utility targets and the pinch; composite and grand composite curves give the
 T–H picture; a Bath-formula area target, a minimum-units target, and utility
 pricing combine into a total annual cost whose minimum over `dt_min` is the
-cost-optimal design point (**supertargeting**); and `synthesize_network` builds —
-and independently verifies — a minimum-utility heat-exchanger network by the pinch
+cost-optimal design point (**supertargeting**); and `synthesize_network` builds,
+and independently verifies, a minimum-utility heat-exchanger network by the pinch
 design method (see [the heat-integration guide](docs/heat-integration.md)):
 
 ```python
@@ -219,10 +219,10 @@ net = synthesize_network(streams, dt_min=10.0)                 # MER network, ve
 net.feasible, net.achieves_mer, net.n_units
 ```
 
-The `fugacio.copilot` agent exposes all of this — properties, steam tables,
+The `fugacio.copilot` agent exposes all of this (properties, steam tables,
 unit ops, distillation, reactors, optimization, sizing, costing, FOPDT
 identification / PID tuning, LQR & Kalman design, constrained MPC simulation &
-weight tuning, and heat-integration targeting & network synthesis — as a JSON
+weight tuning, and heat-integration targeting & network synthesis) as a JSON
 tool registry, driven by a vendor-neutral provider layer (OpenAI / Anthropic /
 mock) through a multi-turn, tool-calling loop.
 
@@ -242,6 +242,8 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 | Import boundaries | `just imports` |
 | Tests | `just test` |
 | Oracle differential tests (opt-in) | `just oracles` |
+| Docs preview (live reload) | `just docs-serve` |
+| Docs build (strict, as CI) | `just docs-build` |
 
 `just test` runs the fast, hermetic unit suite. The differential-testing oracles
 (graded against [CoolProp](https://github.com/CoolProp/CoolProp) and
@@ -255,6 +257,30 @@ optional packages and run them explicitly with `just oracles`. CI runs the same
 oracle suite on every pull request, on pushes to `main`, and on a weekly
 schedule (`.github/workflows/oracles.yml`).
 
+## Documentation
+
+The documentation site is built with [MkDocs](https://www.mkdocs.org/) and the
+[Material](https://squidfunk.github.io/mkdocs-material/) theme and published to
+GitHub Pages on every push to `main` (`.github/workflows/docs.yml`):
+
+- Narrative **guides** under `docs/` are the worked-example tour of each
+  subsystem.
+- The **API reference** is generated straight from the package docstrings with
+  [mkdocstrings](https://mkdocstrings.github.io/), so it never drifts from the
+  code.
+
+Public modules, classes, and functions use [Google-style
+docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings),
+enforced by Ruff's pydocstyle (`D`) rules (`convention = "google"` in
+`pyproject.toml`) and checked by `just lint`. Because that docstring is the
+single source of truth for the rendered reference, keep the `Args:`, `Returns:`,
+and `Raises:` sections accurate and complete. Tests, data-generation scripts,
+and `conftest.py` are exempt.
+
+Preview locally with `just docs-serve`; `just docs-build` reproduces the strict
+CI build (it sets `CI=true` to render social cards, which needs Cairo and Pango
+installed locally).
+
 ## Layout
 
 ```text
@@ -263,9 +289,11 @@ fugacio/
 │   ├── fugacio-thermo/    # fugacio.thermo  (no internal deps)
 │   ├── fugacio-sim/       # fugacio.sim     (-> thermo)
 │   └── fugacio-copilot/   # fugacio.copilot (-> sim)
+├── docs/                  # MkDocs sources: guides + generated API reference
+├── mkdocs.yml             # docs site config (Material + mkdocstrings)
 ├── pyproject.toml         # uv workspace root + shared ruff/mypy/pytest config
 ├── .importlinter          # enforced layer boundaries
-└── .github/workflows/     # CI + trusted-publishing release
+└── .github/workflows/     # CI + docs + trusted-publishing release
 ```
 
 ## License

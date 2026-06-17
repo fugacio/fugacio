@@ -2,21 +2,21 @@
 
 Two complementary loops share one tool registry:
 
-* :func:`run_agent` -- the original *model-agnostic* loop. A **planner** callable
+* `run_agent` -- the original *model-agnostic* loop. A **planner** callable
   ``(goal, tool_schemas, transcript) -> decision`` decides the next tool call or
   the final answer, where ``decision`` is ``{"tool": name, "arguments": {...}}``
   or ``{"final_answer": text}``. This keeps the control flow fully testable with
   a scripted planner and lets any decision policy drop in.
 
-* :func:`run_llm_agent` -- a real multi-turn function-calling loop over an
-  :class:`~fugacio.copilot.llm.base.LLMProvider` (OpenAI, Anthropic, or the test
-  :class:`~fugacio.copilot.llm.mock.MockProvider`). It maintains the full message
+* `run_llm_agent` -- a real multi-turn function-calling loop over an
+  `LLMProvider` (OpenAI, Anthropic, or the test
+  `MockProvider`). It maintains the full message
   history with tool-call ids, executes every requested tool (validating
   arguments and capturing errors so the model can self-correct), feeds the JSON
   results back, and returns when the model answers in plain text.
 
-:func:`llm_planner` bridges the two: it turns a provider into a planner for the
-simple loop. A deterministic :func:`heuristic_planner` is provided for tests and
+`llm_planner` bridges the two: it turns a provider into a planner for the
+simple loop. A deterministic `heuristic_planner` is provided for tests and
 offline use.
 """
 
@@ -73,12 +73,12 @@ def run_agent(
     Args:
         goal: The natural-language design goal.
         planner: Decision function (see module docstring); inject an LLM via
-            :func:`llm_planner`, or pass a scripted/heuristic planner.
-        registry: Tool registry to expose (defaults to :func:`default_registry`).
+            `llm_planner`, or pass a scripted/heuristic planner.
+        registry: Tool registry to expose (defaults to `default_registry`).
         max_steps: Maximum number of tool calls before giving up.
 
     Returns:
-        An :class:`AgentResult` with the final answer and the full transcript.
+        An `AgentResult` with the final answer and the full transcript.
     """
     registry = default_registry() if registry is None else registry
     schemas = tool_schemas(registry)
@@ -123,15 +123,15 @@ def run_llm_agent(
 
     Args:
         goal: The user's natural-language request.
-        provider: Any :class:`~fugacio.copilot.llm.base.LLMProvider`.
-        registry: Tool registry (defaults to :func:`default_registry`).
-        system: System prompt; defaults to :data:`DEFAULT_SYSTEM_PROMPT`.
+        provider: Any `LLMProvider`.
+        registry: Tool registry (defaults to `default_registry`).
+        system: System prompt; defaults to `DEFAULT_SYSTEM_PROMPT`.
         max_steps: Maximum model turns.
         temperature: Sampling temperature.
         max_tokens: Per-turn token cap.
 
     Returns:
-        An :class:`AgentResult`.
+        An `AgentResult`.
     """
     registry = default_registry() if registry is None else registry
     schemas = tool_schemas(registry)
@@ -193,7 +193,7 @@ def llm_planner(
     temperature: float = 0.0,
     max_tokens: int = 1024,
 ) -> Planner:
-    """Adapt an :class:`LLMProvider` into a :class:`Planner` for :func:`run_agent`.
+    """Adapt an `LLMProvider` into a `Planner` for `run_agent`.
 
     On each call it reconstructs the conversation from the goal and transcript,
     asks the model for the next step, and maps the first requested tool call to a

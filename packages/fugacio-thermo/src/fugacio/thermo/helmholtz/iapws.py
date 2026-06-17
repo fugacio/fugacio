@@ -13,7 +13,7 @@ compressibility ``(d rho/d P)_T`` evaluated at the state *and* at the
 reference temperature ``1.5 Tc`` -- reference codes either require the caller
 to supply those derivatives or fall back to a tabulated fit. Here they are
 exact autodiff derivatives of the IAPWS-95 equation of state
-(:mod:`fugacio.thermo.helmholtz`), so the *scientific* (not just industrial)
+(`fugacio.thermo.helmholtz`), so the *scientific* (not just industrial)
 formulation is evaluated everywhere, closed over one differentiable graph.
 
 Inputs are molar density (mol/m^3) and temperature (K), consistent with the

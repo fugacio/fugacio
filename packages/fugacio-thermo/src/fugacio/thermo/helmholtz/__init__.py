@@ -4,18 +4,18 @@ This subpackage gives Fugacio *reference-grade* pure-fluid properties: the
 same class of model behind NIST REFPROP and CoolProp -- IAPWS-95 for
 water/steam, Span & Wagner for CO2, Setzmann & Wagner for methane, and the
 short technical formulations for the other vendored process fluids
-(:func:`reference_fluid_names` lists all 26).
+(`reference_fluid_names` lists all 26).
 
 The entire model is one scalar function, the reduced Helmholtz energy
-``alpha(delta, tau)``; every property is an exact :func:`jax.grad` derivative
-of it (:mod:`~fugacio.thermo.helmholtz.terms`,
-:mod:`~fugacio.thermo.helmholtz.props`). Saturation lines come from a
+``alpha(delta, tau)``; every property is an exact `jax.grad` derivative
+of it (`terms`,
+`props`). Saturation lines come from a
 differentiable Maxwell construction
-(:mod:`~fugacio.thermo.helmholtz.saturation`), ``(T, P)`` / ``(P, h)`` /
+(`saturation`), ``(T, P)`` / ``(P, h)`` /
 ``(P, s)`` / quality states from steam-table style resolvers
-(:mod:`~fugacio.thermo.helmholtz.states`), and water carries the full IAPWS
+(`states`), and water carries the full IAPWS
 transport formulations with autodiff critical enhancements
-(:mod:`~fugacio.thermo.helmholtz.iapws`).
+(`iapws`).
 
 Validation is layered like the rest of Fugacio: hermetic unit tests pin the
 published IAPWS-95/Span-Wagner check tables, consistency tests assert

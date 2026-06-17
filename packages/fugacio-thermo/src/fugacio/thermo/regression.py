@@ -1,19 +1,19 @@
 """Differentiable parameter estimation for activity-coefficient models.
 
 Because every equilibrium output is differentiable with respect to the
-activity-model parameters (see :mod:`fugacio.thermo.gammaphi`,
-:mod:`fugacio.thermo.lle`), fitting a model to data is *plain* gradient-based
+activity-model parameters (see `fugacio.thermo.gammaphi`,
+`fugacio.thermo.lle`), fitting a model to data is *plain* gradient-based
 optimisation -- no finite-difference parameter sweeps, no black-box derivatives.
 This module supplies:
 
-* two self-contained optimisers -- :func:`levenberg_marquardt` for nonlinear
+* two self-contained optimisers -- `levenberg_marquardt` for nonlinear
   least squares (exact Gauss-Newton Hessian, adaptive damping) and a simple
-  :func:`gradient_descent` -- that operate on an arbitrary parameter *pytree*;
+  `gradient_descent` -- that operate on an arbitrary parameter *pytree*;
 * residual builders that turn experimental data into a residual vector:
-  :func:`bubble_pressure_residuals` (isothermal/isobaric P-x-y VLE),
-  :func:`activity_residuals` (measured ``ln gamma``), and
-  :func:`lle_residuals` (mutual-solubility / tie-line data); and
-* convenience fitters (:func:`fit_nrtl_binary`, :func:`fit_uniquac_binary`) that
+  `bubble_pressure_residuals` (isothermal/isobaric P-x-y VLE),
+  `activity_residuals` (measured ``ln gamma``), and
+  `lle_residuals` (mutual-solubility / tie-line data); and
+* convenience fitters (`fit_nrtl_binary`, `fit_uniquac_binary`) that
   wire a model factory to the optimiser and return a ready model object.
 
 A "model factory" is any ``theta -> ActivityModel`` mapping; the optimiser fits
@@ -55,7 +55,7 @@ def levenberg_marquardt(
 
     A trust-region blend of Gauss-Newton and gradient descent: each step solves
     ``(J^T J + lambda diag(J^T J)) delta = -J^T r`` with the exact Jacobian ``J``
-    (via :func:`jax.jacobian`), shrinking ``lambda`` after an accepted step and
+    (via `jax.jacobian`), shrinking ``lambda`` after an accepted step and
     growing it after a rejected one. Operates on any parameter pytree ``theta0``.
 
     Returns:
@@ -144,14 +144,16 @@ def bubble_pressure_residuals(
         t: Temperatures (K), shape ``(m,)``.
         x: Liquid compositions, shape ``(m, n)``.
         p_exp: Measured bubble pressures (Pa), shape ``(m,)``.
-        tc, pc, omega: Component constants.
+        tc: Component critical temperatures (K).
+        pc: Component critical pressures (Pa).
+        omega: Component acentric factors.
         y_exp: Optional measured vapour compositions, shape ``(m, n)``.
         p_scale: Pressure normaliser (defaults to ``mean(p_exp)``).
         y_weight: Relative weight on the vapour-composition residuals.
-        **opts: Forwarded to :func:`bubble_pressure_gamma` (``vapor``, ``poynting``, ...).
+        **opts: Forwarded to `bubble_pressure_gamma` (``vapor``, ``poynting``, ...).
 
     Returns:
-        ``residual(theta) -> 1-D array`` for use with :func:`levenberg_marquardt`.
+        ``residual(theta) -> 1-D array`` for use with `levenberg_marquardt`.
     """
     t = jnp.asarray(t)
     x = jnp.asarray(x)
@@ -313,7 +315,7 @@ def predict_nrtl_from_unifac(
 
     UNIFAC supplies ``ln gamma`` over a composition (and temperature) grid; the two
     NRTL ``1/T`` coefficients ``b12``, ``b21`` (with ``a = 0`` and fixed ``alpha``)
-    are fitted to it by :func:`levenberg_marquardt`. Use it to bootstrap a
+    are fitted to it by `levenberg_marquardt`. Use it to bootstrap a
     correlative model for a pair without measured data.
 
     Returns:
@@ -348,9 +350,9 @@ def predict_uniquac_from_unifac(
 ) -> tuple[UNIQUAC, Array]:
     """Predict binary UNIQUAC ``b`` parameters by fitting to UNIFAC activity coefficients.
 
-    Like :func:`predict_nrtl_from_unifac`, but for UNIQUAC. The surface/volume
+    Like `predict_nrtl_from_unifac`, but for UNIQUAC. The surface/volume
     parameters ``r``, ``q`` default to the curated values
-    (:func:`fugacio.thermo.data.uniquac_rq`); the free parameters are the ``1/T``
+    (`fugacio.thermo.data.uniquac_rq`); the free parameters are the ``1/T``
     coefficients of ``tau = exp(b/T)``.
 
     Returns:

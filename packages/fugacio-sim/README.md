@@ -4,7 +4,7 @@ Differentiable process-simulation layer for the
 [Fugacio](https://github.com/owenthcarey/fugacio) stack: flowsheet and
 unit-operation models built on top of `fugacio.thermo`.
 
-The core abstraction is the `Stream` — a JAX pytree whose molar flows,
+The core abstraction is the `Stream`, a JAX pytree whose molar flows,
 temperature, and pressure are differentiable leaves (component names are static
 metadata). Because the underlying EOS phase equilibrium is differentiable, unit
 operations are too: you can take a gradient of any downstream quantity (a product
@@ -20,20 +20,20 @@ just material balances: `molar_enthalpy`, `molar_entropy`, `enthalpy_flow`,
 
 ## Unit operations (rigorous material + energy balances)
 
-- `flash_drum` — isothermal-isobaric vapour/liquid separator.
-- `heater` — heater/cooler on a temperature **or** a duty specification.
-- `valve` — isenthalpic (Joule-Thomson) pressure letdown.
-- `pump` — incompressible-liquid pump with an efficiency.
-- `compressor` / `turbine` — isentropic machines with an efficiency.
-- `mix` — adiabatic, energy-balanced mixer (exact material balance).
-- `splitter` / `component_separator` — flow split and idealised component split.
-- `bubble_pressure` / `antoine_psat` — lightweight modified-Raoult helpers.
+- `flash_drum`: isothermal-isobaric vapour/liquid separator.
+- `heater`: heater/cooler on a temperature **or** a duty specification.
+- `valve`: isenthalpic (Joule-Thomson) pressure letdown.
+- `pump`: incompressible-liquid pump with an efficiency.
+- `compressor` / `turbine`: isentropic machines with an efficiency.
+- `mix`: adiabatic, energy-balanced mixer (exact material balance).
+- `splitter` / `component_separator`: flow split and idealised component split.
+- `bubble_pressure` / `antoine_psat`: lightweight modified-Raoult helpers.
 
 ## Flowsheets with recycle
 
 `tear_solve` closes a recycle by solving the tear fixed point
 `tear = g(tear, theta)` with a Wegstein-accelerated iteration, and
-differentiates the *converged* flowsheet by the implicit function theorem — a
+differentiates the *converged* flowsheet by the implicit function theorem: a
 gradient through the recycle costs one adjoint solve regardless of iteration
 count. `Flowsheet` is a small declarative builder on top of it.
 
@@ -51,11 +51,11 @@ count. `Flowsheet` is a small declarative builder on top of it.
 Built on the `fugacio.thermo` γ–φ property system (via the `eos_model_for`,
 `nrtl_model_for`, `uniquac_model_for`, `unifac_model_for` bridges):
 
-- `flash_vle`, `decanter`, `three_phase_flash` — activity-based VLE / LLE / VLLE
+- `flash_vle`, `decanter`, `three_phase_flash`: activity-based VLE / LLE / VLLE
   drums for real, non-ideal mixtures.
-- `pxy_diagram`, `txy_diagram`, `azeotrope_pressure`, `azeotrope_temperature` —
+- `pxy_diagram`, `txy_diagram`, `azeotrope_pressure`, `azeotrope_temperature`:
   binary phase diagrams and azeotrope finders.
-- `residue_curve`, `residue_curve_map` — ternary open-evaporation trajectories for
+- `residue_curve`, `residue_curve_map`: ternary open-evaporation trajectories for
   laying out distillation boundaries.
 
 ## Reactors

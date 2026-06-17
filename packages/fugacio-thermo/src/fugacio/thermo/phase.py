@@ -1,14 +1,14 @@
 """A uniform phase-equilibrium model: one interface over EOS and gamma-phi.
 
 The two routes to vapour-liquid equilibrium -- a cubic equation of state for both
-phases (:mod:`fugacio.thermo.equilibrium`) and an activity model for the liquid
-with an EOS/ideal vapour (:mod:`fugacio.thermo.gammaphi`) -- have, until now,
+phases (`fugacio.thermo.equilibrium`) and an activity model for the liquid
+with an EOS/ideal vapour (`fugacio.thermo.gammaphi`) -- have, until now,
 different call signatures. That made the rest of the stack (flashes inside unit
 operations, column K-values, the copilot tools) hard-wire the EOS. This module
-unifies them behind a single :class:`EquilibriumModel` interface so a flowsheet
+unifies them behind a single `EquilibriumModel` interface so a flowsheet
 can be switched from Peng-Robinson to NRTL by swapping one object.
 
-Both concrete models -- :class:`EOSModel` and :class:`GammaPhiModel` -- bundle the
+Both concrete models -- `EOSModel` and `GammaPhiModel` -- bundle the
 component constants they need and expose the same five calls: ``flash_pt``,
 ``bubble_pressure``/``bubble_temperature`` and ``dew_pressure``/``dew_temperature``.
 They are registered JAX pytrees whose parameters (critical constants, ``kij``, and,
@@ -111,7 +111,7 @@ class EOSModel:
     ) -> tuple[Array, Array]:
         """Bubble temperature and incipient vapour at fixed ``P``, ``x``.
 
-        Found by inverting :meth:`bubble_pressure` for the temperature whose bubble
+        Found by inverting `bubble_pressure` for the temperature whose bubble
         pressure equals ``P`` (the saturation pressure rises monotonically with
         temperature), then returning the incipient vapour there.
         """
@@ -285,7 +285,7 @@ jax.tree_util.register_dataclass(
 def eos_model(
     tc: Array, pc: Array, omega: Array, *, kij: Array | None = None, eos: CubicEOS = PR
 ) -> EOSModel:
-    """Construct an :class:`EOSModel` from component constants."""
+    """Construct an `EOSModel` from component constants."""
     return EOSModel(
         tc=jnp.asarray(tc), pc=jnp.asarray(pc), omega=jnp.asarray(omega), kij=kij, eos=eos
     )
@@ -303,7 +303,7 @@ def gamma_phi_model(
     poynting: bool = False,
     phi_saturation: bool = False,
 ) -> GammaPhiModel:
-    """Construct a :class:`GammaPhiModel` from an activity model and constants."""
+    """Construct a `GammaPhiModel` from an activity model and constants."""
     return GammaPhiModel(
         activity=activity,
         tc=jnp.asarray(tc),

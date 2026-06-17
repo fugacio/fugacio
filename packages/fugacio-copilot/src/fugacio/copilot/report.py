@@ -69,7 +69,7 @@ def stream_table(streams: Mapping[str, Stream], *, digits: int = 4) -> str:
 
 
 def summarize_optimization(result: Any, *, title: str = "Optimization") -> str:
-    """Summarize an :class:`OptimizeResult` or :class:`FlowsheetOptResult` as Markdown.
+    """Summarize an `OptimizeResult` or `FlowsheetOptResult` as Markdown.
 
     Reads the common fields by duck typing, so it accepts either the raw optimizer
     result (``fun``) or a flowsheet optimization result (``objective``).
@@ -103,7 +103,7 @@ def summarize_economics(
     """Render an equipment cost breakdown and the resulting total annual cost.
 
     Args:
-        items: Costed equipment (from :func:`fugacio.sim.bare_module_cost`).
+        items: Costed equipment (from `fugacio.sim.bare_module_cost`).
         operating_cost: Annual operating (utility) cost ($/yr).
         interest_rate: Annual interest rate for the capital-recovery factor.
         years: Project life (years).
@@ -138,7 +138,7 @@ def summarize_economics(
 
 
 def summarize_pid_tuning(recommendation: Mapping[str, Any]) -> str:
-    """Render a :func:`recommend_pid_tuning` result as a Markdown comparison table.
+    """Render a `recommend_pid_tuning` result as a Markdown comparison table.
 
     Accepts the dict returned by the ``recommend_pid_tuning`` copilot tool (a list
     of candidate rules with their gains and closed-loop metrics) and renders the
@@ -202,7 +202,7 @@ def summarize_heat_integration(targets: Mapping[str, Any]) -> str:
 
 
 def summarize_lqr_design(design: Mapping[str, Any]) -> str:
-    """Render an :func:`lqr_design` result (gain, poles, stability) as Markdown.
+    """Render an `lqr_design` result (gain, poles, stability) as Markdown.
 
     Accepts the dict returned by the ``lqr_design`` copilot tool.
     """
@@ -227,7 +227,7 @@ def summarize_lqr_design(design: Mapping[str, Any]) -> str:
 
 
 def summarize_mpc_simulation(result: Mapping[str, Any]) -> str:
-    """Render a :func:`simulate_mpc` result as a Markdown step-response report.
+    """Render a `simulate_mpc` result as a Markdown step-response report.
 
     Accepts the dict returned by the ``simulate_mpc`` copilot tool (per-output step
     metrics, setpoint, and final value) and lays it out as an engineer-facing table.

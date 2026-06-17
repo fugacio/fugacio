@@ -1,6 +1,6 @@
 """OpenAI chat-completions adapter for the Fugacio copilot.
 
-Translates the neutral :class:`~fugacio.copilot.llm.base.Message` / tool schemas
+Translates the neutral `Message` / tool schemas
 to the OpenAI chat-completions wire format and parses tool calls back out. The
 ``openai`` SDK is imported lazily inside the constructor, so importing this
 module never requires the dependency; install it with the ``llm`` extra.
@@ -36,7 +36,7 @@ def _to_openai_message(m: Message) -> JsonDict:
 
 
 class OpenAIProvider:
-    """An :class:`~fugacio.copilot.llm.base.LLMProvider` backed by the OpenAI API.
+    """An `LLMProvider` backed by the OpenAI API.
 
     Args:
         model: Chat model name (e.g. ``"gpt-4o"``, ``"gpt-4o-mini"``).
@@ -72,7 +72,7 @@ class OpenAIProvider:
         temperature: float = 0.0,
         max_tokens: int = 1024,
     ) -> ChatResponse:
-        """Call chat-completions and parse the reply into a :class:`ChatResponse`."""
+        """Call chat-completions and parse the reply into a `ChatResponse`."""
         kwargs: JsonDict = {
             "model": self.model,
             "messages": [_to_openai_message(m) for m in messages],

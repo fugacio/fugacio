@@ -6,7 +6,7 @@ in. Writing the single forward pass as ``g(tear, theta) -> tear`` (mix the feed
 with the recycle guess, run the units, return the recomputed recycle), the
 converged flowsheet is the fixed point ``tear* = g(tear*, theta)``.
 
-:func:`tear_solve` finds that fixed point with a **Wegstein-accelerated**
+`tear_solve` finds that fixed point with a **Wegstein-accelerated**
 iteration -- the workhorse of sequential-modular simulators, far more robust than
 plain direct substitution on tight recycles -- and differentiates the *converged*
 solution by the implicit function theorem (a hand-written ``custom_vjp``). The
@@ -15,13 +15,13 @@ product spec with respect to an operating variable costs one adjoint solve, no
 matter how many recycle iterations were needed. That is what makes whole-process,
 recycle-closed gradient optimisation tractable.
 
-The tear state can be any JAX pytree (a :class:`~fugacio.sim.stream.Stream`, a
+The tear state can be any JAX pytree (a `Stream`, a
 list of them, a dict, ...); it is flattened internally. Convergence is judged on
 a relative norm, so mixed-scale states (flows, temperature, pressure) all
 converge to the same relative tolerance without manual scaling.
 
-:class:`Flowsheet` is a thin declarative wrapper: register feeds and unit
-functions, mark a tear, and call :meth:`Flowsheet.solve`.
+`Flowsheet` is a thin declarative wrapper: register feeds and unit
+functions, mark a tear, and call `Flowsheet.solve`.
 """
 
 from __future__ import annotations
@@ -159,10 +159,12 @@ def tear_solve(
             Pass the quantities you want to differentiate through here -- gradients
             flow to ``theta`` by implicit differentiation. Closed-over constants are
             fine but are treated as non-differentiable.
-        q_min, q_max: Bounds on the Wegstein acceleration factor. The default
+        q_min: Lower bound on the Wegstein acceleration factor.
+        q_max: Upper bound on the Wegstein acceleration factor. The default
             ``[-5, 0]`` accelerates without over-damping; widen ``q_max`` toward
             ``1`` to damp oscillatory recycles.
-        tol, atol: Relative / absolute floor for the convergence norm.
+        tol: Relative tolerance for the convergence norm.
+        atol: Absolute floor for the convergence norm.
         max_iter: Iteration cap for both the forward and adjoint solves.
 
     Returns:
@@ -196,7 +198,7 @@ class Flowsheet:
     """A small declarative flowsheet: named streams produced by connected units.
 
     Build a flowsheet by registering feeds and units, then designate a recycle
-    *tear* and call :meth:`solve`. Each unit is a plain function of its input
+    *tear* and call `solve`. Each unit is a plain function of its input
     streams (and the shared ``theta``) returning one or more output streams; the
     flowsheet evaluates the units in registration order, which the caller arranges
     to be a valid sequential-modular order with the recycle torn.
@@ -236,7 +238,7 @@ class Flowsheet:
         """Register a unit ``fn(*input_streams, theta) -> output stream(s)``.
 
         ``fn`` receives the named input streams positionally followed by the shared
-        ``theta`` pytree, and returns either a single :class:`Stream` (for one
+        ``theta`` pytree, and returns either a single `Stream` (for one
         output name) or a tuple/list of streams aligned with ``outputs``.
         """
         self.units.append(_Unit(name, fn, tuple(inputs), tuple(outputs)))
@@ -267,7 +269,7 @@ class Flowsheet:
 
         ``theta`` is the differentiable parameter pytree passed to every unit; any
         output stream is differentiable with respect to it. Extra keyword arguments
-        are forwarded to :func:`tear_solve`.
+        are forwarded to `tear_solve`.
         """
         if not self.tears:
             return self._evaluate({}, theta)

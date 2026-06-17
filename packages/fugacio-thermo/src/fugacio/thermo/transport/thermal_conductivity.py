@@ -1,17 +1,17 @@
 """Thermal conductivity: dilute-gas and liquid, pure components and mixtures.
 
-The same two-route dispatch as :mod:`fugacio.thermo.transport.viscosity`:
+The same two-route dispatch as `fugacio.thermo.transport.viscosity`:
 
 * **curated fits** -- DIPPR-102 (dilute gas) and DIPPR-100 (liquid) coefficients
-  from :mod:`fugacio.thermo._property_data`;
+  from `fugacio.thermo._property_data`;
 * **corresponding states** -- the Chung et al. dilute-gas method
-  (:func:`chung_thermal_conductivity_gas`, built on the Chung viscosity and the
+  (`chung_thermal_conductivity_gas`, built on the Chung viscosity and the
   ideal-gas heat capacity) and Sato-Riedel for liquids
-  (:func:`sato_riedel_thermal_conductivity`).
+  (`sato_riedel_thermal_conductivity`).
 
 Mixtures use Wassiljewa's equation with the Mason-Saxena weights for gases
-(:func:`wassiljewa_mixture`) and the DIPPR9H mass-fraction power law for liquids
-(:func:`dippr9h_mixture`).
+(`wassiljewa_mixture`) and the DIPPR9H mass-fraction power law for liquids
+(`dippr9h_mixture`).
 
 All conductivities are in W/m/K.
 """

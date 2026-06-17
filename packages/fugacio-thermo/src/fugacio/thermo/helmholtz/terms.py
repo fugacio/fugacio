@@ -8,10 +8,10 @@ Helmholtz energy
 with ``delta = rho/rho_reducing`` and ``tau = t_reducing/T``. Every
 thermodynamic property -- pressure, heat capacities, speed of sound, fugacity,
 Joule-Thomson coefficient -- is an algebraic combination of partial
-derivatives of ``alpha`` (:mod:`fugacio.thermo.helmholtz.props`). Reference
+derivatives of ``alpha`` (`fugacio.thermo.helmholtz.props`). Reference
 implementations hand-derive and hand-code those derivatives term family by
 term family; Fugacio instead evaluates the scalar ``alpha`` and lets
-:func:`jax.grad` produce the exact derivatives. That is the clearest possible
+`jax.grad` produce the exact derivatives. That is the clearest possible
 demonstration of a differentiable thermodynamics core: one formula, every
 property, machine-precision consistency between them by construction.
 
@@ -130,7 +130,7 @@ class AlphaDerivatives:
 
     Subscripts denote reduced-variable partials: ``ar_d`` is
     ``d(alphar)/d(delta)`` at constant ``tau``, ``a0_tt`` is
-    ``d^2(alpha0)/d(tau)^2``, and so on. All are produced by :func:`jax.grad`
+    ``d^2(alpha0)/d(tau)^2``, and so on. All are produced by `jax.grad`
     of the scalar term sums -- no hand-derived derivative code exists in this
     package.
     """

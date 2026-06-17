@@ -1,11 +1,11 @@
 # Dynamics & process control
 
-Everything else in `fugacio.sim` is **steady state** — a flash, a column, a
+Everything else in `fugacio.sim` is **steady state**: a flash, a column, a
 recycle loop is the solution of an algebraic system. The `fugacio.sim.dynamics`
 and `fugacio.sim.control` layers add the missing dimension, **time**, while
 keeping the whole stack end-to-end differentiable. You can simulate how a plant
 *gets* to steady state, close PID loops around it, and take a gradient of any
-trajectory feature — a settling time, an off-spec integral, a peak temperature —
+trajectory feature (a settling time, an off-spec integral, a peak temperature)
 with respect to controller gains, setpoints, feed schedules, or equipment
 parameters.
 
@@ -42,8 +42,8 @@ g = jax.grad(lambda zeta: odeint(rhs, jnp.array([1.0, 0.0]), ts,
 `integrate` is an **adaptive-step** Dormand–Prince 5(4) with a PI step-size
 controller, for when only the final state matters and efficiency or stiffness
 control does. Its data-dependent step count rules out naive reverse-mode, so
-gradients come from the **continuous-adjoint** method — a hand-written
-`custom_vjp` that integrates the adjoint ODE backwards — exactly the
+gradients come from the **continuous-adjoint** method (a hand-written
+`custom_vjp` that integrates the adjoint ODE backwards), exactly the
 "differentiate the converged solution, not the iteration" philosophy used for the
 algebraic solvers elsewhere in the stack. The cost of the gradient is one adjoint
 solve, independent of how many forward steps the controller took.
@@ -61,7 +61,7 @@ res.y, res.n_accepted, res.success
 `PID` is a registered JAX pytree, so the *gains themselves* are differentiable. It
 is written to live **inside** a flowsheet ODE: its integral action and filtered
 derivative are carried as ODE states, so a closed loop is just a larger ODE. Two
-things make it production-grade rather than a toy — a realizable, **filtered
+things make it production-grade rather than a toy: a realizable, **filtered
 derivative** (acting on the measurement, so no derivative kick on setpoint
 changes), and **back-calculation anti-windup** that unwinds the integrator while
 the output is saturated.
@@ -90,8 +90,8 @@ The classical building blocks come with closed-form **step responses**
 (`first_order_step`, `fopdt_step`, `second_order_step`, `lead_lag`) and
 **state-space realizations** (`first_order_ss`, `second_order_ss`), plus the
 static actuator nonlinearities (`saturate`, `dead_band`, `rate_limit`). Response
-**metrics** — `overshoot`, `rise_time`, `settling_time`, the error integrals
-`iae` / `ise` / `itae`, and the `step_info` bundle — turn a trajectory into the
+**metrics** (`overshoot`, `rise_time`, `settling_time`, the error integrals
+`iae` / `ise` / `itae`, and the `step_info` bundle) turn a trajectory into the
 figures of merit you actually tune for; the error integrals are smooth, so they
 are the natural objectives for gradient-based tuning.
 
@@ -129,7 +129,7 @@ controller = imc_tuning(model, controller="PI", tau_c=2.0)
 
 For a closed-loop, performance-index-optimal tune that exploits the fully
 differentiable plant, `tune_pid` descends an IAE / ISE / ITAE objective directly
-on the gains — gradients flow through the whole simulated loop, so it is exact
+on the gains: gradients flow through the whole simulated loop, so it's exact
 first-order, not a grid search.
 
 ```python
@@ -143,12 +143,12 @@ res.x        # the tuned gains
 ## Dynamic unit operations
 
 A steady-state unit maps inlets to outlets instantaneously; a **dynamic** unit has
-memory — inventory of material and energy — so its outlets depend on accumulated
+memory (inventory of material and energy), so its outlets depend on accumulated
 holdup, and its behaviour is an ODE. Every model follows the same recipe: the
 **state** is a conserved holdup (component moles, an energy state) with a clean
 balance `d(holdup)/dt = in − out + generation`, while the **constitutive
 relations** (phase split, density, reaction rate, pressure) are evaluated
-instantaneously from the holdup with the steady-state `fugacio.thermo` kernels — so
+instantaneously from the holdup with the steady-state `fugacio.thermo` kernels, so
 a dynamic flash reuses `flash_pt`, a dynamic reactor reuses the reaction
 thermochemistry and rate laws, and so on.
 

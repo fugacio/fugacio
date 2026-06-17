@@ -5,13 +5,13 @@ whole point of reactive distillation is to push a reaction past its equilibrium
 limit by continuously pulling products into a different phase. This module adds
 two such units on top of the gamma-phi property system:
 
-* :func:`reactive_flash` -- an isothermal flash in which the liquid simultaneously
+* `reactive_flash` -- an isothermal flash in which the liquid simultaneously
   reaches **chemical** equilibrium (one or more reactions) and **phase**
   equilibrium (vapour-liquid). The extents of reaction and the V/L split are
   solved together, reusing the validated gamma-phi flash and the ideal-gas
   reaction thermochemistry. Works for any net mole change.
 
-* :func:`reactive_distillation` -- a rigorous multistage column (Wang-Henke
+* `reactive_distillation` -- a rigorous multistage column (Wang-Henke
   bubble-point, constant molar overflow) with a **rate-based** reaction source on
   each reactive stage: ``S_{j,i} = H_j * sum_r nu_{r,i} * rate_r(T_j, a_j)`` with
   the liquid-phase activities ``a_i = x_i gamma_i`` and a per-stage molar holdup
@@ -21,11 +21,11 @@ two such units on top of the gamma-phi property system:
   exact and the model is rigorous.
 
 The reaction equilibrium constant ``K(T)`` comes from the ideal-gas formation data
-in :mod:`fugacio.thermo.reactions`; at vapour-liquid equilibrium the component
+in `fugacio.thermo.reactions`; at vapour-liquid equilibrium the component
 fugacities are equal across phases, so the ideal-gas-referenced equilibrium is
 written consistently in terms of the liquid activities
 ``a_i = x_i gamma_i f_i^{0,L}/P_ref``. Every result is a differentiable
-:class:`~fugacio.sim.stream.Stream` (or profile of them): conversions, product
+`Stream` (or profile of them): conversions, product
 purities, and stage profiles carry gradients with respect to the feed, operating
 conditions, the activity-model parameters, *and* the kinetic/thermochemical
 parameters.
@@ -103,8 +103,8 @@ class ReactiveFlashResult(NamedTuple):
     """Outcome of a simultaneous reaction + vapour-liquid flash.
 
     Attributes:
-        vapor: Vapour product :class:`~fugacio.sim.stream.Stream`.
-        liquid: Liquid product :class:`~fugacio.sim.stream.Stream`.
+        vapor: Vapour product `Stream`.
+        liquid: Liquid product `Stream`.
         beta: Vapour fraction (mol vapour / mol after reaction).
         extent: Equilibrium extent of each reaction (mol/s), shape ``(n_reactions,)``.
     """
@@ -136,14 +136,16 @@ def reactive_flash(
     Args:
         feed: Inlet stream; reactions must be defined over ``feed.components``.
         reactions: One reaction or several over the feed's component ordering.
-        t, p: Temperature (K) and pressure (Pa).
-        model: A :class:`~fugacio.thermo.GammaPhiModel` (activity liquid + EOS/ideal
+        t: Temperature (K).
+        p: Pressure (Pa).
+        model: A `GammaPhiModel` (activity liquid + EOS/ideal
             vapour) -- the right tool for the non-ideal mixtures reactive flashes
             target.
-        tol, max_iter: Solver controls.
+        tol: Convergence tolerance on the reaction/flash residual.
+        max_iter: Maximum number of solver iterations.
 
     Returns:
-        A :class:`ReactiveFlashResult`. Differentiable in the feed, ``(T, P)``, the
+        A `ReactiveFlashResult`. Differentiable in the feed, ``(T, P)``, the
         activity-model parameters, and the reaction thermochemistry.
     """
     comps = feed.components
@@ -200,8 +202,8 @@ class ReactiveColumnResult(NamedTuple):
         t: Stage temperatures (K), top stage first, shape ``(n_stages,)``.
         x: Liquid mole fractions, shape ``(n_stages, n_components)``.
         y: Vapour mole fractions, shape ``(n_stages, n_components)``.
-        distillate: Distillate product :class:`~fugacio.sim.stream.Stream`.
-        bottoms: Bottoms product :class:`~fugacio.sim.stream.Stream`.
+        distillate: Distillate product `Stream`.
+        bottoms: Bottoms product `Stream`.
         reflux: Reflux ratio used.
         generation: Net mole generation by reaction on each stage (mol/s),
             shape ``(n_stages, n_components)``.
@@ -265,12 +267,15 @@ def reactive_distillation(
         reactive_stages: Inclusive 1-indexed ``(first, last)`` reactive stage range;
             defaults to all interior stages ``(2, n_stages - 1)``.
         q: Feed thermal quality (1 = saturated liquid).
-        t_top, t_bottom: Optional initial top/bottom temperatures.
-        t_min, t_max: Per-stage temperature clamp.
-        tol, max_iter: Outer fixed-point controls.
+        t_top: Optional initial top-stage temperature (K).
+        t_bottom: Optional initial bottom-stage temperature (K).
+        t_min: Lower per-stage temperature clamp (K).
+        t_max: Upper per-stage temperature clamp (K).
+        tol: Convergence tolerance for the outer fixed point.
+        max_iter: Maximum number of outer sweeps.
 
     Returns:
-        A :class:`ReactiveColumnResult`.
+        A `ReactiveColumnResult`.
     """
     from fugacio.sim.flowsheet import tear_solve
 

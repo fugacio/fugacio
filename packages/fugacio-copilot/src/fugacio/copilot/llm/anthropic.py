@@ -1,6 +1,6 @@
 """Anthropic (Claude) Messages-API adapter for the Fugacio copilot.
 
-Translates the neutral :class:`~fugacio.copilot.llm.base.Message` / tool schemas
+Translates the neutral `Message` / tool schemas
 to Anthropic's Messages format -- system prompt hoisted to a top-level argument,
 ``tool_use`` / ``tool_result`` content blocks -- and parses tool calls back out.
 The ``anthropic`` SDK is imported lazily, so importing this module never requires
@@ -43,7 +43,7 @@ def _to_anthropic_message(m: Message) -> JsonDict:
 
 
 class AnthropicProvider:
-    """An :class:`~fugacio.copilot.llm.base.LLMProvider` backed by the Anthropic API.
+    """An `LLMProvider` backed by the Anthropic API.
 
     Args:
         model: Claude model name (e.g. ``"claude-3-5-sonnet-latest"``).
@@ -79,7 +79,7 @@ class AnthropicProvider:
         temperature: float = 0.0,
         max_tokens: int = 1024,
     ) -> ChatResponse:
-        """Call the Messages API and parse the reply into a :class:`ChatResponse`."""
+        """Call the Messages API and parse the reply into a `ChatResponse`."""
         system = "\n\n".join(m.content for m in messages if m.role == "system")
         convo = [_to_anthropic_message(m) for m in messages if m.role != "system"]
         kwargs: JsonDict = {

@@ -1,6 +1,6 @@
 """Process streams for heat integration: the data the pinch targets act on.
 
-A :class:`HeatStream` is the heat-integration view of a process stream: a duty
+A `HeatStream` is the heat-integration view of a process stream: a duty
 that must be supplied (a *cold* stream, heated from a low supply to a high target
 temperature) or removed (a *hot* stream, cooled from a high supply to a low
 target). Under the usual constant-heat-capacity assumption a stream is fully
@@ -11,13 +11,13 @@ The stream is a registered JAX pytree (temperatures, ``CP`` and the film
 coefficient are differentiable leaves; the name is static metadata), so every
 pinch target downstream -- minimum utilities, the pinch temperature, the area
 and capital targets -- is differentiable with respect to the stream data. That is
-what lets :func:`fugacio.sim.integration.optimal_dt_min` optimise heat recovery
+what lets `fugacio.sim.integration.optimal_dt_min` optimise heat recovery
 by gradients.
 
-:func:`heat_stream` builds a :class:`HeatStream` straight from a
-:class:`~fugacio.sim.stream.Stream` and a target temperature, taking the duty
+`heat_stream` builds a `HeatStream` straight from a
+`Stream` and a target temperature, taking the duty
 (and hence ``CP``) from the two-phase-aware stream enthalpy in
-:mod:`fugacio.sim.properties` -- so the heat-integration model inherits the real
+`fugacio.sim.properties` -- so the heat-integration model inherits the real
 thermodynamics of the flowsheet.
 """
 
@@ -96,7 +96,7 @@ def make_stream(
     h: ArrayLike = DEFAULT_FILM_COEFFICIENT,
     name: str = "",
 ) -> HeatStream:
-    """Build a :class:`HeatStream` from supply/target temperatures and ``CP``.
+    """Build a `HeatStream` from supply/target temperatures and ``CP``.
 
     Args:
         t_supply: Supply temperature (K).
@@ -106,7 +106,7 @@ def make_stream(
         name: Optional label.
 
     Returns:
-        A :class:`HeatStream` with array-valued leaves.
+        A `HeatStream` with array-valued leaves.
     """
     return HeatStream(
         t_supply=jnp.asarray(t_supply, dtype=float),
@@ -124,11 +124,11 @@ def heat_stream(
     h: ArrayLike = DEFAULT_FILM_COEFFICIENT,
     name: str = "",
 ) -> HeatStream:
-    """Extract a :class:`HeatStream` from a process :class:`Stream` and a target ``T``.
+    """Extract a `HeatStream` from a process `Stream` and a target ``T``.
 
     The duty is the *actual* enthalpy change of the stream between its temperature
     and ``t_target`` (computed with the two-phase-aware
-    :func:`fugacio.sim.properties.enthalpy_flow`), and the constant ``CP`` is that
+    `fugacio.sim.properties.enthalpy_flow`), and the constant ``CP`` is that
     duty divided by the temperature span -- so the heat-integration stream carries
     the flowsheet's real thermodynamics. Differentiable in the stream state.
 
@@ -139,7 +139,7 @@ def heat_stream(
         name: Optional label.
 
     Returns:
-        A :class:`HeatStream`; hot if ``stream.t > t_target``, cold otherwise.
+        A `HeatStream`; hot if ``stream.t > t_target``, cold otherwise.
     """
     from fugacio.sim.properties import enthalpy_flow
 

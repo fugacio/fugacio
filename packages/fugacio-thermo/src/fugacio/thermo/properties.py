@@ -1,8 +1,8 @@
 """Real-fluid molar properties: ideal-gas integrals plus EOS residual functions.
 
 This is the bridge that assembles ``M_real = M_ideal_gas + M_residual`` for a
-real mixture, combining :mod:`fugacio.thermo.ideal` (the temperature-dependent
-ideal-gas backbone) with :mod:`fugacio.thermo.departure` (the pressure- and
+real mixture, combining `fugacio.thermo.ideal` (the temperature-dependent
+ideal-gas backbone) with `fugacio.thermo.departure` (the pressure- and
 composition-dependent residual). The outputs -- molar enthalpy, entropy, Gibbs
 energy, and heat capacity -- are exactly what energy balances need, and they are
 differentiable with respect to ``T``, ``P``, composition, and every model
@@ -17,7 +17,7 @@ reactor, say -- add the standard enthalpies of formation themselves.
 Each function accepts an explicit ``phase`` (``"vapor"`` or ``"liquid"``) or
 ``"auto"``, which evaluates both cubic roots and selects the one with the lower
 molar Gibbs energy (the thermodynamically stable single phase). The ``"auto"``
-branch is differentiable (a :func:`jax.numpy.where` blend), with the usual
+branch is differentiable (a `jax.numpy.where` blend), with the usual
 caveat that the gradient is one-sided exactly at a phase boundary.
 """
 

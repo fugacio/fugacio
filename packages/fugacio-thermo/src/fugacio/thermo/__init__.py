@@ -1,51 +1,51 @@
 """Differentiable thermodynamics and physical-property engine for Fugacio.
 
-Everything here is written against :mod:`jax.numpy`, so gradients flow cleanly
+Everything here is written against `jax.numpy`, so gradients flow cleanly
 through the rest of the Fugacio stack (``fugacio.sim``, ``fugacio.copilot``).
 
 The public surface is grouped as:
 
-* **data** -- :class:`Component`, the curated :data:`DATABASE`, helpers, and a
-  NIST ThermoML archive reader (:func:`read_thermoml`, :func:`load_sample`);
-* **ideal gas** -- :func:`cp_ig`, :func:`enthalpy_ig`, :func:`entropy_ig`;
-* **equations of state** -- :data:`PR`, :data:`SRK`, :data:`RK`, :data:`VDW`
+* **data** -- `Component`, the curated `DATABASE`, helpers, and a
+  NIST ThermoML archive reader (`read_thermoml`, `load_sample`);
+* **ideal gas** -- `cp_ig`, `enthalpy_ig`, `entropy_ig`;
+* **equations of state** -- `PR`, `SRK`, `RK`, `VDW`
   plus fugacity-coefficient and volume routines;
 * **activity models** -- Margules, van Laar, Wilson, NRTL, UNIQUAC, and
   regular-solution / Flory-Huggins, both as functions and as differentiable
-  :class:`~fugacio.thermo.activity.models.ActivityModel` objects;
-* **group contribution** -- :func:`unifac_activity`, :func:`joback_estimate`;
-* **reference state** -- :func:`liquid_reference_fugacity`,
-  :func:`poynting_factor`, :func:`henry_constant`;
-* **reference fluids** -- :mod:`fugacio.thermo.helmholtz`, multiparameter
+  `ActivityModel` objects;
+* **group contribution** -- `unifac_activity`, `joback_estimate`;
+* **reference state** -- `liquid_reference_fugacity`,
+  `poynting_factor`, `henry_constant`;
+* **reference fluids** -- `fugacio.thermo.helmholtz`, multiparameter
   Helmholtz EOS of the REFPROP/CoolProp class (IAPWS-95 water/steam,
   Span-Wagner CO2, ...) with differentiable saturation lines, steam-table
-  state functions (:func:`state_tp`, :func:`state_ph`, ...), and the IAPWS
+  state functions (`state_tp`, `state_ph`, ...), and the IAPWS
   transport formulations for water;
 * **property correlations** -- DIPPR-form kernels and corresponding-states
   estimators for enthalpy of vaporization and liquid heat capacity
-  (:func:`heat_of_vaporization`, :func:`liquid_heat_capacity`), liquid/vapour
-  volumetric properties (:func:`liquid_density`, :func:`mixture_liquid_volume`,
+  (`heat_of_vaporization`, `liquid_heat_capacity`), liquid/vapour
+  volumetric properties (`liquid_density`, `mixture_liquid_volume`,
   Peneloux translation), and transport properties
-  (:func:`gas_viscosities`, :func:`liquid_thermal_conductivities`,
-  :func:`surface_tensions`, :func:`gas_diffusivity`, ...), pure and mixture;
-* **phase equilibrium** -- equation-of-state (:func:`flash_pt`,
-  :func:`bubble_pressure_eos`, ...) *and* gamma-phi (:func:`flash_pt_gamma`,
-  :func:`bubble_pressure_gamma`, ...) routes, plus liquid-liquid
-  (:func:`flash_lle`) and vapour-liquid-liquid (:func:`flash_vlle`,
-  :func:`heterogeneous_azeotrope`) equilibria and tangent-plane stability;
-* **models** -- the unified :class:`EOSModel` / :class:`GammaPhiModel` interface;
+  (`gas_viscosities`, `liquid_thermal_conductivities`,
+  `surface_tensions`, `gas_diffusivity`, ...), pure and mixture;
+* **phase equilibrium** -- equation-of-state (`flash_pt`,
+  `bubble_pressure_eos`, ...) *and* gamma-phi (`flash_pt_gamma`,
+  `bubble_pressure_gamma`, ...) routes, plus liquid-liquid
+  (`flash_lle`) and vapour-liquid-liquid (`flash_vlle`,
+  `heterogeneous_azeotrope`) equilibria and tangent-plane stability;
+* **models** -- the unified `EOSModel` / `GammaPhiModel` interface;
 * **regression** -- differentiable parameter estimation
-  (:func:`levenberg_marquardt`, :func:`fit_nrtl_binary`, ...),
-  UNIFAC-to-binary prediction (:func:`predict_nrtl_from_unifac`), and the
-  ThermoML batch driver / parameter bank (:func:`fit_vle_dataset`,
-  :class:`ParameterBank`);
+  (`levenberg_marquardt`, `fit_nrtl_binary`, ...),
+  UNIFAC-to-binary prediction (`predict_nrtl_from_unifac`), and the
+  ThermoML batch driver / parameter bank (`fit_vle_dataset`,
+  `ParameterBank`);
 * **reactions** -- stoichiometry and standard-state thermochemistry
-  (:class:`Reaction`, :func:`reaction_properties`, :func:`equilibrium_constant`),
+  (`Reaction`, `reaction_properties`, `equilibrium_constant`),
   chemical-reaction equilibrium
-  (:func:`fugacio.thermo.reaction_equilibrium.equilibrium`), and differentiable
-  rate laws (:class:`PowerLaw`, :class:`MassActionReversible`, :class:`LHHW`);
+  (`fugacio.thermo.reaction_equilibrium.equilibrium`), and differentiable
+  rate laws (`PowerLaw`, `MassActionReversible`, `LHHW`);
 * **validation** -- consistency laws and finite-difference gradient checks, plus
-  :mod:`fugacio.thermo.oracles`, optional differential tests against the
+  `fugacio.thermo.oracles`, optional differential tests against the
   ``thermo`` / ``chemicals`` / Clapeyron.jl (activity) and Cantera (reaction)
   reference libraries.
 """

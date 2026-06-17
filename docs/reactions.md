@@ -88,7 +88,7 @@ either *isothermal* (reporting the heat `duty` to hold `t_out`) or *adiabatic*
 | --- | --- |
 | `equilibrium_reactor` | Outlet at chemical equilibrium (Gibbs / `K(T)`). |
 | `stoichiometric_reactor` | Specified `extent` **or** fractional `conversion`. |
-| `cstr` | Continuous stirred tank — kinetics balanced over a `volume`. |
+| `cstr` | Continuous stirred tank, kinetics balanced over a `volume`. |
 | `pfr` | Plug-flow tubular reactor (RK4 integration along the volume). |
 | `batch_reactor` | Constant-volume batch over a reaction `time`. |
 
@@ -119,10 +119,10 @@ conversion(feed, out.outlet, 0)   # fractional N2 conversion
 When reaction and phase separation happen together, use the `fugacio.sim`
 reactive units, which couple kinetics / chemical equilibrium to a `GammaPhiModel`:
 
-- `reactive_flash` — simultaneous chemical *and* vapour-liquid equilibrium in a
+- `reactive_flash`: simultaneous chemical *and* vapour-liquid equilibrium in a
   single drum (liquid-activity reaction quotient), returning vapour/liquid
   products, the vapour fraction `beta`, and the extents.
-- `reactive_distillation` — a rate-based column that adds per-stage reaction source
+- `reactive_distillation`: a rate-based column that adds per-stage reaction source
   terms (kinetics × molar holdup) to the Wang-Henke mass balances, returning the
   stage profiles, products, and the net `generation` on every stage.
 

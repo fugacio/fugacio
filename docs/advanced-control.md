@@ -1,8 +1,8 @@
 # Advanced process control (MPC & state estimation)
 
 The [dynamics & control](dynamics.md) layer closes single PID loops around a
-plant. Real plants are **multivariable** and **constrained** — interacting loops,
-actuators that saturate, products that must stay on spec — and that is the
+plant. Real plants are **multivariable** and **constrained** (interacting loops,
+actuators that saturate, products that must stay on spec), and that's the
 province of *model predictive control*. At every sample MPC solves a small
 optimal-control problem over a receding horizon, honoring the constraints
 explicitly; paired with a **state estimator** it reconstructs the unmeasured
@@ -10,8 +10,8 @@ state (and unmeasured disturbances) the controller needs.
 
 The `fugacio.sim.mpc` subpackage builds this from the same autodiff primitives as
 the rest of the engine, so two things hold that are unusual for a control
-library. First, every solver — the Riccati recursion, the QP, the nonlinear
-program, the moving-horizon estimator — is **differentiable through its own
+library. First, every solver (the Riccati recursion, the QP, the nonlinear
+program, the moving-horizon estimator) is **differentiable through its own
 solution**, so a closed-loop performance index has *exact* gradients with respect
 to the controller's tuning. Second, the controllers compose with the
 [dynamic flowsheet](dynamics.md) they regulate. The package is layered bottom-up,
@@ -21,7 +21,7 @@ and so is this page.
 
 The bedrock of linear control is the algebraic Riccati equation. `dare` and
 `care` solve the discrete and continuous equations by fixed-iteration
-**structured-doubling** / matrix-sign recursions — no Python-level convergence
+**structured-doubling** / matrix-sign recursions, no Python-level convergence
 branch, so the whole solve is a clean `jax.lax.scan` that backpropagates. From
 them, `dlqr` / `lqr` return the infinite-horizon **LQR** state-feedback gain
 `u = -K x` and its cost-to-go, and `kalman_gain` returns the dual: the
@@ -43,7 +43,7 @@ gain, sigma = kalman_gain(a, c, 1e-3 * jnp.eye(2), jnp.array([[1e-2]]))
 ```
 
 Because the solve is differentiable, the *sensitivity* of any LQR/Kalman quantity
-to the design weights is one `jax.grad` away — useful for control-aware design,
+to the design weights is one `jax.grad` away, useful for control-aware design,
 where the plant and its controller are tuned together:
 
 ```python
@@ -56,7 +56,7 @@ dP_dr = jax.grad(lambda w: dlqr(a, b, q, jnp.array([[w]]))[1][0, 0])(0.1)
 Linear MPC is, at heart, a convex **quadratic program** solved every sample.
 `solve_qp` is a small dense QP solver in the OSQP/ADMM style: a fixed number of
 ADMM iterations (a differentiable `scan`) followed by an active-set **polish**,
-and — crucially — a hand-written `custom_vjp` that differentiates the *solution*
+and, crucially, a hand-written `custom_vjp` that differentiates the *solution*
 through the KKT system (the implicit-function theorem), not the iteration. So you
 can put a QP anywhere inside a differentiable program.
 
@@ -86,8 +86,8 @@ limits. By default it carries an **output-disturbance observer**, the textbook
 recipe for **offset-free** tracking: a step load or plant/model mismatch is
 absorbed into an estimated disturbance and driven out of the steady-state error.
 
-The controller mirrors the [`PID`](dynamics.md) interface — `init_state` then
-`step(state, y_meas, r) -> (u, state)` — so it drops straight into a loop.
+The controller mirrors the [`PID`](dynamics.md) interface (`init_state` then
+`step(state, y_meas, r) -> (u, state)`), so it drops straight into a loop.
 
 ```python
 import jax.numpy as jnp
@@ -118,14 +118,14 @@ MPC needs the state; estimation supplies it. All four estimators share the
 `GaussianState(mean, cov)` belief and a uniform `predict` / `update` / `step` /
 `filter` interface (`filter` runs a whole sequence with one `scan`).
 
-* **`KalmanFilter`** — the optimal linear-Gaussian recursion, with a numerically
+* **`KalmanFilter`**: the optimal linear-Gaussian recursion, with a numerically
   robust **Joseph-form** covariance update.
-* **`ExtendedKalmanFilter`** — the same recursion on the *exact autodiff
+* **`ExtendedKalmanFilter`**: the same recursion on the *exact autodiff
   linearization* of an arbitrary nonlinear transition/measurement (`A = ∂f/∂x`,
   `C = ∂h/∂x` via `jax.jacobian`, no finite differences).
-* **`UnscentedKalmanFilter`** — a derivative-free sigma-point filter for strongly
+* **`UnscentedKalmanFilter`**: a derivative-free sigma-point filter for strongly
   nonlinear models.
-* **`moving_horizon_estimate`** — optimization-based estimation over a sliding
+* **`moving_horizon_estimate`**: optimization-based estimation over a sliding
   window, the estimation dual of MPC: it fits the most recent measurements
   subject to the dynamics, with an arrival cost summarizing older data.
 
@@ -150,7 +150,7 @@ A linear MPC about one operating point is only locally valid. `nonlinear_mpc`
 optimizes over the *true* nonlinear model each step by direct **single shooting**:
 the prediction is a roll-out of a discrete transition `f(x, u, theta)`, the cost
 is a sum over that roll-out, and the open-loop problem is handed to
-[`argmin`](optimization.md) — which differentiates *through the optimum* and is
+[`argmin`](optimization.md), which differentiates *through the optimum* and is
 **warm-started** from the previous step's shifted plan. `discretize` turns a
 continuous right-hand side into the one-step transition; `quadratic_tracking`
 builds the usual stage/terminal costs, or supply an arbitrary stage cost for
@@ -175,13 +175,13 @@ u, warm = mpc.step(jnp.array([3.0, 0.0]), jnp.zeros(1), theta={"r": jnp.array([j
 ## Closed-loop simulation & gradient-based tuning
 
 `simulate_closed_loop` marches a plant and controller together as a single
-`jax.lax.scan` — measurement → control → plant step, with optional process and
-measurement noise — and returns the full state/output/input trajectory. The
+`jax.lax.scan` (measurement → control → plant step, with optional process and
+measurement noise) and returns the full state/output/input trajectory. The
 `linear_feedback` and `nonlinear_feedback` adapters wrap an MPC into the harness's
 `(state, measurement, setpoint) -> (input, state)` protocol, and
 `constant_setpoint` builds a setpoint program.
 
-Because the entire loop is differentiable — *through the controller's own QP* —
+Because the entire loop is differentiable (*through the controller's own QP*),
 `tune_mpc` descends a closed-loop performance index (`closed_loop_cost`, i.e.
 tracking ISE plus optional effort/move penalties) directly on the MPC **weights**.
 This is exact first-order tuning, not a grid search: the gradient knows how
@@ -214,14 +214,14 @@ res.x        # the tuned log-weights (gradients flowed through every QP solve)
 `fugacio.copilot` exposes the layer to an LLM design agent as deterministic,
 JSON-in/JSON-out tools over a linear state-space plant:
 
-* **`lqr_design`** — the LQR gain, Riccati cost-to-go and closed-loop poles for
+* **`lqr_design`**: the LQR gain, Riccati cost-to-go and closed-loop poles for
   given weights (discrete or continuous);
-* **`kalman_design`** — the steady-state Kalman gain, error covariance and
+* **`kalman_design`**: the steady-state Kalman gain, error covariance and
   estimator poles for given noise covariances;
-* **`simulate_mpc`** — run a constrained, offset-free linear MPC in closed loop to
+* **`simulate_mpc`**: run a constrained, offset-free linear MPC in closed loop to
   a setpoint (optionally with an unmeasured output disturbance) and report the
   trajectories and step metrics;
-* **`tune_mpc_weights`** — descend the closed-loop tracking cost on the MPC
+* **`tune_mpc_weights`**: descend the closed-loop tracking cost on the MPC
   weights, exploiting the differentiability of the controller's own QP.
 
 `summarize_lqr_design` and `summarize_mpc_simulation` render the results as

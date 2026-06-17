@@ -1,7 +1,7 @@
 """Energy targeting: the problem table algorithm, composite curves, and the pinch.
 
 This is the differentiable heart of heat integration. Given a set of hot and cold
-:class:`~fugacio.sim.integration.streams.HeatStream` objects and a minimum
+`HeatStream` objects and a minimum
 approach temperature ``dt_min``, the **problem table algorithm** computes the
 thermodynamic minimum hot- and cold-utility duties and locates the **pinch** -- the
 temperature that divides the process into a heat-deficit region (above) and a
@@ -25,8 +25,8 @@ Every quantity is a smooth (a.e.) function of the stream temperatures, the
 heat-capacity flowrates, and ``dt_min``, so ``jax.grad`` flows through the whole
 target -- the basis for gradient-based heat-recovery optimisation.
 
-Composite curves (:func:`composite_curves`) and the grand composite curve
-(:func:`grand_composite_curve`) return the canonical temperature-enthalpy data
+Composite curves (`composite_curves`) and the grand composite curve
+(`grand_composite_curve`) return the canonical temperature-enthalpy data
 for plotting and area targeting.
 """
 
@@ -76,7 +76,7 @@ class HeatCascade(NamedTuple):
 
 
 def heat_cascade(streams: list[HeatStream], dt_min: ArrayLike) -> HeatCascade:
-    """Run the problem table algorithm and return the full :class:`HeatCascade`.
+    """Run the problem table algorithm and return the full `HeatCascade`.
 
     Args:
         streams: The hot and cold process streams (classified by their own
@@ -84,7 +84,7 @@ def heat_cascade(streams: list[HeatStream], dt_min: ArrayLike) -> HeatCascade:
         dt_min: Minimum approach temperature ``dt_min`` (K).
 
     Returns:
-        A :class:`HeatCascade` carrying the minimum utilities, the pinch, and the
+        A `HeatCascade` carrying the minimum utilities, the pinch, and the
         interval data.
     """
     t_supply, t_target, cp, _ = stack(streams)
@@ -168,7 +168,7 @@ def pinch_analysis(streams: list[HeatStream], dt_min: ArrayLike) -> PinchResult:
         dt_min: Minimum approach temperature (K).
 
     Returns:
-        A :class:`PinchResult`.
+        A `PinchResult`.
     """
     casc = heat_cascade(streams, dt_min)
     half = 0.5 * casc.dt_min
@@ -286,7 +286,7 @@ def composite_curves(streams: list[HeatStream], dt_min: ArrayLike) -> CompositeC
         dt_min: Minimum approach temperature (K).
 
     Returns:
-        A :class:`CompositeCurves` with the two curves and the achieved minimum
+        A `CompositeCurves` with the two curves and the achieved minimum
         approach (a consistency check: it equals ``dt_min`` for a pinched
         problem).
     """

@@ -11,7 +11,7 @@ volumes and energy differences::
     Lambda_ij = (v_j / v_i) * exp(-(lambda_ij - lambda_ii) / (R T))
 
 Everything is differentiable with respect to composition and the ``Lambda``
-matrix (or the underlying energies/volumes via :func:`wilson_lambda`).
+matrix (or the underlying energies/volumes via `wilson_lambda`).
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Transport properties: viscosity, thermal conductivity, surface tension, diffusivity.
 
 Every routine dispatches per component between curated correlation fits
-(transcribed from open data into :mod:`fugacio.thermo._property_data`) and
+(transcribed from open data into `fugacio.thermo._property_data`) and
 corresponding-states estimators, so the whole component database is covered; the
 mixture rules are the standard kinetic-theory and engineering combinations. All
 functions are differentiable in temperature and composition.

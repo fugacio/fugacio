@@ -4,16 +4,16 @@ Pure components come from two routes, dispatched per component:
 
 * **curated fits** -- DIPPR-101 (liquid) and DIPPR-102 (dilute gas) coefficients
   transcribed/refitted from open data into
-  :mod:`fugacio.thermo._property_data`;
+  `fugacio.thermo._property_data`;
 * **corresponding states** -- the Chung et al. dilute-gas method
-  (:func:`chung_viscosity_gas`, needing only ``Tc``, ``Vc``, ``omega``, ``MW``
+  (`chung_viscosity_gas`, needing only ``Tc``, ``Vc``, ``omega``, ``MW``
   and the dipole moment) and Letsou-Stiel for liquids
-  (:func:`letsou_stiel_viscosity`), used when no fit is tabulated.
+  (`letsou_stiel_viscosity`), used when no fit is tabulated.
 
 Mixtures use the standard kinetic-theory combination rules: Wilke's
-approximation for gases (:func:`wilke_mixture_viscosity`) and the
+approximation for gases (`wilke_mixture_viscosity`) and the
 Grunberg-Nissan logarithmic rule with zero interaction parameters for liquids
-(:func:`grunberg_nissan_viscosity`). Everything is :mod:`jax.numpy`, so
+(`grunberg_nissan_viscosity`). Everything is `jax.numpy`, so
 viscosities are differentiable in temperature and composition -- and the oracle
 suite grades both routes against CoolProp's reference correlations.
 

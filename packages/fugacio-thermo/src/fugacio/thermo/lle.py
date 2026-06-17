@@ -15,7 +15,7 @@ the phase fraction ``psi`` now the mole fraction in phase ``II``:
 
 The catch is the ever-present *trivial* solution ``x^I = x^II = z`` (``K = 1``); we
 avoid it by seeding the iteration from the unstable trial phase found by the
-tangent-plane test in :mod:`fugacio.thermo.stability`. The converged split is
+tangent-plane test in `fugacio.thermo.stability`. The converged split is
 differentiable in temperature, feed, and the model parameters via implicit
 differentiation of the fixed point -- so tie-lines move smoothly under a gradient,
 which matters for solvent-selection optimisation and parameter fitting to
@@ -80,12 +80,13 @@ def flash_lle(
         z: Overall (feed) mole fractions.
         k_guess: Optional initial distribution ratios ``K_i``. If omitted, the
             tangent-plane stability test seeds a non-trivial split automatically.
-        tol, max_iter: Fixed-point convergence controls.
+        tol: Fixed-point convergence tolerance.
+        max_iter: Maximum number of fixed-point iterations.
 
     Returns:
-        An :class:`LLEResult`. If the feed is actually miscible the iteration
+        An `LLEResult`. If the feed is actually miscible the iteration
         collapses toward the trivial ``K = 1`` (``psi`` at a bound); call
-        :func:`fugacio.thermo.stability.liquid_stability` first to decide whether a
+        `fugacio.thermo.stability.liquid_stability` first to decide whether a
         split exists.
     """
     z = jnp.asarray(z)
@@ -147,7 +148,7 @@ def tie_line(
 ) -> tuple[Array, Array, Array]:
     """One ternary tie-line through feed ``z``: ``(x_raffinate, x_extract, psi)``.
 
-    A thin wrapper over :func:`flash_lle` returning the two conjugate-phase
+    A thin wrapper over `flash_lle` returning the two conjugate-phase
     compositions and the phase fraction -- the unit of a ternary LLE diagram.
     """
     res = flash_lle(model, t, z, tol=tol, max_iter=max_iter)
@@ -164,7 +165,7 @@ def binodal_curve(
 ) -> tuple[Array, Array]:
     """Binary binodal branches over a temperature range.
 
-    Maps :func:`binary_binodal` across ``temperatures`` and returns
+    Maps `binary_binodal` across ``temperatures`` and returns
     ``(x1_phase_I, x1_phase_II)`` arrays aligned with the input -- the two branches
     of the solubility envelope that meet at the upper (or lower) critical solution
     temperature.

@@ -4,21 +4,21 @@ Cubic equations of state are excellent for phase equilibrium but notoriously poo
 for saturated-liquid density (Peng-Robinson is typically 5-15% off). This module
 supplies the standard remedies:
 
-* **Rackett** (:func:`rackett_volume`) -- the two-line corresponding-states
+* **Rackett** (`rackett_volume`) -- the two-line corresponding-states
   classic, sharpened by the Spencer-Danner ``Z_RA`` parameter when the curated
-  tables carry one (:func:`zra_estimate` otherwise);
-* **COSTALD** (:func:`costald_volume`, :func:`costald_mixture_volume`) -- the
+  tables carry one (`zra_estimate` otherwise);
+* **COSTALD** (`costald_volume`, `costald_mixture_volume`) -- the
   Hankinson-Thomson correlation with its characteristic volumes and SRK acentric
   factors, including the standard mixing rules;
 * **DIPPR-105 fits** -- per-component saturated-density correlations transcribed
   from open data (the most accurate route where available);
-* **Peneloux volume translation** (:func:`peneloux_shift`,
-  :func:`translated_molar_volume`) -- the constant shift ``v = v_eos - sum x_i c_i``
+* **Peneloux volume translation** (`peneloux_shift`,
+  `translated_molar_volume`) -- the constant shift ``v = v_eos - sum x_i c_i``
   that repairs cubic-EOS liquid volumes *without changing phase equilibrium*
   (fugacity ratios are invariant to a composition-linear translation).
 
-The name-based dispatchers (:func:`liquid_molar_volumes`,
-:func:`mixture_liquid_volume`, :func:`liquid_density`) choose the best available
+The name-based dispatchers (`liquid_molar_volumes`,
+`mixture_liquid_volume`, `liquid_density`) choose the best available
 route per component -- DIPPR fit, then COSTALD, then Rackett -- so callers get a
 sensible answer for every database component, differentiable in ``T`` and
 composition throughout.
@@ -213,7 +213,7 @@ def mixture_liquid_volume(
     """Saturated-liquid molar volume of a mixture (m^3/mol).
 
     ``method="auto"`` (default) mole-fraction-averages the best available pure
-    volumes (:func:`liquid_molar_volumes`), so the pure-component limits match
+    volumes (`liquid_molar_volumes`), so the pure-component limits match
     the transcribed DIPPR fits exactly. ``method="costald"`` opts into the
     Hankinson-Thomson corresponding-states mixing rules, which capture excess
     volume but require a curated characteristic volume for every component and
@@ -278,7 +278,7 @@ def translated_liquid_volume_for(
 ) -> Array:
     """Peneloux-translated EOS liquid molar volume for named components (m^3/mol).
 
-    Convenience wrapper over :func:`translated_molar_volume` that assembles the
+    Convenience wrapper over `translated_molar_volume` that assembles the
     critical constants and ``Z_RA`` values (curated, else estimated) from the
     component database.
     """

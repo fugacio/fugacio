@@ -13,10 +13,10 @@ differentiable ODE. Two things make it production-grade rather than a toy:
   the integrator is unwound at tracking rate ``1/tau_t`` toward the achievable
   output, so the loop recovers cleanly from saturation instead of winding up.
 
-The :class:`PID` parameters are a registered JAX pytree, so the *gains themselves*
+The `PID` parameters are a registered JAX pytree, so the *gains themselves*
 are differentiable: you can take a gradient of a closed-loop performance index
 (IAE, overshoot, settling time) with respect to ``kc``, ``tau_i``, ``tau_d`` and
-let an optimizer tune them -- see :func:`fugacio.sim.dynamics.tune_pid`.
+let an optimizer tune them -- see `fugacio.sim.dynamics.tune_pid`.
 
 Sign convention: the controller computes the error ``e = setpoint - measurement``
 and a *positive* ``kc`` increases the output when the measurement is below
@@ -115,7 +115,7 @@ class PID:
         """Initial controller state for bumpless start at output ``u0`` (default bias).
 
         The integral term is preloaded so the controller's initial output equals
-        ``u0`` (or :attr:`u_bias` if ``u0`` is ``None``) when the measurement is at
+        ``u0`` (or `u_bias` if ``u0`` is ``None``) when the measurement is at
         ``pv0`` and the setpoint equals ``pv0``; the derivative filter starts at the
         measurement so the initial derivative action is zero.
         """
@@ -144,7 +144,7 @@ class PID:
     def derivative(self, state: PIDState, setpoint: ArrayLike, pv: ArrayLike) -> PIDState:
         """Time derivative of the controller state (for embedding in a flowsheet ODE).
 
-        Returns ``(di/dt, dx_d/dt)`` as a :class:`PIDState`. The integral derivative
+        Returns ``(di/dt, dx_d/dt)`` as a `PIDState`. The integral derivative
         includes the back-calculation anti-windup term so it stops winding up while
         the output is saturated.
         """
@@ -165,7 +165,7 @@ class PID:
         """Discrete one-step update by explicit Euler; returns ``(output, new_state)``.
 
         For standalone digital-controller loops. Inside a continuous dynamic
-        simulation prefer :meth:`derivative` so the controller integrates with the
+        simulation prefer `derivative` so the controller integrates with the
         same solver as the plant.
         """
         d = self.derivative(state, setpoint, pv)

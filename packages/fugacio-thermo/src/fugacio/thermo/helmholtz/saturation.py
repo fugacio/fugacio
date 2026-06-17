@@ -7,10 +7,10 @@ equilibrium:
     g(rho_liquid, T) = g(rho_vapor, T),
 
 a 2x2 root problem in ``(ln delta_liquid, ln delta_vapor)`` solved by the
-damped Newton of :mod:`fugacio.thermo.implicit` and seeded by the published
+damped Newton of `fugacio.thermo.implicit` and seeded by the published
 saturation ancillary equations. Because the solve is wrapped in an implicit
 ``custom_vjp``, the saturation line is *differentiable*: ``d(psat)/dT``
-computed by :func:`jax.grad` through this solve reproduces the
+computed by `jax.grad` through this solve reproduces the
 Clausius-Clapeyron relation ``dP/dT = h_vap / (T dv)`` to machine precision --
 one of the consistency oracles in the test suite.
 

@@ -10,23 +10,23 @@ values are SI unless noted.
 Tables (and the kernels that consume them):
 
 * ``ZRA`` -- Spencer-Danner Rackett compressibilities
-  (:func:`fugacio.thermo.volumetric.rackett_volume`);
+  (`fugacio.thermo.volumetric.rackett_volume`);
 * ``COSTALD_VOLUME`` -- ``(V* m^3/mol, omega_SRK)``
-  (:func:`fugacio.thermo.volumetric.costald_volume`);
+  (`fugacio.thermo.volumetric.costald_volume`);
 * ``DIPOLE`` -- gas-phase dipole moments in debye (Chung estimators);
 * ``RHO_LIQUID_DIPPR105`` -- ``(c1..c4, tmin, tmax)``, density in mol/m^3
-  (:func:`fugacio.thermo.correlations.dippr105`);
+  (`fugacio.thermo.correlations.dippr105`);
 * ``MU_LIQUID_DIPPR101`` -- ``(c1..c5, tmin, tmax)``, viscosity in Pa*s
-  (:func:`fugacio.thermo.correlations.dippr101`);
+  (`fugacio.thermo.correlations.dippr101`);
 * ``MU_GAS_DIPPR102`` -- ``(c1..c4, tmin, tmax)``, viscosity in Pa*s
-  (:func:`fugacio.thermo.correlations.dippr102`);
+  (`fugacio.thermo.correlations.dippr102`);
 * ``K_LIQUID_DIPPR100`` -- ``(c1..c5, tmin, tmax)``, conductivity in W/m/K
-  (:func:`fugacio.thermo.correlations.dippr100`);
+  (`fugacio.thermo.correlations.dippr100`);
 * ``K_GAS_DIPPR102`` -- ``(c1..c4, tmin, tmax)``, conductivity in W/m/K;
 * ``SIGMA_MULERO_CACHADINA`` -- ``(tc, s0, n0, s1, n1, s2, n2, tmin, tmax)``,
-  tension in N/m (:func:`fugacio.thermo.correlations.mulero_cachadina`);
+  tension in N/m (`fugacio.thermo.correlations.mulero_cachadina`);
 * ``HVAP_DIPPR106`` -- ``(tc, c1..c4, tmin, tmax)``, enthalpy of vaporization in
-  J/mol (:func:`fugacio.thermo.correlations.dippr106`);
+  J/mol (`fugacio.thermo.correlations.dippr106`);
 * ``ANTOINE_BACKFILL`` -- ``(a, b, c, tmin, tmax)`` NIST-form Antoine constants
   fitted for components whose curated record lacks them;
 * ``CP_BACKFILL`` -- ``(a, b, c, e, tmin, tmax)`` ideal-gas ``Cp/R`` polynomial

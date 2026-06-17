@@ -4,14 +4,14 @@ The economics layer prices utilities per gigajoule; this module supplies the
 *physical* side: how many kg/s of steam a reboiler actually condenses, what a
 cooling-water circuit's return flow is, how much shaft power a backpressure
 turbine extracts from a header. All of it runs on the IAPWS-95 steam tables
-from :mod:`fugacio.thermo.helmholtz` -- real latent heats at the header
+from `fugacio.thermo.helmholtz` -- real latent heats at the header
 pressure (not a constant 2257 kJ/kg), real liquid heat capacities, real
 isentropic enthalpy drops -- and stays differentiable end to end, so a
 total-annual-cost objective can take exact gradients through the utility
 balances with respect to column duties, header pressures, or approach
 temperatures.
 
-Sign conventions match :func:`fugacio.sim.units.heater`: duties are signed
+Sign conventions match `fugacio.sim.units.heater`: duties are signed
 heat *added to the process* (so a condenser's duty is negative); utility
 functions accept either sign and size on the magnitude.
 """
@@ -99,7 +99,7 @@ def steam_heating(
         condensate_subcooling: Condensate return subcooling below saturation (K).
 
     Returns:
-        A :class:`SteamHeatingResult`; differentiable in every argument.
+        A `SteamHeatingResult`; differentiable in every argument.
     """
     water = reference_fluid("water")
     duty = jnp.abs(jnp.asarray(duty, dtype=float))
@@ -176,7 +176,7 @@ def cooling_water(
         pressure: Circuit pressure (Pa).
 
     Returns:
-        A :class:`CoolingWaterResult`; differentiable in every argument.
+        A `CoolingWaterResult`; differentiable in every argument.
     """
     water = reference_fluid("water")
     duty = jnp.abs(jnp.asarray(duty, dtype=float))
@@ -250,7 +250,7 @@ def steam_turbine(
 
     The ideal outlet comes from an isentropic ``(P, s)`` resolution of
     IAPWS-95 (wet outlets handled by the two-phase dome logic of
-    :func:`fugacio.thermo.helmholtz.state_ps`); the real outlet enthalpy is
+    `fugacio.thermo.helmholtz.state_ps`); the real outlet enthalpy is
     ``h_in - eta * (h_in - h_s)``. Gradients flow through both state solves,
     so turbine power can be differentiated with respect to throttle pressure,
     inlet superheat, or backpressure -- the classic Rankine design knobs.
@@ -263,7 +263,7 @@ def steam_turbine(
         isentropic_efficiency: Fraction of the ideal enthalpy drop extracted.
 
     Returns:
-        A :class:`SteamTurbineResult`; differentiable in every argument.
+        A `SteamTurbineResult`; differentiable in every argument.
     """
     water = reference_fluid("water")
     mass_flow = jnp.asarray(mass_flow, dtype=float)
@@ -302,7 +302,7 @@ def steam_quality_after_letdown(
     Saturated (or slightly superheated) steam throttled across a letdown valve
     flashes to the lower header pressure at constant enthalpy; the result is
     the outlet quality (> 1 is impossible -- ``nan`` marks a superheated,
-    single-phase outlet, matching :class:`fugacio.thermo.helmholtz.FluidState`).
+    single-phase outlet, matching `fugacio.thermo.helmholtz.FluidState`).
     """
     water = reference_fluid("water")
     p_supply = jnp.asarray(p_supply, dtype=float)

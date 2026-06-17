@@ -7,7 +7,7 @@ the state-space matrices are simply its Jacobians,
 
     ``A = df/dy``, ``B = df/du``, ``C = dg/dy``, ``D = dg/du``,
 
-evaluated at the operating point with :func:`jax.jacobian`. No finite differences,
+evaluated at the operating point with `jax.jacobian`. No finite differences,
 no hand-derived models -- the same source of truth that runs the nonlinear
 simulation produces its exact local linearization. From there everything is
 standard dense linear algebra on ``(A, B, C, D)``.
@@ -56,7 +56,7 @@ def linearize(
     *,
     output: Callable[..., Array] | None = None,
 ) -> StateSpace:
-    """Linearize ``y' = f(y, u, theta)`` about ``(y_op, u_op)`` into a :class:`StateSpace`.
+    """Linearize ``y' = f(y, u, theta)`` about ``(y_op, u_op)`` into a `StateSpace`.
 
     Args:
         f: State derivative ``f(y, u, theta) -> dy`` (``theta`` optional/ignored if
@@ -68,7 +68,7 @@ def linearize(
             full state (``C = I``, ``D = 0``).
 
     Returns:
-        The local :class:`StateSpace` ``(A, B, C, D)``.
+        The local `StateSpace` ``(A, B, C, D)``.
     """
     y_op = jnp.asarray(y_op, dtype=float)
     u_op = jnp.asarray(u_op, dtype=float)

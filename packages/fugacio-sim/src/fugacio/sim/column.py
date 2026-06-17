@@ -3,14 +3,14 @@
 Two complementary, fully differentiable column models:
 
 * **Shortcut** -- the Fenske-Underwood-Gilliland (FUG) method: minimum stages at
-  total reflux (:func:`fenske_min_stages`), minimum reflux (:func:`underwood_min_reflux`),
-  the actual stage count at a working reflux (:func:`gilliland_stages`), and the
-  feed-stage location (:func:`kirkbride_feed_stage`), tied together by
-  :func:`shortcut_column`. Cheap, robust, and ideal for screening or as an
+  total reflux (`fenske_min_stages`), minimum reflux (`underwood_min_reflux`),
+  the actual stage count at a working reflux (`gilliland_stages`), and the
+  feed-stage location (`kirkbride_feed_stage`), tied together by
+  `shortcut_column`. Cheap, robust, and ideal for screening or as an
   initial guess for the rigorous model.
 * **Rigorous** -- a multistage equilibrium-stage column solved by the Wang-Henke
   bubble-point method under constant molar overflow, with EOS K-values on every
-  stage (:func:`solve_column`). The converged profile is differentiable through
+  stage (`solve_column`). The converged profile is differentiable through
   the fixed-point iteration by implicit differentiation.
 
 Both expose exact gradients of their outputs (stage count, reflux, product
@@ -256,12 +256,13 @@ def shortcut_column(
         b: Bottoms component molar flows (``z * F - d`` on a consistent basis).
         alpha: Relative volatilities (to any common reference).
         q: Feed thermal quality (1 = saturated liquid, 0 = saturated vapour).
-        lk, hk: Light- and heavy-key component indices.
+        lk: Light-key component index.
+        hk: Heavy-key component index.
         reflux: Working reflux ratio. If ``None``, ``reflux_factor * R_min`` is used.
         reflux_factor: Multiplier on ``R_min`` when ``reflux`` is not given.
 
     Returns:
-        A :class:`ShortcutResult`; every field is differentiable in the inputs.
+        A `ShortcutResult`; every field is differentiable in the inputs.
     """
     d = jnp.asarray(d)
     b = jnp.asarray(b)
@@ -291,8 +292,8 @@ class ColumnResult(NamedTuple):
         t: Stage temperatures (K), top stage first.
         x: Liquid mole fractions, shape ``(n_stages, n_components)``.
         y: Vapour mole fractions, shape ``(n_stages, n_components)``.
-        distillate: Distillate product :class:`~fugacio.sim.stream.Stream`.
-        bottoms: Bottoms product :class:`~fugacio.sim.stream.Stream`.
+        distillate: Distillate product `Stream`.
+        bottoms: Bottoms product `Stream`.
         reflux: Reflux ratio used.
         condenser_duty: Condenser heat removed (W, positive).
         reboiler_duty: Reboiler heat added (W, positive).
@@ -335,12 +336,12 @@ def solve_column(
     balances for the liquid profile with the current EOS K-values, (ii) takes a
     bubble-point Newton step on every stage temperature, and (iii) refreshes the
     vapour compositions. The sweep is iterated to a fixed point by
-    :func:`~fugacio.sim.flowsheet.tear_solve`, so the converged profile, products,
+    `tear_solve`, so the converged profile, products,
     and duties are all differentiable (implicit differentiation) with respect to
     ``reflux``, ``distillate_rate``, the feed, and model parameters.
 
     Args:
-        feed: Feed :class:`~fugacio.sim.stream.Stream` (its temperature sets the
+        feed: Feed `Stream` (its temperature sets the
             feed enthalpy used for the duty balance).
         n_stages: Number of equilibrium stages including the reboiler.
         feed_stage: 1-indexed feed stage (``2 <= feed_stage <= n_stages - 1``).
@@ -349,13 +350,17 @@ def solve_column(
         eos: Cubic equation of state (default Peng-Robinson).
         q: Feed thermal quality (1 = saturated liquid).
         kij: Optional binary interaction matrix.
-        t_top, t_bottom: Optional initial top/bottom temperatures for the linear
-            starting profile (default ``feed.t -/+`` a small spread).
-        t_min, t_max: Bracket clamp for the per-stage temperature updates.
-        tol, max_iter: Convergence controls for the outer fixed point.
+        t_top: Optional initial top-stage temperature for the linear starting
+            profile (default ``feed.t`` minus a small spread).
+        t_bottom: Optional initial bottom-stage temperature for the linear starting
+            profile (default ``feed.t`` plus a small spread).
+        t_min: Lower bracket clamp for the per-stage temperature updates.
+        t_max: Upper bracket clamp for the per-stage temperature updates.
+        tol: Convergence tolerance for the outer fixed point.
+        max_iter: Maximum number of outer sweeps.
 
     Returns:
-        A :class:`ColumnResult`.
+        A `ColumnResult`.
     """
     components = feed.components
     n = n_stages

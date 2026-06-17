@@ -4,7 +4,7 @@ Given a sampled response ``(t, y)`` toward a setpoint, these compute the figures
 of merit an engineer actually tunes for: overshoot, rise and settling time, and
 the error integrals (IAE / ISE / ITAE). The error integrals are smooth functionals
 of the trajectory, so they are the natural -- and differentiable -- objectives for
-gradient-based controller tuning (:func:`fugacio.sim.dynamics.tune_pid`); the
+gradient-based controller tuning (`fugacio.sim.dynamics.tune_pid`); the
 event-style metrics (overshoot, settling time) are primarily for reporting.
 """
 

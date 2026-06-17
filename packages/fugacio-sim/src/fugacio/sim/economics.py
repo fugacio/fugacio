@@ -4,7 +4,7 @@ To *optimize* a process you need an objective with units of money, and that mean
 sizing equipment and costing it. This module supplies smooth, differentiable
 correlations for both, so a total-annual-cost or net-present-value objective
 plugs straight into the gradient-based optimizers in
-:mod:`fugacio.sim.optimize` -- you can take the derivative of installed cost with
+`fugacio.sim.optimize` -- you can take the derivative of installed cost with
 respect to a reflux ratio or a heat-exchanger approach temperature.
 
 Sizing
@@ -154,7 +154,8 @@ def heat_exchanger_area(
     Args:
         duty: Heat duty ``Q`` (W); the magnitude is used.
         u: Overall heat-transfer coefficient (W/m^2/K).
-        dt_hot, dt_cold: Terminal temperature approaches at the two ends (K).
+        dt_hot: Terminal temperature approach at the hot end (K).
+        dt_cold: Terminal temperature approach at the cold end (K).
     """
     return jnp.abs(jnp.asarray(duty)) / (jnp.asarray(u) * lmtd(dt_hot, dt_cold))
 
@@ -227,7 +228,7 @@ def purchased_cost(kind: str, size: ArrayLike) -> Array:
     """Purchased equipment cost ``Cp0`` at the correlation basis (CEPCI 397), in $.
 
     Uses ``log10 Cp0 = K1 + K2 log10 A + K3 (log10 A)^2`` with ``A`` the
-    equipment's capacity attribute (see :data:`_TURTON`). The size is clipped to
+    equipment's capacity attribute (see `_TURTON`). The size is clipped to
     the correlation's validity range before the (smooth) evaluation.
     """
     c = _coeffs(kind)
@@ -268,7 +269,7 @@ def bare_module_cost(
         cepci: Target cost index.
 
     Returns:
-        An :class:`EquipmentCost`.
+        An `EquipmentCost`.
     """
     c = _coeffs(kind)
     fm = _MATERIAL_FACTOR.get(material, 1.0)
@@ -324,7 +325,7 @@ def utility_cost(
 
     Args:
         duty_w: Duty (W); the magnitude is used (heating or cooling alike).
-        kind: Utility key in :data:`UTILITIES`.
+        kind: Utility key in `UTILITIES`.
         hours_per_year: Operating hours per year.
     """
     if kind not in UTILITIES:

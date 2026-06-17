@@ -10,11 +10,11 @@ cannot.
 
 This module builds the *condensed* QP (the optimizer decides the input sequence;
 the states are eliminated by the prediction equations) so each step is a single
-call to the differentiable :func:`fugacio.sim.mpc.solve_qp`. Three pieces make it
+call to the differentiable `fugacio.sim.mpc.solve_qp`. Three pieces make it
 production-grade rather than a textbook regulator:
 
 * **A stabilizing terminal cost.** The terminal weight defaults to the discrete
-  LQR cost-to-go (:func:`fugacio.sim.mpc.dare`), so an *unconstrained* horizon-one
+  LQR cost-to-go (`fugacio.sim.mpc.dare`), so an *unconstrained* horizon-one
   controller reproduces the infinite-horizon LQR law exactly -- the finite horizon
   inherits the LQR's nominal stability.
 * **Offset-free tracking.** An augmented output-disturbance model is estimated by
@@ -28,7 +28,7 @@ production-grade rather than a textbook regulator:
 
 Because the whole step is the differentiable QP, a gradient of a closed-loop
 performance index flows straight through the controller's optimization -- see
-:func:`fugacio.sim.mpc.tune_mpc`.
+`fugacio.sim.mpc.tune_mpc`.
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def _any_finite(v: ArrayLike) -> bool:
 # Discretization
 # --------------------------------------------------------------------------- #
 def c2d(ss: StateSpace, dt: ArrayLike, *, method: str = "zoh") -> StateSpace:
-    """Discretize a continuous :class:`StateSpace` at sample time ``dt``.
+    """Discretize a continuous `StateSpace` at sample time ``dt``.
 
     Zero-order-hold exactly via the matrix exponential of the augmented block
     ``[[A, B], [0, 0]]``: ``expm(.. * dt) = [[Ad, Bd], [0, I]]``. The output map
@@ -176,7 +176,7 @@ class MPCState(NamedTuple):
 
 
 class MPCResult(NamedTuple):
-    """Outcome of a single :meth:`LinearMPC.solve`.
+    """Outcome of a single `LinearMPC.solve`.
 
     Attributes:
         u: The first input move to apply ``(m,)``.
@@ -202,11 +202,11 @@ class MPCResult(NamedTuple):
 class LinearMPC:
     """A condensed-QP linear MPC with offset-free tracking and constraints.
 
-    Construct with :func:`linear_mpc`, which discretizes (if needed), computes the
+    Construct with `linear_mpc`, which discretizes (if needed), computes the
     LQR terminal cost and the disturbance-observer gain, and fills the bounds. The
-    controller is discrete-time with sample period :attr:`dt`; drive a closed loop
-    with :meth:`step` (estimate, optimize, advance) or query a one-shot optimal
-    move with :meth:`solve`.
+    controller is discrete-time with sample period `dt`; drive a closed loop
+    with `step` (estimate, optimize, advance) or query a one-shot optimal
+    move with `solve`.
     """
 
     a: Array
@@ -233,14 +233,17 @@ class LinearMPC:
     # -- dimensions ----------------------------------------------------------
     @property
     def n_state(self) -> int:
+        """Number of plant states."""
         return self.a.shape[0]
 
     @property
     def n_input(self) -> int:
+        """Number of manipulated inputs."""
         return self.b.shape[1]
 
     @property
     def n_output(self) -> int:
+        """Number of controlled outputs."""
         return self.c.shape[0]
 
     # -- offset-free target --------------------------------------------------
@@ -433,10 +436,10 @@ class LinearMPC:
     ) -> tuple[Array, MPCState]:
         """One discrete controller iteration: estimate, optimize, advance the prior.
 
-        Mirrors :meth:`fugacio.sim.control.PID.step`: returns ``(u, new_state)``
+        Mirrors `fugacio.sim.control.PID.step`: returns ``(u, new_state)``
         where ``new_state`` carries the *predicted* prior estimate for the next
         sample. Drop into a closed-loop simulation (see
-        :func:`fugacio.sim.mpc.simulate_closed_loop`).
+        `fugacio.sim.mpc.simulate_closed_loop`).
         """
         corrected = self.estimate(state, y_meas)
         res = self.solve(corrected.x_hat, r, corrected.u_prev, corrected.d_hat, settings=settings)
@@ -496,10 +499,10 @@ def linear_mpc(
     dist_noise: float = 1.0,
     meas_noise: float = 1e-2,
 ) -> LinearMPC:
-    """Assemble a :class:`LinearMPC` from a state-space model and weights.
+    """Assemble a `LinearMPC` from a state-space model and weights.
 
     Args:
-        model: The plant :class:`StateSpace`. Discrete by default; pass
+        model: The plant `StateSpace`. Discrete by default; pass
             ``discretize=True`` with ``dt`` to ZOH-discretize a continuous model.
         q: Output tracking weight ``(p, p)`` (scalar/diagonal broadcast).
         r: Input weight ``(m, m)``.
@@ -508,17 +511,22 @@ def linear_mpc(
         s_du: Input-move (rate) weight ``(m, m)`` (default 0).
         dt: Sample time; required if ``discretize`` (and recorded on the controller).
         discretize: Whether ``model`` is continuous and must be ZOH-discretized.
-        u_min, u_max, du_max: Input magnitude and per-step rate limits (vectors).
-        y_min, y_max: Output limits, imposed as *soft* (slack) constraints.
+        u_min: Lower input-magnitude limit (vector).
+        u_max: Upper input-magnitude limit (vector).
+        du_max: Per-step input-rate limit (vector).
+        y_min: Lower output limit, imposed as a *soft* (slack) constraint.
+        y_max: Upper output limit, imposed as a *soft* (slack) constraint.
         soft_weight: Linear penalty on output-constraint slacks.
         terminal: Terminal cost -- ``"lqr"`` (DARE cost-to-go, stabilizing) or
             ``"none"`` (use ``q`` mapped to states).
         disturbance: ``"output"`` for offset-free output-disturbance tracking or
             ``"none"`` to disable the disturbance model.
-        proc_noise, dist_noise, meas_noise: Kalman tuning for the observer.
+        proc_noise: Process-noise weight for the observer Kalman gain.
+        dist_noise: Disturbance-state noise weight for the observer Kalman gain.
+        meas_noise: Measurement-noise weight for the observer Kalman gain.
 
     Returns:
-        A ready :class:`LinearMPC`.
+        A ready `LinearMPC`.
     """
     if discretize:
         if dt is None:

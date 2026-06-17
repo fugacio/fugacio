@@ -1,6 +1,6 @@
 """Copilot tools for advanced process control (MPC + state estimation).
 
-These expose :mod:`fugacio.sim.mpc` to the LLM design agent as deterministic,
+These expose `fugacio.sim.mpc` to the LLM design agent as deterministic,
 JSON-in/JSON-out calculations over a *linear state-space* plant ``x+ = A x + B u``,
 ``y = C x``:
 

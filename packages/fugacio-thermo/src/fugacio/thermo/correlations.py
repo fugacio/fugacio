@@ -3,18 +3,18 @@
 Two layers live here:
 
 * **Correlation kernels** -- the classic DIPPR-numbered functional forms
-  (:func:`dippr100`, :func:`dippr101`, :func:`dippr102`, :func:`dippr105`,
-  :func:`dippr106`) plus the REFPROP-style :func:`mulero_cachadina` surface-tension
-  expansion. These are plain :mod:`jax.numpy` functions of temperature and their
+  (`dippr100`, `dippr101`, `dippr102`, `dippr105`,
+  `dippr106`) plus the REFPROP-style `mulero_cachadina` surface-tension
+  expansion. These are plain `jax.numpy` functions of temperature and their
   coefficients, so they are differentiable in both (handy when regressing
   coefficients to data).
 * **Corresponding-states estimators and dispatchers** -- enthalpy of vaporization
-  (curated DIPPR-106 table, else :func:`pitzer_hvap`; rescaled between
-  temperatures by :func:`watson_hvap`) and liquid heat capacity
-  (:func:`rowlinson_bondi_cp` on top of the ideal-gas ``Cp``). The name-based
-  dispatchers (:func:`heat_of_vaporization`, :func:`liquid_heat_capacity`) pull
+  (curated DIPPR-106 table, else `pitzer_hvap`; rescaled between
+  temperatures by `watson_hvap`) and liquid heat capacity
+  (`rowlinson_bondi_cp` on top of the ideal-gas ``Cp``). The name-based
+  dispatchers (`heat_of_vaporization`, `liquid_heat_capacity`) pull
   per-component coefficients from the generated
-  :mod:`fugacio.thermo._property_data` tables and fall back to the
+  `fugacio.thermo._property_data` tables and fall back to the
   corresponding-states estimate when no curated fit exists, so they work for the
   whole component database.
 
@@ -198,7 +198,7 @@ def heat_of_vaporization(components: list[str] | list[Component], t: ArrayLike) 
     """Per-component enthalpy of vaporization ``Hvap_i(T)`` (J/mol).
 
     Uses the curated DIPPR-106 fit where one exists and the Pitzer
-    corresponding-states correlation (:func:`pitzer_hvap`) otherwise, so the
+    corresponding-states correlation (`pitzer_hvap`) otherwise, so the
     result is defined for every database component. Values go to zero at each
     component's critical temperature.
     """

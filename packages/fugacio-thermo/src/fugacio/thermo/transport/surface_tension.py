@@ -2,9 +2,9 @@
 
 Pure components dispatch between the curated Mulero-Cachadina fits (REFPROP-grade
 multi-term ``(1-Tr)^n`` expansions transcribed/refitted from open data) and the
-Brock-Bird corresponding-states estimate (:func:`brock_bird_surface_tension`)
+Brock-Bird corresponding-states estimate (`brock_bird_surface_tension`)
 when no fit exists. Mixtures use the Winterfeld-Scriven-Davis combination rule
-(:func:`winterfeld_scriven_davis`), which weights component tensions by their
+(`winterfeld_scriven_davis`), which weights component tensions by their
 liquid molar volumes.
 
 All tensions are in N/m. Tension vanishes at the (mixture) critical point by

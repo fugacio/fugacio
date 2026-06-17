@@ -12,11 +12,11 @@ coefficient ``gamma_i`` for a liquid activity model, or the fugacity coefficient
 ``phi_i`` for an equation of state. Casting the test in terms of a generic
 ``ln_coeff_fn`` makes one implementation serve both worlds.
 
-The companion of equilibrium: while :mod:`fugacio.thermo.equilibrium` answers
+The companion of equilibrium: while `fugacio.thermo.equilibrium` answers
 "given that it splits, into what?", this module answers "does it split at all?"
 -- the test that decides whether a feed is one phase, needs a VLE flash, or (for
 a liquid activity model with a miscibility gap) needs the liquid-liquid solver in
-:mod:`fugacio.thermo.lle`. The most negative trial result also gives an excellent
+`fugacio.thermo.lle`. The most negative trial result also gives an excellent
 *initial guess* for those splits, which those modules consume directly.
 """
 
@@ -95,7 +95,7 @@ def stability_analysis_general(
         tol: Negative-``tm`` threshold below which the feed is declared unstable.
 
     Returns:
-        A :class:`TangentPlaneResult`.
+        A `TangentPlaneResult`.
     """
     z = jnp.asarray(z)
     trials = jnp.asarray(trials)
@@ -132,7 +132,7 @@ def liquid_stability(
 
     Uses the activity coefficients as the ``ln_coeff_fn`` and trial phases enriched
     toward each pure component. A negative ``tpd`` flags a miscibility gap; the
-    returned ``split`` seeds :func:`fugacio.thermo.lle.flash_lle`.
+    returned ``split`` seeds `fugacio.thermo.lle.flash_lle`.
     """
     trials = _enrichment_trials(z, strength=strength)
     return stability_analysis_general(

@@ -1,6 +1,6 @@
 """Gamma-phi vapour-liquid equilibrium (activity-coefficient liquid model).
 
-The cubic-EOS flash in :mod:`fugacio.thermo.equilibrium` describes both phases
+The cubic-EOS flash in `fugacio.thermo.equilibrium` describes both phases
 with one equation of state (the *phi-phi* approach). For the low-pressure, polar,
 strongly non-ideal mixtures that dominate real separations -- ethanol/water and
 other azeotropes, alcohol/ketone/water systems -- a cubic EOS with zero binary
@@ -20,15 +20,15 @@ With an ideal vapour (``phi^V = 1``) and the plain saturation reference
 (``f^{0,L} = Psat``), this collapses to modified Raoult's law
 ``K_i = gamma_i Psat_i / P`` -- enough to reproduce azeotropes that the
 zero-``kij`` cubic cannot. The richer reference (saturation fugacity coefficient +
-Poynting, see :mod:`fugacio.thermo.reference`) and an EOS vapour are available via
+Poynting, see `fugacio.thermo.reference`) and an EOS vapour are available via
 keyword flags.
 
 Every routine here -- K-values, the four saturation calculations (bubble/dew at
 fixed ``T`` or ``P``), and the isothermal flash -- is a fixed point or a
 bracketed root solved by the implicit-diff primitives in
-:mod:`fugacio.thermo.implicit`, so each output is differentiable end-to-end with
+`fugacio.thermo.implicit`, so each output is differentiable end-to-end with
 respect to ``T``, ``P``, composition, *and* the activity-model parameters. That
-last point is what turns parameter regression (:mod:`fugacio.thermo.regression`)
+last point is what turns parameter regression (`fugacio.thermo.regression`)
 into plain gradient descent.
 """
 
@@ -89,9 +89,13 @@ def gamma_phi_k_values(
 
     Args:
         model: Liquid activity-coefficient model.
-        t, p: Temperature (K) and pressure (Pa).
-        x, y: Liquid and vapour mole fractions (``y`` only matters for an EOS vapour).
-        tc, pc, omega: Component critical constants and acentric factors.
+        t: Temperature (K).
+        p: Pressure (Pa).
+        x: Liquid mole fractions.
+        y: Vapour mole fractions (only matters for an EOS vapour).
+        tc: Component critical temperatures (K).
+        pc: Component critical pressures (Pa).
+        omega: Component acentric factors.
         eos: Cubic EOS for the saturation reference and (if selected) the vapour.
         kij: Optional binary interaction matrix for the vapour EOS.
         vapor: ``"ideal"`` (phi^V = 1) or ``"eos"``.

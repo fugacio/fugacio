@@ -1,8 +1,8 @@
 """Vendor-neutral LLM provider layer for the Fugacio copilot.
 
 Importing this package pulls in only the neutral types and the in-memory
-:class:`MockProvider`; the real providers (:class:`OpenAIProvider`,
-:class:`AnthropicProvider`) import their SDKs lazily, so they are importable here
+`MockProvider`; the real providers (`OpenAIProvider`,
+`AnthropicProvider`) import their SDKs lazily, so they are importable here
 without the optional ``llm`` extra installed and only fail if instantiated
 without the SDK.
 """

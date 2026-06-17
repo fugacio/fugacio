@@ -2,19 +2,19 @@
 
 This subpackage supplies the control side of dynamic simulation:
 
-* :mod:`~fugacio.sim.control.pid` -- a realizable, anti-windup :class:`PID`
+* `pid` -- a realizable, anti-windup `PID`
   controller whose gains are a differentiable pytree (so they can be tuned by
   gradient descent), carried as ODE states inside a dynamic flowsheet;
-* :mod:`~fugacio.sim.control.blocks` -- linear blocks (first/second order, FOPDT,
+* `blocks` -- linear blocks (first/second order, FOPDT,
   lead-lag) with both analytic step responses and state-space realizations, plus
   static actuator nonlinearities;
-* :mod:`~fugacio.sim.control.metrics` -- step-response performance metrics
+* `metrics` -- step-response performance metrics
   (overshoot, rise/settling time, IAE/ISE/ITAE) for reporting and as tuning
   objectives;
-* :mod:`~fugacio.sim.control.tuning` -- FOPDT model identification and the
+* `tuning` -- FOPDT model identification and the
   classical tuning rules (Ziegler-Nichols, Cohen-Coon, IMC/lambda, AMIGO);
-* :mod:`~fugacio.sim.control.linearize` -- exact autodiff linearization of a
-  nonlinear plant into a :class:`StateSpace`, with poles, Bode response, and
+* `linearize` -- exact autodiff linearization of a
+  nonlinear plant into a `StateSpace`, with poles, Bode response, and
   controllability/observability.
 """
 

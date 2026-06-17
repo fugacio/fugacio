@@ -12,8 +12,8 @@ The functional kernels in this package (``nrtl_ln_gamma``, ``uniquac_ln_gamma``,
   so fitting a model to data is a plain gradient problem and a model can be
   threaded through ``jax.grad``/``jax.jit`` as part of a parameter pytree.
 
-Every model implements the :class:`ActivityModel` protocol. Two free functions,
-:func:`gamma` and :func:`excess_gibbs`, derive the activity coefficients and the
+Every model implements the `ActivityModel` protocol. Two free functions,
+`gamma` and `excess_gibbs`, derive the activity coefficients and the
 (exact, model-independent) excess Gibbs energy ``g^E/(RT) = sum_i x_i ln gamma_i``
 from any model's ``ln_gamma``.
 """
@@ -57,7 +57,7 @@ class ActivityModel(Protocol):
 
 
 def gamma(model: ActivityModel, x: Array, t: ArrayLike) -> Array:
-    """Activity coefficients ``gamma_i`` from any :class:`ActivityModel`."""
+    """Activity coefficients ``gamma_i`` from any `ActivityModel`."""
     return jnp.exp(model.ln_gamma(x, t))
 
 
@@ -268,7 +268,7 @@ for _cls, _fields in (
 
 
 def nrtl(a: Array, b: Array, alpha: Array, e: Array | None = None) -> NRTL:
-    """Build an :class:`NRTL` model, defaulting the ``ln T`` term ``e`` to zero."""
+    """Build an `NRTL` model, defaulting the ``ln T`` term ``e`` to zero."""
     a = jnp.asarray(a, dtype=float)
     return NRTL(
         a=a,
@@ -279,7 +279,7 @@ def nrtl(a: Array, b: Array, alpha: Array, e: Array | None = None) -> NRTL:
 
 
 def nrtl_from_energies(dg: Array, alpha: Array) -> NRTL:
-    """Build a temperature-independent :class:`NRTL` from energies ``dg_ij`` (J/mol).
+    """Build a temperature-independent `NRTL` from energies ``dg_ij`` (J/mol).
 
     Uses ``tau_ij = dg_ij / (R T)`` (i.e. ``a = 0``, ``b = dg / R``), the common
     "g_ij - g_jj" parameterisation.
@@ -290,7 +290,7 @@ def nrtl_from_energies(dg: Array, alpha: Array) -> NRTL:
 
 
 def uniquac(r: Array, q: Array, a: Array, b: Array) -> UNIQUAC:
-    """Build a :class:`UNIQUAC` model with ``tau_ij = exp(a_ij + b_ij/T)``."""
+    """Build a `UNIQUAC` model with ``tau_ij = exp(a_ij + b_ij/T)``."""
     return UNIQUAC(
         r=jnp.asarray(r, dtype=float),
         q=jnp.asarray(q, dtype=float),
@@ -300,7 +300,7 @@ def uniquac(r: Array, q: Array, a: Array, b: Array) -> UNIQUAC:
 
 
 def uniquac_from_energies(r: Array, q: Array, du: Array) -> UNIQUAC:
-    """Build a temperature-dependent :class:`UNIQUAC` from energies ``du_ij`` (J/mol).
+    """Build a temperature-dependent `UNIQUAC` from energies ``du_ij`` (J/mol).
 
     Uses ``tau_ij = exp(-du_ij / (R T))`` (``a = 0``, ``b = -du / R``).
     """
@@ -316,7 +316,7 @@ def uniquac_from_energies(r: Array, q: Array, du: Array) -> UNIQUAC:
 def margules(
     a12: ArrayLike, a21: ArrayLike, b12: ArrayLike = 0.0, b21: ArrayLike = 0.0
 ) -> Margules:
-    """Build a :class:`Margules` binary model (constant ``A`` unless ``b`` given)."""
+    """Build a `Margules` binary model (constant ``A`` unless ``b`` given)."""
     return Margules(
         a12=jnp.asarray(a12, dtype=float),
         b12=jnp.asarray(b12, dtype=float),
@@ -326,7 +326,7 @@ def margules(
 
 
 def van_laar(a12: ArrayLike, a21: ArrayLike, b12: ArrayLike = 0.0, b21: ArrayLike = 0.0) -> VanLaar:
-    """Build a :class:`VanLaar` binary model (constant ``A`` unless ``b`` given)."""
+    """Build a `VanLaar` binary model (constant ``A`` unless ``b`` given)."""
     return VanLaar(
         a12=jnp.asarray(a12, dtype=float),
         b12=jnp.asarray(b12, dtype=float),

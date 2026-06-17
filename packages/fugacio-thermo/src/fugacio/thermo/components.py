@@ -1,8 +1,8 @@
 """Pure-component model and a curated database of open reference constants.
 
-A :class:`Component` is an immutable bundle of the constants Fugacio needs to
+A `Component` is an immutable bundle of the constants Fugacio needs to
 evaluate equations of state, ideal-gas properties, and saturation pressures for
-one chemical species. The values bundled in :data:`DATABASE` are textbook
+one chemical species. The values bundled in `DATABASE` are textbook
 reference data drawn from open sources:
 
 * critical constants and acentric factors -- Poling, Prausnitz & O'Connell,
@@ -14,8 +14,8 @@ reference data drawn from open sources:
   ``log10(P/bar) = a - b / (T/K + c)``.
 
 ``Component`` instances are deliberately *static* Python objects (not JAX
-pytrees): the differentiable numerical kernels in :mod:`fugacio.thermo` operate
-on plain arrays, which you extract with :func:`component_arrays`. That keeps
+pytrees): the differentiable numerical kernels in `fugacio.thermo` operate
+on plain arrays, which you extract with `component_arrays`. That keeps
 gradients flowing with respect to the physical parameters themselves (useful for
 parameter estimation) without entangling autodiff with database bookkeeping.
 """
@@ -81,8 +81,8 @@ class Component:
         tb: Normal boiling point in K, or ``None``.
         vc: Critical molar volume in m^3/mol, or ``None``.
         zc: Critical compressibility factor, or ``None``.
-        antoine: :class:`AntoineCoeffs`, or ``None`` if not tabulated.
-        cp_ig: :class:`CpIdeal`, or ``None`` if not tabulated.
+        antoine: `AntoineCoeffs`, or ``None`` if not tabulated.
+        cp_ig: `CpIdeal`, or ``None`` if not tabulated.
         hform_ig: Standard ideal-gas enthalpy of formation (J/mol at 298.15 K).
         gform_ig: Standard ideal-gas Gibbs energy of formation (J/mol at 298.15 K).
         dipole: Gas-phase dipole moment in debye, or ``None`` if not tabulated.
@@ -119,7 +119,7 @@ def _cp(
     t_min: float = 50.0,
     t_max: float = 1500.0,
 ) -> CpIdeal:
-    """Build a :class:`CpIdeal` from Smith-Van-Ness-Abbott Table C.1 magnitudes.
+    """Build a `CpIdeal` from Smith-Van-Ness-Abbott Table C.1 magnitudes.
 
     The table reports ``b`` scaled by ``1e3``, ``c`` by ``1e6`` and ``d`` by
     ``1e-5``; this helper rescales them to SI so callers can transcribe the
@@ -129,13 +129,13 @@ def _cp(
 
 
 def _cpp(a: float, b: float, c: float, e: float, t_min: float, t_max: float) -> CpIdeal:
-    """Build a :class:`CpIdeal` from a fitted ideal-gas *polynomial*.
+    """Build a `CpIdeal` from a fitted ideal-gas *polynomial*.
 
     ``Cp/R = a + b*T + c*T**2 + e*T**3`` with SI coefficients and no ``1/T**2``
     term. Used by the extended database entries, whose heat capacities were
     least-squares fitted (over ``[t_min, t_max]`` kelvin) to the Poling ideal-gas
     correlation in the open ``chemicals`` dataset rather than transcribed from the
-    Smith-Van-Ness-Abbott table that :func:`_cp` targets.
+    Smith-Van-Ness-Abbott table that `_cp` targets.
     """
     return CpIdeal(a=a, b=b, c=c, d=0.0, e=e, t_min=t_min, t_max=t_max)
 
@@ -157,7 +157,7 @@ def _comp(
     hform_ig: float | None = None,
     gform_ig: float | None = None,
 ) -> Component:
-    """Construct a :class:`Component`, converting ``pc_bar`` and ``vc_cm3`` to SI."""
+    """Construct a `Component`, converting ``pc_bar`` and ``vc_cm3`` to SI."""
     return Component(
         name=name,
         formula=formula,
@@ -6424,15 +6424,15 @@ def _with_supplements(c: Component) -> Component:
     return replace(c, **updates) if updates else c  # type: ignore[arg-type]
 
 
-#: Canonical-name -> :class:`Component` lookup for the curated database.
+#: Canonical-name -> `Component` lookup for the curated database.
 DATABASE: dict[str, Component] = {c.name: _with_supplements(c) for c in _COMPONENTS}
 
 
 def get(name: str) -> Component:
-    """Return the :class:`Component` for ``name`` (case-insensitive).
+    """Return the `Component` for ``name`` (case-insensitive).
 
     Raises:
-        KeyError: if ``name`` is not present in :data:`DATABASE`.
+        KeyError: if ``name`` is not present in `DATABASE`.
     """
     key = name.strip().lower()
     if key not in DATABASE:
@@ -6449,7 +6449,7 @@ def component_arrays(components: list[str] | list[Component]) -> dict[str, Array
     """Stack the core EOS constants of several components into JAX arrays.
 
     Args:
-        components: A list of component names or :class:`Component` objects.
+        components: A list of component names or `Component` objects.
 
     Returns:
         A dict with keys ``"tc"``, ``"pc"``, ``"omega"`` and ``"mw"`` mapping to
