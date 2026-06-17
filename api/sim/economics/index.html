@@ -1,0 +1,3777 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot.">
+      
+      
+        <meta name="author" content="Owen Carey">
+      
+      
+        <link rel="canonical" href="https://fugacio.com/api/sim/economics/">
+      
+      
+        <link rel="prev" href="../optimization/">
+      
+      
+        <link rel="next" href="../dynamics/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Economics & sizing - Fugacio</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../styles/brand.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Economics & sizing - Fugacio" />
+<meta property="og:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
+<meta property="og:image" content="https://fugacio.com/assets/images/social/api/sim/economics.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://fugacio.com/api/sim/economics/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="Economics & sizing - Fugacio" />
+<meta property="twitter:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
+<meta property="twitter:image" content="https://fugacio.com/assets/images/social/api/sim/economics.png" />
+</head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#economics-sizing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Fugacio" class="md-header__button md-logo" aria-label="Fugacio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fugacio
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Economics & sizing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/owenthcarey/fugacio" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    owenthcarey/fugacio
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../phase-equilibrium/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Fugacio" class="md-nav__button md-logo" aria-label="Fugacio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fugacio
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/owenthcarey/fugacio" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    owenthcarey/fugacio
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../phase-equilibrium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Non-ideal phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference-fluids/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference fluids & steam tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../physical-properties/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical & transport properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reactions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactions & reactors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimization, design & economics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dynamics & process control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced-control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced control (MPC & estimation)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../heat-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Heat integration & pinch analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../thermo/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    fugacio.thermo
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    fugacio.thermo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components & data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/eos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Equations of state
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/equilibrium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/lle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Liquid-liquid & VLLE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/activity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Activity & group contribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/energy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Energy & property models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/helmholtz/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference fluids (Helmholtz)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transport & volumetric
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/reactions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactions & kinetics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/regression/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression & ThermoML
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    fugacio.sim
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    fugacio.sim
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../streams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streams & properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../units/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unit operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../flowsheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flowsheet & recycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thermodynamic models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../columns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distillation & diagrams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reactors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactors & reactive separations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimization & design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Economics & sizing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Economics & sizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#fugacio.sim.economics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;economics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" economics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics--sizing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sizing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics--costing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Costing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics--operating-cost-finance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operating cost &amp; finance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.EquipmentCost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;EquipmentCost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.Utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Utility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.lmtd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;lmtd
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.heat_exchanger_area" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;heat_exchanger_area
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.vapor_molar_volume_ideal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;vapor_molar_volume_ideal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.column_diameter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;column_diameter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.column_height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;column_height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.vessel_volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;vessel_volume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.cylinder_volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;cylinder_volume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.purchased_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;purchased_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.pressure_factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;pressure_factor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.bare_module_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;bare_module_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.utility_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;utility_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.capital_recovery_factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;capital_recovery_factor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.annualized_capital" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;annualized_capital
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.total_annual_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;total_annual_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.npv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;npv
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.discounted_payback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discounted_payback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.installed_capital" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;installed_capital
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dynamics & control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced control (MPC)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Heat integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Steam & cooling utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../copilot/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    fugacio.copilot
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    fugacio.copilot
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../copilot/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../copilot/agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent loops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../copilot/providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../copilot/report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#fugacio.sim.economics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;economics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" economics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics--sizing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sizing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics--costing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Costing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics--operating-cost-finance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operating cost &amp; finance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.EquipmentCost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;EquipmentCost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.Utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Utility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.lmtd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;lmtd
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.heat_exchanger_area" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;heat_exchanger_area
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.vapor_molar_volume_ideal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;vapor_molar_volume_ideal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.column_diameter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;column_diameter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.column_height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;column_height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.vessel_volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;vessel_volume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.cylinder_volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;cylinder_volume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.purchased_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;purchased_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.pressure_factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;pressure_factor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.bare_module_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;bare_module_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.utility_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;utility_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.capital_recovery_factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;capital_recovery_factor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.annualized_capital" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;annualized_capital
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.total_annual_cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;total_annual_cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.npv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;npv
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.discounted_payback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discounted_payback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.economics.installed_capital" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;installed_capital
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/owenthcarey/fugacio/edit/main/docs/api/sim/economics.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/owenthcarey/fugacio/raw/main/docs/api/sim/economics.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5"/></svg>
+    </a>
+  
+
+
+<h1 id="economics-sizing">Economics &amp; sizing<a class="headerlink" href="#economics-sizing" title="Permanent link">&para;</a></h1>
+<p>Differentiable equipment sizing, purchased- and bare-module costing, utility
+costs, and profitability metrics (total annual cost, net present value). Because
+the correlations are differentiable, capital and operating cost can enter an
+objective directly.</p>
+<p>See the <a href="../../../optimization/">optimization, design &amp; economics guide</a> for
+worked examples.</p>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="fugacio.sim.economics" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">economics</span>
+
+
+<a href="#fugacio.sim.economics" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Differentiable equipment sizing, capital/operating costing, and economics.</p>
+<p>To <em>optimize</em> a process you need an objective with units of money, and that means
+sizing equipment and costing it. This module supplies smooth, differentiable
+correlations for both, so a total-annual-cost or net-present-value objective
+plugs straight into the gradient-based optimizers in
+<code>fugacio.sim.optimize</code> -- you can take the derivative of installed cost with
+respect to a reflux ratio or a heat-exchanger approach temperature.</p>
+<h4 id="fugacio.sim.economics--sizing">Sizing<a class="headerlink" href="#fugacio.sim.economics--sizing" title="Permanent link">&para;</a></h4>
+<p>Physically-grounded sizing from process quantities: heat-exchanger area from duty
+and a log-mean temperature difference, column diameter from the Souders-Brown
+flooding velocity, vessel volume from a residence time, and so on.</p>
+<h4 id="fugacio.sim.economics--costing">Costing<a class="headerlink" href="#fugacio.sim.economics--costing" title="Permanent link">&para;</a></h4>
+<p>The <strong>Turton</strong> correlations (Turton et al., <em>Analysis, Synthesis and Design of
+Chemical Processes</em>) for purchased and bare-module cost:</p>
+<ul>
+<li>purchased cost <code>log10 Cp0 = K1 + K2 log10 A + K3 (log10 A)^2</code> in the size
+  attribute <code>A</code>;</li>
+<li>a pressure factor <code>log10 F_P = C1 + C2 log10 P + C3 (log10 P)^2</code>;</li>
+<li>the bare-module cost <code>C_BM = Cp0 (B1 + B2 F_M F_P)</code> with a material factor
+  <code>F_M</code>;</li>
+<li>escalation from the correlation basis (CEPCI 397, year 2001) to a target CEPCI.</li>
+</ul>
+<p>These are smooth in the size and pressure, hence differentiable. The bundled
+coefficients are representative textbook values for screening-level estimates,
+not a substitute for a vendor quote.</p>
+<h4 id="fugacio.sim.economics--operating-cost-finance">Operating cost &amp; finance<a class="headerlink" href="#fugacio.sim.economics--operating-cost-finance" title="Permanent link">&para;</a></h4>
+<p>Utility pricing on an energy basis, the capital-recovery factor, total annual
+cost, net present value, and discounted payback -- all differentiable.</p>
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;EquipmentCost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.EquipmentCost&lt;/code&gt;)" href="#fugacio.sim.economics.EquipmentCost">EquipmentCost</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Costed equipment item.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Utility&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.Utility&lt;/code&gt;)" href="#fugacio.sim.economics.Utility">Utility</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>A priced utility on an energy basis.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+<p><span class="doc-section-title">Functions:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;lmtd&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.lmtd&lt;/code&gt;)" href="#fugacio.sim.economics.lmtd">lmtd</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Log-mean temperature difference of the two terminal approaches.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;heat_exchanger_area&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.heat_exchanger_area&lt;/code&gt;)" href="#fugacio.sim.economics.heat_exchanger_area">heat_exchanger_area</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Required heat-transfer area <code>A = |Q| / (U * LMTD)</code> (m^2).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;vapor_molar_volume_ideal&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.vapor_molar_volume_ideal&lt;/code&gt;)" href="#fugacio.sim.economics.vapor_molar_volume_ideal">vapor_molar_volume_ideal</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Ideal-gas molar volume <code>V = R T / P</code> (m^3/mol), a sizing convenience.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;column_diameter&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.column_diameter&lt;/code&gt;)" href="#fugacio.sim.economics.column_diameter">column_diameter</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Column (or knock-out drum) diameter from the Souders-Brown flooding velocity.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;column_height&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.column_height&lt;/code&gt;)" href="#fugacio.sim.economics.column_height">column_height</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Tangent-to-tangent column height from the stage count and tray spacing (m).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;vessel_volume&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.vessel_volume&lt;/code&gt;)" href="#fugacio.sim.economics.vessel_volume">vessel_volume</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Vessel volume from a volumetric flow and liquid residence time (m^3).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;cylinder_volume&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.cylinder_volume&lt;/code&gt;)" href="#fugacio.sim.economics.cylinder_volume">cylinder_volume</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Volume of a vertical cylinder (m^3) -- a column shell from its size.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;purchased_cost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.purchased_cost&lt;/code&gt;)" href="#fugacio.sim.economics.purchased_cost">purchased_cost</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Purchased equipment cost <code>Cp0</code> at the correlation basis (CEPCI 397), in $.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;pressure_factor&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.pressure_factor&lt;/code&gt;)" href="#fugacio.sim.economics.pressure_factor">pressure_factor</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Turton pressure factor <code>F_P</code> (&gt;= 1) for the equipment at gauge pressure (barg).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;bare_module_cost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.bare_module_cost&lt;/code&gt;)" href="#fugacio.sim.economics.bare_module_cost">bare_module_cost</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Installed (bare-module) cost <code>C_BM</code> escalated to the target CEPCI.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;utility_cost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.utility_cost&lt;/code&gt;)" href="#fugacio.sim.economics.utility_cost">utility_cost</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Annual cost of a utility duty ($/yr) from its energy price.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;capital_recovery_factor&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.capital_recovery_factor&lt;/code&gt;)" href="#fugacio.sim.economics.capital_recovery_factor">capital_recovery_factor</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Capital-recovery factor <code>i(1+i)^n / ((1+i)^n - 1)</code> for interest <code>i</code> over <code>n</code> years.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;annualized_capital&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.annualized_capital&lt;/code&gt;)" href="#fugacio.sim.economics.annualized_capital">annualized_capital</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Annualized capital charge <code>CRF * CAPEX</code> ($/yr).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;total_annual_cost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.total_annual_cost&lt;/code&gt;)" href="#fugacio.sim.economics.total_annual_cost">total_annual_cost</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Total annual cost <code>TAC = CRF * CAPEX + OPEX</code> ($/yr) -- the screening objective.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;npv&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.npv&lt;/code&gt;)" href="#fugacio.sim.economics.npv">npv</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Net present value of a cash-flow stream (index 0 is now), discounted at <code>rate</code>.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;discounted_payback&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.discounted_payback&lt;/code&gt;)" href="#fugacio.sim.economics.discounted_payback">discounted_payback</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Discounted payback period (years) for a uniform annual cash inflow.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;installed_capital&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.installed_capital&lt;/code&gt;)" href="#fugacio.sim.economics.installed_capital">installed_capital</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Total installed capital from a list of costed items (optionally Lang-scaled).</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="fugacio.sim.economics.EquipmentCost" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">EquipmentCost</span>
+
+
+<a href="#fugacio.sim.economics.EquipmentCost" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="&lt;code&gt;typing.NamedTuple&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.NamedTuple">NamedTuple</a></code></p>
+
+
+
+        <p>Costed equipment item.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.economics.EquipmentCost.kind">kind</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Equipment kind (key into the Turton table).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.economics.EquipmentCost.size">size</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The sizing attribute used (area m^2, power kW, or volume m^3).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.economics.EquipmentCost.purchased">purchased</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Purchased cost <code>Cp0</code> escalated to the target CEPCI ($).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.economics.EquipmentCost.bare_module">bare_module</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Installed bare-module cost <code>C_BM</code> ($).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="fugacio.sim.economics.Utility" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">Utility</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#fugacio.sim.economics.Utility" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Utility</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n">price_per_gj</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>A priced utility on an energy basis.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.economics.Utility.name">name</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Utility name.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.economics.Utility.price_per_gj">price_per_gj</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Price ($/GJ of heating or cooling delivered).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.lmtd" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">lmtd</span>
+
+
+<a href="#fugacio.sim.economics.lmtd" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">lmtd</span><span class="p">(</span><span class="n">dt1</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span> <span class="n">dt2</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Log-mean temperature difference of the two terminal approaches.</p>
+<p>Smooth everywhere for positive approaches: as <code>dt1 -&gt; dt2</code> the value tends
+to their common limit, with a series expansion used near equality so the
+gradient stays finite.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.heat_exchanger_area" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">heat_exchanger_area</span>
+
+
+<a href="#fugacio.sim.economics.heat_exchanger_area" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">heat_exchanger_area</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">duty</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">u</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">dt_hot</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">dt_cold</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Required heat-transfer area <code>A = |Q| / (U * LMTD)</code> (m^2).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>duty</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Heat duty <code>Q</code> (W); the magnitude is used.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>u</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Overall heat-transfer coefficient (W/m^2/K).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dt_hot</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Terminal temperature approach at the hot end (K).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dt_cold</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Terminal temperature approach at the cold end (K).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.vapor_molar_volume_ideal" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">vapor_molar_volume_ideal</span>
+
+
+<a href="#fugacio.sim.economics.vapor_molar_volume_ideal" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">vapor_molar_volume_ideal</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">t</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Ideal-gas molar volume <code>V = R T / P</code> (m^3/mol), a sizing convenience.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.column_diameter" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">column_diameter</span>
+
+
+<a href="#fugacio.sim.economics.column_diameter" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">column_diameter</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">vapor_molar_flow</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">vapor_density</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">liquid_density</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">molar_mass</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">k_drum</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.07</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">flooding</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.8</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Column (or knock-out drum) diameter from the Souders-Brown flooding velocity.</p>
+<p>The maximum vapour velocity is <code>u_max = k sqrt((rho_L - rho_V)/rho_V)</code>; the
+diameter follows from the volumetric vapour load at the design fraction of
+flooding.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>vapor_molar_flow</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Vapour molar flow (mol/s).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>vapor_density</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Vapour mass density (kg/m^3).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>liquid_density</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Liquid mass density (kg/m^3).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>molar_mass</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Vapour molar mass (kg/mol) to convert molar to mass flow.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.05</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>k_drum</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Souders-Brown coefficient (m/s).</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.07</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>flooding</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Design fraction of the flooding velocity.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.8</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Diameter (m).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.column_height" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">column_height</span>
+
+
+<a href="#fugacio.sim.economics.column_height" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">column_height</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">n_stages</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">tray_spacing</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.6</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">extra</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Tangent-to-tangent column height from the stage count and tray spacing (m).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.vessel_volume" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">vessel_volume</span>
+
+
+<a href="#fugacio.sim.economics.vessel_volume" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">vessel_volume</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">volumetric_flow</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">residence_time</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">300.0</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">fill</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Vessel volume from a volumetric flow and liquid residence time (m^3).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.cylinder_volume" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">cylinder_volume</span>
+
+
+<a href="#fugacio.sim.economics.cylinder_volume" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">cylinder_volume</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">diameter</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Volume of a vertical cylinder (m^3) -- a column shell from its size.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.purchased_cost" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">purchased_cost</span>
+
+
+<a href="#fugacio.sim.economics.purchased_cost" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">purchased_cost</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Purchased equipment cost <code>Cp0</code> at the correlation basis (CEPCI 397), in $.</p>
+<p>Uses <code>log10 Cp0 = K1 + K2 log10 A + K3 (log10 A)^2</code> with <code>A</code> the
+equipment's capacity attribute (see <code>_TURTON</code>). The size is clipped to
+the correlation's validity range before the (smooth) evaluation.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.pressure_factor" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">pressure_factor</span>
+
+
+<a href="#fugacio.sim.economics.pressure_factor" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">pressure_factor</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">kind</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n">pressure_barg</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Turton pressure factor <code>F_P</code> (&gt;= 1) for the equipment at gauge pressure (barg).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.bare_module_cost" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">bare_module_cost</span>
+
+
+<a href="#fugacio.sim.economics.bare_module_cost" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">bare_module_cost</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">kind</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">size</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">pressure_barg</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">material</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;CS&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">cepci</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="n"><span title="fugacio.sim.economics.CEPCI_DEFAULT">CEPCI_DEFAULT</span></span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;EquipmentCost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.EquipmentCost&lt;/code&gt;)" href="#fugacio.sim.economics.EquipmentCost">EquipmentCost</a></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Installed (bare-module) cost <code>C_BM</code> escalated to the target CEPCI.</p>
+<p><code>C_BM = Cp0 (B1 + B2 F_M F_P)</code> with a material factor <code>F_M</code> and pressure
+factor <code>F_P</code>, all escalated by <code>cepci / CEPCI_REF</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>kind</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Equipment kind (key in the Turton table).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>size</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Capacity attribute (area m^2, power kW, or volume m^3).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>pressure_barg</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Design gauge pressure (barg) for the pressure factor.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>material</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Material-of-construction key (<code>"CS"</code>, <code>"SS"</code>, ...).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;CS&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cepci</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Target cost index.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.CEPCI_DEFAULT">CEPCI_DEFAULT</span></code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;EquipmentCost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.EquipmentCost&lt;/code&gt;)" href="#fugacio.sim.economics.EquipmentCost">EquipmentCost</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An <code>EquipmentCost</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.utility_cost" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">utility_cost</span>
+
+
+<a href="#fugacio.sim.economics.utility_cost" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">utility_cost</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">duty_w</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">kind</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">hours_per_year</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="n"><span title="fugacio.sim.economics.HOURS_PER_YEAR">HOURS_PER_YEAR</span></span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Annual cost of a utility duty ($/yr) from its energy price.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>duty_w</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Duty (W); the magnitude is used (heating or cooling alike).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>kind</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Utility key in <code>UTILITIES</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>hours_per_year</code>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Operating hours per year.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="fugacio.sim.economics.HOURS_PER_YEAR">HOURS_PER_YEAR</span></code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.capital_recovery_factor" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">capital_recovery_factor</span>
+
+
+<a href="#fugacio.sim.economics.capital_recovery_factor" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">capital_recovery_factor</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">rate</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span> <span class="n">years</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Capital-recovery factor <code>i(1+i)^n / ((1+i)^n - 1)</code> for interest <code>i</code> over <code>n</code> years.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.annualized_capital" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">annualized_capital</span>
+
+
+<a href="#fugacio.sim.economics.annualized_capital" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">annualized_capital</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">capex</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">rate</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">years</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Annualized capital charge <code>CRF * CAPEX</code> ($/yr).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.total_annual_cost" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">total_annual_cost</span>
+
+
+<a href="#fugacio.sim.economics.total_annual_cost" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">total_annual_cost</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">capex</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">opex</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">rate</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">years</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Total annual cost <code>TAC = CRF * CAPEX + OPEX</code> ($/yr) -- the screening objective.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.npv" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">npv</span>
+
+
+<a href="#fugacio.sim.economics.npv" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">npv</span><span class="p">(</span><span class="n">cash_flows</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Net present value of a cash-flow stream (index 0 is now), discounted at <code>rate</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.discounted_payback" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">discounted_payback</span>
+
+
+<a href="#fugacio.sim.economics.discounted_payback" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">discounted_payback</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">capex</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">annual_cash</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">rate</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Discounted payback period (years) for a uniform annual cash inflow.</p>
+<p>Solves <code>CAPEX = annual_cash * (1 - (1+i)^-n) / i</code> for <code>n</code> in closed form;
+smooth and differentiable in all arguments.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.economics.installed_capital" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">installed_capital</span>
+
+
+<a href="#fugacio.sim.economics.installed_capital" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">installed_capital</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">items</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;EquipmentCost&lt;/span&gt; (&lt;code&gt;fugacio.sim.economics.EquipmentCost&lt;/code&gt;)" href="#fugacio.sim.economics.EquipmentCost">EquipmentCost</a></span><span class="p">],</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">lang_factor</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.economics.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Total installed capital from a list of costed items (optionally Lang-scaled).</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/owenthcarey/fugacio" target="_blank" rel="noopener" title="Fugacio on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://pypi.org/project/fugacio-thermo/" target="_blank" rel="noopener" title="Fugacio on PyPI" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["announce.dismiss", "content.action.edit", "content.action.view", "content.code.annotate", "content.code.copy", "content.tabs.link", "content.tooltips", "navigation.expand", "navigation.indexes", "navigation.instant", "navigation.instant.progress", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.tracking", "search.highlight", "search.suggest", "search.share", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

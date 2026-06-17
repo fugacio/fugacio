@@ -1,0 +1,21 @@
+/* Fugacio docs theme tweaks (layered on Material for MkDocs). */
+
+:root {
+  --md-code-font: "JetBrains Mono";
+}
+
+/* Give the mkdocstrings API blocks a touch more breathing room between
+   successive symbols so long reference pages stay scannable. */
+.md-typeset .doc-children .doc-object {
+  margin-top: 1.1rem;
+}
+
+/* Subtle divider above each documented function/class heading. */
+.md-typeset .doc-heading {
+  scroll-margin-top: 4rem;
+}
+
+/* Tame the bottom whitespace once the footer nav is present. */
+.md-main__inner {
+  margin-bottom: 2rem;
+}
