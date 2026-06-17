@@ -1,14 +1,14 @@
 """Ideal-gas thermodynamic properties from heat-capacity correlations.
 
 These functions integrate the four-parameter ``Cp/R = a + b*T + c*T**2 + d/T**2``
-correlation (see :class:`fugacio.thermo.components.CpIdeal`) into the ideal-gas
+correlation (see `fugacio.thermo.components.CpIdeal`) into the ideal-gas
 enthalpy, entropy, and Gibbs energy. They are the temperature-dependent backbone
 that the equation-of-state *departure functions* are added to in order to obtain
 real-fluid properties::
 
     H_real(T, P) = H_ideal(T) + H_departure(T, P)
 
-Everything is written in :mod:`jax.numpy`, so the coefficients ``a, b, c, d`` may
+Everything is written in `jax.numpy`, so the coefficients ``a, b, c, d`` may
 themselves be differentiated through (useful when regressing Cp data).
 """
 
@@ -121,7 +121,7 @@ def enthalpy_ig_mixture(
 
     Ideal-gas enthalpy is independent of pressure and of mixing, so the mixture
     value is just the mole-fraction average of the component enthalpies. ``a..e``
-    are 1-D coefficient arrays aligned with ``x`` (see :func:`ideal_gas_coeffs`).
+    are 1-D coefficient arrays aligned with ``x`` (see `ideal_gas_coeffs`).
     """
     x = jnp.asarray(x)
     return jnp.sum(x * enthalpy_ig(t, a, b, c, d, e, t_ref=t_ref))

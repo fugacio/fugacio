@@ -3,23 +3,23 @@
 A *rate law* maps the local state of a reacting mixture -- temperature ``T`` and
 the concentration vector ``c`` (mol/m^3, aligned with a component list) -- to the
 intensive rate of one reaction ``r`` (mol/m^3/s). The reactor models in
-:mod:`fugacio.sim.reactors` multiply that rate by the stoichiometry of a
-:class:`~fugacio.thermo.reactions.Reaction` to get species production rates.
+`fugacio.sim.reactors` multiply that rate by the stoichiometry of a
+`Reaction` to get species production rates.
 
 Every rate law here is a small frozen dataclass registered as a JAX pytree, so
 its kinetic parameters (pre-exponential factors, activation energies, reaction
 orders, adsorption constants) are *differentiable leaves*. That makes rate
 constants fittable from data by the same machinery as the thermodynamic models
-(:mod:`fugacio.thermo.regression`) and lets reactor outputs be differentiated
+(`fugacio.thermo.regression`) and lets reactor outputs be differentiated
 with respect to the kinetics.
 
 Provided laws:
 
-* :func:`arrhenius` / :class:`Arrhenius` -- the rate constant ``k(T) = A exp(-Ea/RT)``;
-* :class:`PowerLaw` -- an irreversible power-law rate ``k(T) * prod_i c_i^{m_i}``;
-* :class:`MassActionReversible` -- an elementary reversible rate
+* `arrhenius` / `Arrhenius` -- the rate constant ``k(T) = A exp(-Ea/RT)``;
+* `PowerLaw` -- an irreversible power-law rate ``k(T) * prod_i c_i^{m_i}``;
+* `MassActionReversible` -- an elementary reversible rate
   ``k_f prod_{reactants} c^{|nu|} - k_r prod_{products} c^{nu}``;
-* :class:`LHHW` -- a Langmuir-Hinshelwood / Hougen-Watson rate with an adsorption
+* `LHHW` -- a Langmuir-Hinshelwood / Hougen-Watson rate with an adsorption
   inhibition term in the denominator.
 
 Concentrations are clipped at zero before being raised to (possibly fractional)
@@ -53,7 +53,7 @@ def arrhenius(t: ArrayLike, a: ArrayLike, ea: ArrayLike) -> Array:
 def arrhenius_ref(t: ArrayLike, k_ref: ArrayLike, ea: ArrayLike, t_ref: float = T_REF) -> Array:
     """Reference-temperature Arrhenius form ``k(T) = k_ref exp(-Ea/R (1/T - 1/T_ref))``.
 
-    Numerically better conditioned than :func:`arrhenius` for regression, because
+    Numerically better conditioned than `arrhenius` for regression, because
     ``k_ref`` is the rate constant at ``t_ref`` (an O(1)-scaled quantity) rather
     than the extrapolated intercept ``A``.
     """

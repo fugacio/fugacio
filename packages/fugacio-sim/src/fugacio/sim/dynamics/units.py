@@ -1,6 +1,6 @@
 """Dynamic unit operations: holdups carried as ODE states.
 
-A steady-state unit (in :mod:`fugacio.sim.units`) maps inlet streams to outlet
+A steady-state unit (in `fugacio.sim.units`) maps inlet streams to outlet
 streams instantaneously. A *dynamic* unit has memory -- inventory of material and
 energy -- so its outlets depend on accumulated holdup, and its behaviour is an
 ODE. Every model here follows the same recipe, which keeps the differentiable
@@ -11,16 +11,16 @@ index at one and reuses the existing thermodynamics:
   balance ``d(holdup)/dt = in - out + generation``;
 * the **constitutive relations** (phase split, density, reaction rate, pressure)
   are evaluated *instantaneously* from the current holdup using the steady-state
-  kernels in :mod:`fugacio.thermo`, so a dynamic flash reuses :func:`flash_pt`, a
+  kernels in `fugacio.thermo`, so a dynamic flash reuses `flash_pt`, a
   dynamic reactor reuses the reaction thermochemistry and rate laws, and so on.
 
-Each unit exposes :meth:`DynamicUnit.initial_state` and
-:meth:`DynamicUnit.evaluate`; the latter returns the state derivative, the outlet
+Each unit exposes `DynamicUnit.initial_state` and
+`DynamicUnit.evaluate`; the latter returns the state derivative, the outlet
 streams, and a dictionary of measurements (level, temperature, pressure,
 composition) that controllers read. Manipulated variables (valve openings, duties,
 jacket temperatures, product draws) are supplied per-call through a ``controls``
 mapping, defaulting to each unit's configured value. The whole thing is
-:mod:`jax.numpy`, so a dynamic flowsheet assembled from these units integrates and
+`jax.numpy`, so a dynamic flowsheet assembled from these units integrates and
 differentiates as one system.
 """
 
@@ -51,7 +51,7 @@ Controls = Mapping[str, Array]
 
 
 class UnitStep(NamedTuple):
-    """What a dynamic unit returns from :meth:`DynamicUnit.evaluate`.
+    """What a dynamic unit returns from `DynamicUnit.evaluate`.
 
     Attributes:
         dstate: Time derivative of the unit state (same pytree structure as state).
@@ -68,7 +68,7 @@ class UnitStep(NamedTuple):
 def _warm_components(components: tuple[str, ...]) -> None:
     """Populate the cached component-constant table eagerly, at construction time.
 
-    :func:`fugacio.sim.properties._resolve` memoizes its (static) physical-constant
+    `fugacio.sim.properties._resolve` memoizes its (static) physical-constant
     arrays. If its first call happened *inside* a traced integration the cache would
     capture tracers and leak; warming it here -- when the unit is built, outside any
     trace -- guarantees the cached arrays are plain constants by the time the dynamic
@@ -116,7 +116,7 @@ class DynamicUnit(ABC):
 
         These depend on the unit state alone -- not on the inlet streams -- so a
         controller can read them before the units are advanced, which keeps the
-        instantaneous control algebra explicit (see :class:`DynamicFlowsheet`).
+        instantaneous control algebra explicit (see `DynamicFlowsheet`).
         """
 
 
@@ -271,7 +271,7 @@ class ThermalMass(DynamicUnit):
     variable ``"duty"``, W), exchanges sensible heat with the inlet flow, and loses
     heat to ambient through ``ua`` (W/K). State is the bulk temperature ``T``;
     the outlet carries the inlet flows at ``T``. Heat capacities come from the
-    ideal-gas correlations of :mod:`fugacio.thermo`.
+    ideal-gas correlations of `fugacio.thermo`.
 
     Manipulated variable: ``"duty"`` (W). Measurements: ``temperature``, ``duty``.
     """
@@ -342,7 +342,7 @@ class DynamicCSTR(DynamicUnit):
     ``C`` (mol/m^3) and the reactor temperature ``T``. The reactor has volume
     ``volume`` and a constant volumetric throughput ``q``, so the residence time is
     ``volume / q``. The energy balance carries the heat of reaction (from
-    :func:`fugacio.thermo.delta_h_rxn`) and a jacket term ``UA (T_jacket - T)`` with
+    `fugacio.thermo.delta_h_rxn`) and a jacket term ``UA (T_jacket - T)`` with
     a constant volumetric heat capacity ``rho_cp`` (J/m^3/K). Exothermic operation
     reproduces the classic ignition/extinction and limit-cycle behaviour, which is
     why this is *the* reactor-control benchmark.
@@ -503,7 +503,7 @@ class DynamicFlash(DynamicUnit):
 
     State is the per-component liquid holdup ``M`` (mol). The vapour drawn off is in
     instantaneous phase equilibrium with the well-mixed holdup -- its composition is
-    the equilibrium vapour of a :func:`flash_pt` on the holdup at ``(T, P)`` -- and
+    the equilibrium vapour of a `flash_pt` on the holdup at ``(T, P)`` -- and
     leaves at a commanded rate; the liquid product leaves at the holdup composition.
     This captures the composition response of a separator to feed and draw
     disturbances while reusing the rigorous EOS equilibrium.

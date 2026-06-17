@@ -93,8 +93,8 @@ def flory_huggins_gamma(x: Array, volume: Array) -> Array:
 def hildebrand_ln_gamma(x: Array, volume: Array, delta: Array, t: ArrayLike) -> Array:
     """Flory-Huggins-Hildebrand ``ln(gamma)``: regular-solution enthalpy + FH entropy.
 
-    The sum of :func:`regular_solution_ln_gamma` (enthalpic) and
-    :func:`flory_huggins_ln_gamma` (combinatorial/entropic), giving a model that
+    The sum of `regular_solution_ln_gamma` (enthalpic) and
+    `flory_huggins_ln_gamma` (combinatorial/entropic), giving a model that
     handles both energetic and size-asymmetry effects with pure-component data.
     """
     return regular_solution_ln_gamma(x, volume, delta, t) + flory_huggins_ln_gamma(x, volume)

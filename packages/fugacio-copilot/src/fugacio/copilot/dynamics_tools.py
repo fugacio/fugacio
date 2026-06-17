@@ -1,16 +1,16 @@
 """Copilot tools for the time-domain dynamics & control layer.
 
-These expose :mod:`fugacio.sim.control` and :mod:`fugacio.sim.dynamics` to the LLM
+These expose `fugacio.sim.control` and `fugacio.sim.dynamics` to the LLM
 design agent as deterministic, JSON-in/JSON-out calculations: identify a first-
 order-plus-dead-time (FOPDT) model from step data, turn it into PID gains by a
 named tuning rule, simulate the resulting closed loop, and compare tuning rules on
 their closed-loop performance. They are kept in their own module (rather than the
-already-large :mod:`fugacio.copilot.tools`) and folded into the registry there.
+already-large `fugacio.copilot.tools`) and folded into the registry there.
 
 The closed-loop simulator integrates the FOPDT plant with an explicit fixed step
 and represents the transport delay as an integer-sample shift buffer carried
-through a :func:`jax.lax.scan`, so dead time is handled honestly rather than by a
-Pade approximation. The controller is the library :class:`~fugacio.sim.control.PID`
+through a `jax.lax.scan`, so dead time is handled honestly rather than by a
+Pade approximation. The controller is the library `PID`
 marched with the same step, so the numbers match what the engine would produce.
 """
 
@@ -52,7 +52,7 @@ def _build_pid(
     output_min: float | None,
     output_max: float | None,
 ) -> PID:
-    """Construct a :class:`PID` from an FOPDT model by a named tuning rule."""
+    """Construct a `PID` from an FOPDT model by a named tuning rule."""
     key = rule.lower()
     if key not in _RULES:
         raise ValueError(f"unknown tuning rule {rule!r}; use one of {sorted(_RULES)}")

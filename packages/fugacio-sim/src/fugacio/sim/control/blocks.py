@@ -11,7 +11,7 @@ is offered two ways:
 * a **state-space realization** (``A, B, C, D`` arrays), so the block can be
   dropped into a dynamic simulation and integrated with everything else.
 
-Everything is :mod:`jax.numpy`, hence differentiable in the block parameters
+Everything is `jax.numpy`, hence differentiable in the block parameters
 (gain, time constants, damping) -- the basis for gradient-based identification.
 """
 
@@ -64,7 +64,7 @@ def second_order_step(
     """Step response of ``K wn^2 / (s^2 + 2 zeta wn s + wn^2)`` (size ``u``).
 
     Handles the under-, critically-, and over-damped regimes with a single smooth
-    expression (the under/over branches are selected by :func:`jax.numpy.where`, so
+    expression (the under/over branches are selected by `jax.numpy.where`, so
     the result is differentiable in ``zeta`` through ``zeta = 1`` as well).
     """
     t = jnp.clip(jnp.asarray(t), 0.0, None)

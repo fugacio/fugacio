@@ -4,23 +4,23 @@ Control is only half of feedback; the other half is *estimation* -- reconstructi
 the plant state (and the unmeasured disturbances) from noisy, partial
 measurements, because MPC and every state-feedback law need a state to act on.
 This module supplies the standard recursive estimators and their optimization-
-based counterpart, all written against :mod:`jax.numpy` so they slot into the
+based counterpart, all written against `jax.numpy` so they slot into the
 differentiable stack:
 
-* :class:`KalmanFilter` -- the exact recursive Bayesian filter for a linear-
+* `KalmanFilter` -- the exact recursive Bayesian filter for a linear-
   Gaussian model (Joseph-form covariance update for numerical robustness).
-* :class:`ExtendedKalmanFilter` -- the Kalman filter on the *autodiff*
+* `ExtendedKalmanFilter` -- the Kalman filter on the *autodiff*
   linearization of a nonlinear model; the Jacobians are exact ``jax.jacobian``
   evaluations, not finite differences.
-* :class:`UnscentedKalmanFilter` -- the scaled unscented transform (Wan & van der
+* `UnscentedKalmanFilter` -- the scaled unscented transform (Wan & van der
   Merwe), which propagates a deterministic set of sigma points through the true
   nonlinear maps and is typically more accurate than the EKF for strong
   nonlinearity, with no Jacobians at all.
-* :func:`moving_horizon_estimate` -- estimation as *optimization*: fit the state
+* `moving_horizon_estimate` -- estimation as *optimization*: fit the state
   trajectory over a sliding window to the measurements subject to the model, with
   an arrival cost summarizing the past. It is the estimation dual of MPC, it can
   honor constraints (state positivity, bounds), and -- because it is solved with
-  :func:`fugacio.sim.argmin` -- it differentiates through the optimum. For a
+  `fugacio.sim.argmin` -- it differentiates through the optimum. For a
   linear-Gaussian model with no constraints it reproduces the Kalman filter.
 """
 
@@ -85,7 +85,7 @@ class KalmanFilter:
 
     Construct directly with the model and noise covariances (``q`` process, ``r``
     measurement; scalars/diagonals broadcast). A filter *step* corrects the prior
-    with a prediction: :meth:`step` predicts from the previous posterior through
+    with a prediction: `step` predicts from the previous posterior through
     the input and then updates with the new measurement.
     """
 
@@ -127,7 +127,7 @@ class KalmanFilter:
         """Run the filter over input/measurement sequences; return the belief trajectory.
 
         ``us`` and ``ys`` have a leading time axis of equal length ``T``; the
-        returned :class:`GaussianState` has a leading time axis of length ``T`` on
+        returned `GaussianState` has a leading time axis of length ``T`` on
         ``mean`` and ``cov``.
         """
 
@@ -161,9 +161,9 @@ class ExtendedKalmanFilter:
 
     The discrete transition ``f(x, u) -> x+`` and measurement ``h(x) -> y`` are
     arbitrary differentiable callables; the filter linearizes them on the fly with
-    :func:`jax.jacobian` (``A = df/dx``, ``C = dh/dx``). For a continuous plant,
+    `jax.jacobian` (``A = df/dx``, ``C = dh/dx``). For a continuous plant,
     pass a one-step integrator as ``f`` (e.g. a wrapped
-    :func:`fugacio.sim.dynamics.odeint_final`).
+    `fugacio.sim.dynamics.odeint_final`).
     """
 
     f: Callable[[Array, Array], Array]
@@ -172,6 +172,7 @@ class ExtendedKalmanFilter:
     r: Array
 
     def predict(self, state: GaussianState, u: ArrayLike = 0.0) -> GaussianState:
+        """Time update: push the belief through ``f`` and propagate covariance via ``df/dx``."""
         u = jnp.atleast_1d(jnp.asarray(u, dtype=float))
         mean = self.f(state.mean, u)
         a = jax.jacobian(lambda x: self.f(x, u))(state.mean).reshape(mean.shape[0], -1)
@@ -179,6 +180,7 @@ class ExtendedKalmanFilter:
         return GaussianState(mean=mean, cov=0.5 * (cov + cov.T))
 
     def update(self, state: GaussianState, y: ArrayLike) -> GaussianState:
+        """Measurement update: fold in ``y`` through the linearized ``dh/dx`` (Joseph form)."""
         y = jnp.atleast_1d(jnp.asarray(y, dtype=float))
         y_pred = jnp.atleast_1d(self.h(state.mean))
         c = jax.jacobian(lambda x: jnp.atleast_1d(self.h(x)))(state.mean).reshape(
@@ -190,6 +192,7 @@ class ExtendedKalmanFilter:
         return post
 
     def step(self, state: GaussianState, u: ArrayLike, y: ArrayLike) -> GaussianState:
+        """One predict-then-update cycle for input ``u`` and measurement ``y``."""
         return self.update(self.predict(state, u), y)
 
     def filter(self, state0: GaussianState, us: Array, ys: Array) -> GaussianState:
@@ -247,6 +250,7 @@ class UnscentedKalmanFilter:
         return jnp.stack(pts, axis=0)
 
     def predict(self, state: GaussianState, u: ArrayLike = 0.0) -> GaussianState:
+        """Time update: propagate the sigma points through ``f`` and rebuild the Gaussian."""
         u = jnp.atleast_1d(jnp.asarray(u, dtype=float))
         n = state.mean.shape[0]
         wm, wc, lam = self._weights(n)
@@ -258,6 +262,7 @@ class UnscentedKalmanFilter:
         return GaussianState(mean=mean, cov=0.5 * (cov + cov.T))
 
     def update(self, state: GaussianState, y: ArrayLike) -> GaussianState:
+        """Measurement update: fold in ``y`` via the sigma-point output cross-covariance."""
         y = jnp.atleast_1d(jnp.asarray(y, dtype=float))
         n = state.mean.shape[0]
         wm, wc, lam = self._weights(n)
@@ -274,6 +279,7 @@ class UnscentedKalmanFilter:
         return GaussianState(mean=mean, cov=0.5 * (cov + cov.T))
 
     def step(self, state: GaussianState, u: ArrayLike, y: ArrayLike) -> GaussianState:
+        """One predict-then-update cycle for input ``u`` and measurement ``y``."""
         return self.update(self.predict(state, u), y)
 
     def filter(self, state0: GaussianState, us: Array, ys: Array) -> GaussianState:
@@ -294,7 +300,7 @@ class UnscentedKalmanFilter:
 # Moving-horizon estimation (estimation as optimization)
 # --------------------------------------------------------------------------- #
 class MHEResult(NamedTuple):
-    """Outcome of :func:`moving_horizon_estimate`.
+    """Outcome of `moving_horizon_estimate`.
 
     Attributes:
         x: Estimate of the state at the *end* of the window (the current state).
@@ -332,7 +338,7 @@ def moving_horizon_estimate(
 
     subject to ``x_{k+1} = f(x_k, u_k) + w_k``, over the decision variables ``x0``
     and the process-noise sequence ``w``. The optimum is found with
-    :func:`fugacio.sim.argmin`, so the estimate is differentiable (and optional
+    `fugacio.sim.argmin`, so the estimate is differentiable (and optional
     box ``state_bounds`` are enforced). For a linear-Gaussian model with no bounds
     this reproduces the Kalman filter's posterior mean.
 
@@ -342,12 +348,14 @@ def moving_horizon_estimate(
         us: Window inputs ``(N - 1, m)``.
         ys: Window measurements ``(N, p)``.
         x_prior: Prior mean of the window's first state ``(n,)``.
-        q, r, p0: Process, measurement, and arrival covariances.
+        q: Process-noise covariance ``(n, n)`` (scalar/diagonal broadcast).
+        r: Measurement-noise covariance ``(p, p)`` (scalar/diagonal broadcast).
+        p0: Arrival-cost covariance ``(n, n)`` on ``x0 - x_prior``.
         state_bounds: Optional ``(lower, upper)`` box on every windowed state.
         max_iter: Optimizer iteration cap.
 
     Returns:
-        An :class:`MHEResult`.
+        An `MHEResult`.
     """
     us = jnp.atleast_2d(jnp.asarray(us, dtype=float))
     ys = jnp.atleast_2d(jnp.asarray(ys, dtype=float))

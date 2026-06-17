@@ -1,7 +1,7 @@
 """Thermodynamic properties from a reference Helmholtz EOS, at ``(rho, T)``.
 
 Every function here is an algebraic combination of the autodiff partials of
-``alpha(delta, tau)`` (:mod:`fugacio.thermo.helmholtz.terms`), evaluated at a
+``alpha(delta, tau)`` (`fugacio.thermo.helmholtz.terms`), evaluated at a
 molar density ``rho`` (mol/m^3) and temperature ``t`` (K) -- the natural
 variables of a Helmholtz EOS. The standard property relations are (Span,
 *Multiparameter Equations of State*, 2000):
@@ -20,8 +20,8 @@ variables of a Helmholtz EOS. The standard property relations are (Span,
 Enthalpy and entropy are on each fluid's published reference state (for water
 the IAPWS-95 convention: zero internal energy and entropy of the saturated
 liquid at the triple point), *not* on the formation basis used by
-:mod:`fugacio.thermo.ideal`; differences cancel in the Delta-H / Delta-S that
-energy balances consume. Use :func:`fugacio.thermo.helmholtz.states.state_tp`
+`fugacio.thermo.ideal`; differences cancel in the Delta-H / Delta-S that
+energy balances consume. Use `fugacio.thermo.helmholtz.states.state_tp`
 and friends when starting from ``(T, P)`` instead of ``(rho, T)``.
 """
 

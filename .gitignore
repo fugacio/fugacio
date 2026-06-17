@@ -22,6 +22,8 @@ htmlcov/
 
 # Docs build
 site/
+# Material social-cards plugin cache (downloaded fonts + generated card layers)
+.cache/
 
 # OS / editor
 .DS_Store

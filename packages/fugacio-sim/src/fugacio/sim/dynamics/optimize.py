@@ -2,20 +2,20 @@
 
 Because the integrator is end-to-end differentiable, the three classic
 "optimization over a dynamic model" problems collapse to gradients through a
-simulation composed with the existing optimizers in :mod:`fugacio.sim.optimize`:
+simulation composed with the existing optimizers in `fugacio.sim.optimize`:
 
-* :func:`optimal_control` -- choose a (piecewise-constant) input trajectory to
+* `optimal_control` -- choose a (piecewise-constant) input trajectory to
   minimize a running-plus-terminal cost, e.g. minimum-energy or minimum-time-like
   transitions; the control is the decision variable and the simulation supplies
   exact gradients of the cost with respect to it;
-* :func:`estimate_dynamics` -- fit model parameters (and optionally the initial
+* `estimate_dynamics` -- fit model parameters (and optionally the initial
   state) to time-series measurements by Levenberg-Marquardt least squares through
   the integrator (dynamic data reconciliation / parameter estimation);
-* :func:`tune_pid` -- descend a closed-loop performance index (IAE / ISE / ITAE)
+* `tune_pid` -- descend a closed-loop performance index (IAE / ISE / ITAE)
   directly on the controller gains, exploiting the fact that the gains are a
   differentiable pytree and the whole closed loop is differentiable.
 
-All three return the corresponding :class:`fugacio.sim.OptimizeResult`-style
+All three return the corresponding `fugacio.sim.OptimizeResult`-style
 outcome and re-simulate at the solution for convenience.
 """
 
@@ -45,13 +45,13 @@ def _piecewise_constant(u: Array, ts: Array, t: Array) -> Array:
 # Optimal control
 # --------------------------------------------------------------------------- #
 class OptimalControlResult(NamedTuple):
-    """Outcome of :func:`optimal_control`.
+    """Outcome of `optimal_control`.
 
     Attributes:
         u: Optimal piecewise-constant control (one value, or vector, per interval).
         cost: Optimal total cost (running integral plus terminal).
         trajectory: State trajectory under the optimal control (leading time axis).
-        result: The underlying :class:`fugacio.sim.OptimizeResult`.
+        result: The underlying `fugacio.sim.OptimizeResult`.
     """
 
     u: Any
@@ -92,10 +92,13 @@ def optimal_control(
         terminal_cost: Optional terminal cost ``terminal_cost(y_f, theta) -> ()``.
         theta: Optional fixed parameter pytree.
         bounds: Optional ``(lower, upper)`` box on the control.
-        method, integrator, substeps, max_iter: Solver / integrator controls.
+        method: Unconstrained optimizer used over the control (e.g. ``"bfgs"``).
+        integrator: ODE integration scheme for the augmented state (e.g. ``"rk4"``).
+        substeps: Integration substeps taken between consecutive ``ts`` points.
+        max_iter: Maximum number of optimizer iterations.
 
     Returns:
-        An :class:`OptimalControlResult`.
+        An `OptimalControlResult`.
     """
     ts = jnp.asarray(ts, dtype=float)
     u_init = jnp.asarray(u_init, dtype=float)
@@ -135,13 +138,13 @@ def _tree_last(traj: Any) -> Any:
 # Parameter estimation from time-series
 # --------------------------------------------------------------------------- #
 class DynamicEstimateResult(NamedTuple):
-    """Outcome of :func:`estimate_dynamics`.
+    """Outcome of `estimate_dynamics`.
 
     Attributes:
         theta: Estimated parameter pytree.
         trajectory: Model trajectory at the estimate (leading time axis).
         cost: Half-sum-of-squares residual at the estimate.
-        result: The underlying :class:`fugacio.sim.OptimizeResult`.
+        result: The underlying `fugacio.sim.OptimizeResult`.
     """
 
     theta: Any
@@ -171,7 +174,7 @@ def estimate_dynamics(
     (defaults to the trajectory itself); ``weights`` optionally scales residuals.
 
     Returns:
-        A :class:`DynamicEstimateResult`.
+        A `DynamicEstimateResult`.
     """
     ts = jnp.asarray(ts, dtype=float)
     data = jnp.asarray(data, dtype=float)
@@ -225,10 +228,11 @@ def tune_pid(
         objective: Error integral to minimize.
         bounds: Optional ``(lower, upper)`` box on the gains (recommended -- keeps
             gains positive).
-        method, max_iter: Optimizer controls.
+        method: Unconstrained optimizer used over the gains (e.g. ``"bfgs"``).
+        max_iter: Maximum number of optimizer iterations.
 
     Returns:
-        The :class:`fugacio.sim.OptimizeResult`; ``result.x`` is the tuned gains.
+        The `fugacio.sim.OptimizeResult`; ``result.x`` is the tuned gains.
     """
     if objective not in _OBJECTIVES:
         raise ValueError(f"objective must be one of {tuple(_OBJECTIVES)}, got {objective!r}")

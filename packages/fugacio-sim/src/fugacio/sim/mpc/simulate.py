@@ -2,24 +2,24 @@
 
 A controller is only as good as the loop it closes. This module runs a *discrete*
 closed loop -- plant, measurement, controller, repeat -- as a single
-:func:`jax.lax.scan`, so the whole simulation is one differentiable, jit-able
+`jax.lax.scan`, so the whole simulation is one differentiable, jit-able
 function. Two payoffs follow directly:
 
 * **One harness for every controller.** Linear MPC, nonlinear MPC and the PID of
-  :mod:`fugacio.sim.control` all expose the same step protocol
+  `fugacio.sim.control` all expose the same step protocol
   ``(controller_state, measurement, setpoint) -> (input, controller_state)``, so
-  :func:`simulate_closed_loop` drives any of them (adapters
-  :func:`linear_feedback` / :func:`nonlinear_feedback` wrap the two MPC classes).
+  `simulate_closed_loop` drives any of them (adapters
+  `linear_feedback` / `nonlinear_feedback` wrap the two MPC classes).
 * **Tuning by descent, not grid search.** Because the loop is differentiable and
   the MPC step differentiates *through its own QP* (see
-  :mod:`fugacio.sim.mpc.qp`), the gradient of a closed-loop performance index with
+  `fugacio.sim.mpc.qp`), the gradient of a closed-loop performance index with
   respect to the controller weights flows straight through the optimization.
-  :func:`tune_mpc` hands that gradient to :func:`fugacio.sim.minimize`, so the
+  `tune_mpc` hands that gradient to `fugacio.sim.minimize`, so the
   weights ``Q, R, ...`` are tuned the same way PID gains are in
-  :func:`fugacio.sim.dynamics.tune_pid`.
+  `fugacio.sim.dynamics.tune_pid`.
 
 The plant is a discrete one-step map ``x+ = plant(x, u)``; wrap a continuous
-right-hand side with :func:`fugacio.sim.mpc.discretize` to obtain one. Optional
+right-hand side with `fugacio.sim.mpc.discretize` to obtain one. Optional
 per-step process and measurement noise sequences are added so a tune can be made
 robust to disturbances.
 """
@@ -46,7 +46,7 @@ Measure = Callable[[Array], Array]
 
 
 class ClosedLoop(NamedTuple):
-    """Trajectories returned by :func:`simulate_closed_loop`.
+    """Trajectories returned by `simulate_closed_loop`.
 
     With ``T`` control steps, ``n`` states, ``m`` inputs and ``p`` outputs:
 
@@ -95,12 +95,12 @@ def simulate_closed_loop(
     At each step ``k`` the measurement ``y_k = measure(x_k) + v_k`` is formed, the
     controller produces ``u_k`` (advancing its own state), and the plant steps to
     ``x_{k+1} = plant(x_k, u_k) + w_k``. The whole march is a single
-    :func:`jax.lax.scan`, hence differentiable and jit-able.
+    `jax.lax.scan`, hence differentiable and jit-able.
 
     Args:
         plant: Discrete plant map ``(x, u) -> x+``.
         controller: Step ``(state, measurement, setpoint) -> (input, state)``
-            (see :func:`linear_feedback` / :func:`nonlinear_feedback`).
+            (see `linear_feedback` / `nonlinear_feedback`).
         x0: Initial plant state ``(n,)``.
         ctrl0: Initial controller state.
         setpoints: Output setpoints ``(T, p)`` (or ``(T,)`` for a scalar output);
@@ -112,7 +112,7 @@ def simulate_closed_loop(
         meas_noise: Optional additive measurement noise ``(T, p)``.
 
     Returns:
-        A :class:`ClosedLoop` with the state, output, measurement, input and
+        A `ClosedLoop` with the state, output, measurement, input and
         setpoint trajectories.
     """
     x0 = jnp.asarray(x0, dtype=float)
@@ -188,7 +188,7 @@ def closed_loop_cost(
         ``sum_k ||y_{k+1} - r_k||^2_We + ||u_k - u_ref||^2_Wu + ||u_k - u_{k-1}||^2_Wd``
 
     Each weight may be a scalar, a per-channel vector, or a full matrix. This is the
-    natural objective for :func:`tune_mpc`.
+    natural objective for `tune_mpc`.
     """
     err = loop.outputs[1:] - loop.setpoints
     cost = _quad(error_weight, err)
@@ -209,9 +209,9 @@ def linear_feedback(
     u0: ArrayLike | None = None,
     d0: ArrayLike | None = None,
 ) -> tuple[ControllerStep, Any]:
-    """Adapt a :class:`~fugacio.sim.mpc.LinearMPC` to the closed-loop step protocol.
+    """Adapt a `LinearMPC` to the closed-loop step protocol.
 
-    Returns ``(step, ctrl0)`` ready for :func:`simulate_closed_loop`; ``step`` is the
+    Returns ``(step, ctrl0)`` ready for `simulate_closed_loop`; ``step`` is the
     controller's own estimate-optimize-advance iteration and ``ctrl0`` its initial
     estimator state.
     """
@@ -224,7 +224,7 @@ def nonlinear_feedback(
     u0: ArrayLike | None = None,
     theta: Any = None,
 ) -> tuple[ControllerStep, Any]:
-    """Adapt a :class:`~fugacio.sim.mpc.NonlinearMPC` to the closed-loop step protocol.
+    """Adapt a `NonlinearMPC` to the closed-loop step protocol.
 
     Assumes full-state feedback (the measurement *is* the state). The setpoint passed
     by the harness is written into ``theta["r"]`` each step; any other entries of
@@ -263,8 +263,8 @@ def tune_mpc(
     """Tune controller parameters by descending a closed-loop performance index.
 
     ``simulate(params)`` must build the controller from the ``params`` pytree, run the
-    closed loop, and return the :class:`ClosedLoop`; ``performance`` scores it
-    (defaults to :func:`closed_loop_cost`, i.e. tracking ISE). The gradient flows
+    closed loop, and return the `ClosedLoop`; ``performance`` scores it
+    (defaults to `closed_loop_cost`, i.e. tracking ISE). The gradient flows
     through the simulation *and the MPC's own QP*, so the tune is exact first-order.
 
     Args:
@@ -274,10 +274,11 @@ def tune_mpc(
         performance: Scalar score ``ClosedLoop -> ()`` to minimize.
         bounds: Optional ``(lower, upper)`` box on ``params`` (recommended -- keeps
             weights positive).
-        method, max_iter: Forwarded to :func:`fugacio.sim.minimize`.
+        method: Unconstrained optimizer forwarded to `fugacio.sim.minimize`.
+        max_iter: Maximum optimizer iterations forwarded to `fugacio.sim.minimize`.
 
     Returns:
-        The :class:`fugacio.sim.OptimizeResult`; ``result.x`` is the tuned params.
+        The `fugacio.sim.OptimizeResult`; ``result.x`` is the tuned params.
     """
     score = performance if performance is not None else closed_loop_cost
 

@@ -1,11 +1,11 @@
 # Heat integration & pinch analysis
 
 Most of the energy bill of a chemical plant is set before a single exchanger is
-drawn: it is fixed by *how much* heat the hot streams must reject and the cold
+drawn: it's fixed by *how much* heat the hot streams must reject and the cold
 streams must absorb, and by how cleverly the two are matched. **Pinch analysis**
-answers the first question — the thermodynamic minimum hot- and cold-utility
+answers the first question (the thermodynamic minimum hot- and cold-utility
 duties for a chosen minimum approach temperature `dt_min`, and the **pinch** that
-divides the problem — before any network exists. `fugacio.sim.integration` builds
+divides the problem) before any network exists. `fugacio.sim.integration` builds
 the whole pinch-technology workflow (targets, composite curves, area/cost
 supertargeting, and network synthesis) and keeps it **end-to-end
 differentiable**, so a heat-recovery target is just another node in the graph:
@@ -17,7 +17,7 @@ you can take its gradient with respect to stream temperatures, duties, or
 A `HeatStream` is the heat-integration view of a process stream: a supply and
 target temperature, a constant heat-capacity flowrate `CP = m·cp` (W/K), and a
 film coefficient `h` for area targeting. A stream is **hot** (a source, to be
-cooled) when its supply is hotter than its target, and **cold** otherwise — the
+cooled) when its supply is hotter than its target, and **cold** otherwise; the
 classification is structural, while every numeric leaf is a differentiable JAX
 array. Build one directly with `make_stream`, or extract it from a live
 `fugacio.sim.Stream` with `heat_stream`, which uses the real, two-phase-aware
@@ -63,7 +63,7 @@ res.hot_pinch_temperature              # -> 90.0 K  (cold side at 80.0 K)
 res.has_pinch                          # -> True (a threshold problem returns False)
 ```
 
-Because the target is differentiable, sensitivities are exact and free — the
+Because the target is differentiable, sensitivities are exact and free. The
 slope of the hot-utility target with respect to the approach temperature, for
 instance, is one line:
 
@@ -82,8 +82,8 @@ jax.grad(lambda dt: minimum_utilities(streams, dt)[0])(10.0)   # -> 0.5 W/K
 
 The composite curves are the canonical temperature–enthalpy picture of the
 targets: all hot streams combined into one hot composite, all cold streams into
-one cold composite, slid together until they are `dt_min` apart at the pinch. The
-**grand composite curve** plots net heat flow against shifted temperature — the
+one cold composite, slid together until they're `dt_min` apart at the pinch. The
+**grand composite curve** plots net heat flow against shifted temperature, the
 shape that drives utility selection and multiple-utility placement.
 
 ```python
@@ -100,7 +100,7 @@ gcc.shifted_temperature, gcc.net_heat_flow   # the GCC (zero at the pinch)
 
 ## Area, units & cost targets
 
-Targets are not just about energy. With each stream's film coefficient, the
+Targets aren't just about energy. With each stream's film coefficient, the
 **Bath formula** integrates the area of a vertical-heat-transfer network from the
 balanced composite curves, accounting for the individual film resistances and the
 local LMTD. `units_target` gives the minimum number of exchanger units from
@@ -125,7 +125,7 @@ tac.area, tac.capital, tac.utility_cost, tac.total_annual_cost
 A small `dt_min` recovers more heat (less utility, lower operating cost) but needs
 ever more area as the composites pinch together (higher capital); a large one does
 the reverse. The total annual cost is therefore U-shaped in `dt_min`, and the
-minimum is the cost-optimal approach — **supertargeting**, found *before* any
+minimum is the cost-optimal approach, **supertargeting**, found *before* any
 network is designed. The TAC is differentiable between kinks, but the integer
 unit-count steps make it only piecewise-smooth, so `optimal_dt_min` locates the
 basin with a vectorised grid scan (`jax.vmap` over the target) and polishes it with
@@ -144,7 +144,7 @@ curve = supertarget(streams, jnp.linspace(2.0, 40.0, 60))   # arrays for the TAC
 
 ## Heat-exchanger-network synthesis
 
-Targets say what is achievable; `synthesize_network` builds a network that hits
+Targets say what's achievable; `synthesize_network` builds a network that hits
 them, by the **pinch design method**. It splits the problem at the pinch, designs
 each side inward-out by *tick-off* matching subject to the CP-feasibility rule
 (`CP_hot ≤ CP_cold` above the pinch, the reverse below), and tops up the

@@ -1,16 +1,16 @@
 """Energy-balance phase equilibrium: two-phase enthalpy/entropy and PH/PS flash.
 
-The isothermal flash in :mod:`fugacio.thermo.equilibrium` answers "what splits?"
+The isothermal flash in `fugacio.thermo.equilibrium` answers "what splits?"
 at a *given* temperature. Process units instead fix an *energy* specification --
 a heat duty, an adiabatic mix, an isentropic compression -- and the temperature
 is unknown. This module supplies:
 
-* :func:`mixture_enthalpy` / :func:`mixture_entropy` -- the molar enthalpy and
+* `mixture_enthalpy` / `mixture_entropy` -- the molar enthalpy and
   entropy of an equilibrium feed at ``(T, P)``, correctly blending the vapour and
   liquid products of the flash (so the latent heat is included automatically);
-* :func:`flash_ph` -- the isenthalpic (adiabatic) flash: solve for the
+* `flash_ph` -- the isenthalpic (adiabatic) flash: solve for the
   temperature at which the mixture enthalpy meets a target, then return the split;
-* :func:`flash_ps` -- the isentropic flash, the backbone of compressor and
+* `flash_ps` -- the isentropic flash, the backbone of compressor and
   turbine models.
 
 Both flashes solve a scalar, monotone energy residual (enthalpy or entropy minus

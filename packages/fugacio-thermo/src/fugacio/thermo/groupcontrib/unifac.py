@@ -11,11 +11,11 @@ data are proprietary -- exactly the role the project README assigns to UNIFAC.
 the UNIQUAC size/shape term and the residual part is a sum over group residual
 activity coefficients ``Gamma_k`` evaluated in the mixture and in the pure fluid.
 
-The bundled :data:`SUBGROUPS`, :data:`INTERACTIONS`, and :data:`COMPONENT_GROUPS`
-tables live in :mod:`fugacio.thermo.groupcontrib._unifac_data`, generated from the
+The bundled `SUBGROUPS`, `INTERACTIONS`, and `COMPONENT_GROUPS`
+tables live in `fugacio.thermo.groupcontrib._unifac_data`, generated from the
 public UNIFAC (Hansen VLE) parameters and DDBST group assignments for the curated
 component database (see ``scripts/gen_parameters.py``). The numerical kernel
-:func:`unifac_ln_gamma` is general and differentiable, so it works with any
+`unifac_ln_gamma` is general and differentiable, so it works with any
 parameter tables you supply.
 """
 
@@ -141,7 +141,7 @@ def unifac_activity(components: list[str], x: Array, t: ArrayLike) -> Array:
     """Predict ``ln(gamma)`` for named database components using bundled tables.
 
     Args:
-        components: Component names with UNIFAC assignments in :data:`COMPONENT_GROUPS`.
+        components: Component names with UNIFAC assignments in `COMPONENT_GROUPS`.
         x: Mole fractions aligned with ``components``.
         t: Temperature (K).
 

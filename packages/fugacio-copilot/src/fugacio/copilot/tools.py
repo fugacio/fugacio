@@ -5,10 +5,10 @@ calculations. The bridge between a language model and the differentiable engine
 is a set of *tools*: deterministic, JSON-in/JSON-out functions with machine-
 readable schemas (the same shape OpenAI / Anthropic function-calling expects).
 
-This module defines that registry over :mod:`fugacio.sim` and
-:mod:`fugacio.thermo`. The tools are plain Python (floats and lists, not JAX
+This module defines that registry over `fugacio.sim` and
+`fugacio.thermo`. The tools are plain Python (floats and lists, not JAX
 arrays) so they are trivial to serialise; the LLM-planning loop that selects and
-sequences them lives behind the optional ``llm`` extra (:mod:`fugacio.copilot.agent`).
+sequences them lives behind the optional ``llm`` extra (`fugacio.copilot.agent`).
 """
 
 from __future__ import annotations
@@ -1071,7 +1071,7 @@ def _finite(value: float) -> float | None:
 
 
 def _fluid_state_dict(fluid: object, state: object) -> JsonDict:
-    """Serialize a :class:`fugacio.thermo.FluidState` on a mass basis (steam-table units)."""
+    """Serialize a `fugacio.thermo.FluidState` on a mass basis (steam-table units)."""
     assert isinstance(fluid, _helmholtz.HelmholtzFluid)
     assert isinstance(state, _helmholtz.FluidState)
     m = fluid.molar_mass

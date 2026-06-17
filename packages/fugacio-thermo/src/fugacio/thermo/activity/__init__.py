@@ -3,13 +3,13 @@
 The package collects excess-Gibbs / activity-coefficient models that share a
 common, differentiable ``jax.numpy`` implementation:
 
-* :mod:`~fugacio.thermo.activity.margules` and
-  :mod:`~fugacio.thermo.activity.vanlaar` -- two-parameter binary models;
-* :mod:`~fugacio.thermo.activity.wilson`,
-  :mod:`~fugacio.thermo.activity.nrtl` and
-  :mod:`~fugacio.thermo.activity.uniquac` -- multicomponent local-composition
+* `margules` and
+  `vanlaar` -- two-parameter binary models;
+* `wilson`,
+  `nrtl` and
+  `uniquac` -- multicomponent local-composition
   models;
-* :mod:`~fugacio.thermo.activity.regular_solution` -- Scatchard-Hildebrand
+* `regular_solution` -- Scatchard-Hildebrand
   regular-solution and Flory-Huggins models from pure-component descriptors.
 
 Each model exposes ``*_ln_gamma`` and ``*_gamma`` functions; the local-
@@ -17,9 +17,9 @@ composition models additionally provide builders that assemble their interaction
 matrices from temperature and physical parameters.
 
 For a uniform, object-oriented interface (used by the gamma-phi equilibrium
-engine and the parameter regressor), :mod:`~fugacio.thermo.activity.models`
+engine and the parameter regressor), `models`
 wraps each kernel in a differentiable model object implementing
-:class:`~fugacio.thermo.activity.models.ActivityModel`.
+`ActivityModel`.
 """
 
 from fugacio.thermo.activity.margules import (

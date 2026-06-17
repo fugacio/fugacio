@@ -1,6 +1,6 @@
 """A deterministic in-memory provider for testing the agent loop without an API.
 
-:class:`MockProvider` plays back either a fixed list of :class:`ChatResponse`
+`MockProvider` plays back either a fixed list of `ChatResponse`
 objects (one per ``chat`` call) or a callable that decides the reply from the
 running message list. It records every call it receives, so tests can assert on
 how the agent drove the conversation. This keeps the whole tool-calling loop --
@@ -20,7 +20,7 @@ Script = list[ChatResponse] | Callable[[list[Message]], ChatResponse]
 
 @dataclass
 class MockProvider:
-    """A scripted :class:`~fugacio.copilot.llm.base.LLMProvider`.
+    """A scripted `LLMProvider`.
 
     Attributes:
         script: Either a list of replies returned in order, or a function

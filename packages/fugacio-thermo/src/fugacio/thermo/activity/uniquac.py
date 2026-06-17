@@ -18,7 +18,7 @@ lattice coordination number ``z = 10``::
         - sum_j theta_j tau_ij / (sum_k theta_k tau_kj) ]
 
 UNIQUAC is the theoretical parent of the group-contribution UNIFAC model
-(:mod:`fugacio.thermo.groupcontrib.unifac`). All quantities are differentiable.
+(`fugacio.thermo.groupcontrib.unifac`). All quantities are differentiable.
 """
 
 from __future__ import annotations

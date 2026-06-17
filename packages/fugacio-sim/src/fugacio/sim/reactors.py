@@ -1,15 +1,15 @@
 """Differentiable reactor unit operations with material *and* energy balances.
 
 These blocks turn the reaction thermochemistry and kinetics in
-:mod:`fugacio.thermo` into flowsheet units that consume and produce
-:class:`~fugacio.sim.stream.Stream` objects, just like the separation units in
-:mod:`fugacio.sim.units`. Two families are provided:
+`fugacio.thermo` into flowsheet units that consume and produce
+`Stream` objects, just like the separation units in
+`fugacio.sim.units`. Two families are provided:
 
 * *Equilibrium* / *stoichiometric* reactors -- the conversion is set by chemical
-  equilibrium (:func:`fugacio.thermo.reaction_equilibrium.equilibrium`) or by a
+  equilibrium (`fugacio.thermo.reaction_equilibrium.equilibrium`) or by a
   specified extent/conversion; no rate law is needed.
-* *Kinetic* reactors -- :func:`cstr`, :func:`pfr`, and :func:`batch_reactor`
-  integrate the rate laws of :mod:`fugacio.thermo.kinetics` over reactor volume
+* *Kinetic* reactors -- `cstr`, `pfr`, and `batch_reactor`
+  integrate the rate laws of `fugacio.thermo.kinetics` over reactor volume
   (CSTR/PFR) or time (batch).
 
 Every reactor supports an **energy balance**: run it isothermally at a specified
@@ -17,7 +17,7 @@ temperature and the heat *duty* required to hold that temperature is returned
 (it carries the heat of reaction), or run it ``adiabatic=True`` and the outlet
 temperature is solved from an adiabatic enthalpy balance. The enthalpy
 bookkeeping is the ideal-gas absolute enthalpy ``Hf_i(298) + integral Cp_i dT``
-that underlies :func:`fugacio.thermo.reactions.delta_h_rxn`, so reaction heat and
+that underlies `fugacio.thermo.reactions.delta_h_rxn`, so reaction heat and
 sensible heat are accounted for consistently. Kinetic-reactor concentrations use
 the ideal-gas relation ``c_i = y_i P / (R T)``.
 
@@ -62,7 +62,7 @@ class ReactorResult(NamedTuple):
     """Outcome of a reactor calculation.
 
     Attributes:
-        outlet: Product :class:`~fugacio.sim.stream.Stream` (at the reactor outlet
+        outlet: Product `Stream` (at the reactor outlet
             temperature, solved for adiabatic operation).
         duty: Heat duty (W) to hold an isothermal reactor at temperature; positive
             means heat *added*. Zero for an adiabatic reactor.
@@ -182,11 +182,13 @@ def equilibrium_reactor(
         adiabatic: Solve the outlet temperature from an adiabatic balance instead.
         basis: ``"ideal-gas"`` or ``"phi"`` (EOS fugacity coefficients) for the
             isothermal equilibrium; adiabatic operation uses the ideal-gas basis.
-        eos, kij: EOS settings for ``basis="phi"``.
-        tol, max_iter: Solver controls.
+        eos: Cubic EOS used when ``basis="phi"``.
+        kij: Optional binary interaction matrix for the EOS.
+        tol: Convergence tolerance on the reaction extents.
+        max_iter: Maximum number of solver iterations.
 
     Returns:
-        A :class:`ReactorResult`.
+        A `ReactorResult`.
     """
     comps = feed.components
     rxns = _as_reactions(reactions)
@@ -263,7 +265,7 @@ def stoichiometric_reactor(
     Provide exactly one of ``extent`` (per reaction, mol/s) or ``conversion`` (a
     single-reaction fractional conversion of its limiting reactant). The outlet is
     ``n = n_feed + extent @ nu``; the energy balance is the same isothermal-duty /
-    adiabatic-temperature treatment as :func:`equilibrium_reactor`.
+    adiabatic-temperature treatment as `equilibrium_reactor`.
 
     Raises:
         ValueError: if not exactly one of ``extent`` / ``conversion`` is given, or
@@ -328,7 +330,8 @@ def cstr(
         volume: Reactor volume (m^3).
         t_out: Isothermal temperature (K); defaults to ``feed.t``.
         adiabatic: Solve the outlet temperature from the energy balance.
-        tol, max_iter: Newton controls.
+        tol: Convergence tolerance on the steady-state mole balance.
+        max_iter: Maximum number of Newton iterations.
     """
     comps = feed.components
     rxns = _as_reactions(reactions)

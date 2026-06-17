@@ -35,3 +35,13 @@ oracles:
 
 # Everything CI runs, in order.
 check: lint types imports test
+
+# Serve the docs site locally with live reload (http://127.0.0.1:8000).
+# Social cards are CI-only, so no Cairo/Pango is needed for a local preview.
+docs-serve:
+    uv run --group docs mkdocs serve
+
+# Build the docs site exactly as CI does (warnings are errors). Enables the
+# social-card plugin via CI=true, which needs Cairo/Pango installed locally.
+docs-build:
+    CI=true uv run --group docs mkdocs build --strict

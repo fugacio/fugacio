@@ -1,14 +1,193 @@
 site_name: Fugacio
-site_description: Open, differentiable thermodynamics + process simulation.
+site_description: Open, differentiable thermodynamics + process simulation, with an AI design copilot.
+site_author: Owen Carey
+site_url: https://fugacio.com/
+repo_url: https://github.com/owenthcarey/fugacio
+repo_name: owenthcarey/fugacio
+edit_uri: edit/main/docs/
+
 theme:
   name: material
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    - navigation.expand
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.suggest
+    - search.share
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/owenthcarey/fugacio
+      name: Fugacio on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/fugacio-thermo/
+      name: Fugacio on PyPI
+
 nav:
   - Home: index.md
-  - Non-ideal phase equilibrium: phase-equilibrium.md
-  - Reference fluids & steam tables: reference-fluids.md
-  - Physical & transport properties: physical-properties.md
-  - Reactions & reactors: reactions.md
-  - Optimization, design & economics: optimization.md
-  - Dynamics & process control: dynamics.md
-  - Advanced control (MPC & estimation): advanced-control.md
-  - Heat integration & pinch analysis: heat-integration.md
+  - Guides:
+    - Non-ideal phase equilibrium: phase-equilibrium.md
+    - Reference fluids & steam tables: reference-fluids.md
+    - Physical & transport properties: physical-properties.md
+    - Reactions & reactors: reactions.md
+    - Optimization, design & economics: optimization.md
+    - Dynamics & process control: dynamics.md
+    - Advanced control (MPC & estimation): advanced-control.md
+    - Heat integration & pinch analysis: heat-integration.md
+  - API Reference:
+    - Overview: api/index.md
+    - fugacio.thermo:
+      - Package: api/thermo/index.md
+      - Components & data: api/thermo/data.md
+      - Equations of state: api/thermo/eos.md
+      - Phase equilibrium: api/thermo/equilibrium.md
+      - Liquid-liquid & VLLE: api/thermo/lle.md
+      - Activity & group contribution: api/thermo/activity.md
+      - Energy & property models: api/thermo/energy.md
+      - Reference fluids (Helmholtz): api/thermo/helmholtz.md
+      - Transport & volumetric: api/thermo/transport.md
+      - Reactions & kinetics: api/thermo/reactions.md
+      - Regression & ThermoML: api/thermo/regression.md
+    - fugacio.sim:
+      - Package: api/sim/index.md
+      - Streams & properties: api/sim/streams.md
+      - Unit operations: api/sim/units.md
+      - Flowsheet & recycle: api/sim/flowsheet.md
+      - Thermodynamic models: api/sim/models.md
+      - Distillation & diagrams: api/sim/columns.md
+      - Reactors & reactive separations: api/sim/reactors.md
+      - Optimization & design: api/sim/optimization.md
+      - Economics & sizing: api/sim/economics.md
+      - Dynamics & control: api/sim/dynamics.md
+      - Advanced control (MPC): api/sim/mpc.md
+      - Heat integration: api/sim/integration.md
+      - Steam & cooling utilities: api/sim/utilities.md
+    - fugacio.copilot:
+      - Package: api/copilot/index.md
+      - Tool registry: api/copilot/tools.md
+      - Agent loops: api/copilot/agent.md
+      - LLM providers: api/copilot/providers.md
+      - Reporting: api/copilot/report.md
+
+plugins:
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - autorefs
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            - packages/fugacio-thermo/src
+            - packages/fugacio-sim/src
+            - packages/fugacio-copilot/src
+          inventories:
+            - https://docs.python.org/3/objects.inv
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            members_order: source
+            merge_init_into_class: true
+            separate_signature: true
+            show_bases: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_source: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
+            filters: ["!^_"]
+  - social:
+      enabled: !ENV [CI, false]
+      cards_layout_options:
+        background_color: "#0f766e"
+        color: "#ffffff"
+
+extra_css:
+  - styles/brand.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 4
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: owenthcarey
+      repo: fugacio
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+watch:
+  - packages/fugacio-thermo/src
+  - packages/fugacio-sim/src
+  - packages/fugacio-copilot/src

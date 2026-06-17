@@ -1,16 +1,16 @@
 """Modified UNIFAC (Dortmund): predictive activity coefficients with T-dependence.
 
 The Dortmund revision of UNIFAC improves dilute-region and temperature behaviour
-with two changes to classic UNIFAC (:mod:`fugacio.thermo.groupcontrib.unifac`):
+with two changes to classic UNIFAC (`fugacio.thermo.groupcontrib.unifac`):
 
 * a temperature-dependent group interaction,
   ``psi_mn = exp(-(a_mn + b_mn T + c_mn T^2) / T)``; and
 * a modified combinatorial term using ``V'_i = r_i^{3/4} / sum_j x_j r_j^{3/4}``
   for the leading volume contribution.
 
-The kernel :func:`modified_unifac_ln_gamma` is general and differentiable; the
+The kernel `modified_unifac_ln_gamma` is general and differentiable; the
 bundled Dortmund subgroup/interaction tables and DDBST assignments live in
-:mod:`fugacio.thermo.groupcontrib._dortmund_data` (see ``scripts/gen_parameters.py``).
+`fugacio.thermo.groupcontrib._dortmund_data` (see ``scripts/gen_parameters.py``).
 """
 
 from __future__ import annotations
@@ -74,7 +74,9 @@ def modified_unifac_ln_gamma(
         r: Subgroup ``R_k`` values, shape ``(ngroup,)``.
         q: Subgroup ``Q_k`` values, shape ``(ngroup,)``.
         main_index: Each subgroup's main-group index, shape ``(ngroup,)``.
-        a_main, b_main, c_main: Interaction coefficient matrices, shape ``(nmain, nmain)``.
+        a_main: Constant interaction-coefficient matrix, shape ``(nmain, nmain)``.
+        b_main: Linear-in-``T`` interaction-coefficient matrix, shape ``(nmain, nmain)``.
+        c_main: Quadratic-in-``T`` interaction-coefficient matrix, shape ``(nmain, nmain)``.
         t: Temperature (K).
 
     Returns:
@@ -134,7 +136,7 @@ def modified_unifac_activity(components: list[str], x: Array, t: ArrayLike) -> A
     """Predict ``ln(gamma)`` for named database components with modified UNIFAC.
 
     Args:
-        components: Component names with assignments in :data:`DO_COMPONENT_GROUPS`.
+        components: Component names with assignments in `DO_COMPONENT_GROUPS`.
         x: Mole fractions aligned with ``components``.
         t: Temperature (K).
 

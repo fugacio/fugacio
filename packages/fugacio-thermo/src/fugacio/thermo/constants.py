@@ -1,4 +1,4 @@
-"""Physical constants and unit conversions used across :mod:`fugacio.thermo`.
+"""Physical constants and unit conversions used across `fugacio.thermo`.
 
 Fugacio works in SI internally:
 
@@ -10,7 +10,7 @@ Fugacio works in SI internally:
 
 Molar mass is the one deliberate exception: it is stored in the conventional
 gram-per-mole (g/mol), matching how component data are tabulated. Convert to
-kg/mol with :data:`G_PER_MOL_TO_KG_PER_MOL` when you need mass in SI.
+kg/mol with `G_PER_MOL_TO_KG_PER_MOL` when you need mass in SI.
 
 The numerical values follow the 2018 CODATA recommended values, so they match
 the constants used by the open reference codes Fugacio is graded against.

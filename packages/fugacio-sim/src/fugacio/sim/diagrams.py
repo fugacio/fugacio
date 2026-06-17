@@ -3,18 +3,18 @@
 Conceptual design and column screening lean on the binary picture: the P-x-y and
 T-x-y envelopes and, above all, *where the azeotrope is* (it bounds what ordinary
 distillation can reach). These helpers turn any binary
-:class:`~fugacio.thermo.EquilibriumModel` into:
+`EquilibriumModel` into:
 
-* :func:`pxy_diagram` / :func:`txy_diagram` -- the bubble (liquid) and the
+* `pxy_diagram` / `txy_diagram` -- the bubble (liquid) and the
   equilibrium-vapour curves on a composition grid, from one bubble sweep each; and
-* :func:`azeotrope_pressure` / :func:`azeotrope_temperature` -- the azeotropic
+* `azeotrope_pressure` / `azeotrope_temperature` -- the azeotropic
   composition (where ``y_1 = x_1``) at fixed ``T`` or ``P``, returned with an
   ``exists`` flag so a non-azeotropic system is reported, not faked.
 
 All outputs are differentiable: the diagram arrays through the bubble solves, and
 the azeotrope locus through the bracketed root's implicit derivative -- so an
 azeotrope's pressure sensitivity to a model parameter is a single
-:func:`jax.grad` away.
+`jax.grad` away.
 """
 
 from __future__ import annotations
@@ -182,7 +182,7 @@ def azeotrope_temperature(
 ) -> AzeotropeResult:
     """Find the binary azeotrope at fixed pressure ``p`` (where ``y_1 = x_1``).
 
-    As :func:`azeotrope_pressure` but at constant pressure: each residual
+    As `azeotrope_pressure` but at constant pressure: each residual
     evaluation solves a bubble temperature (bracketed in ``[t_min, t_max]``).
     """
 
@@ -254,20 +254,21 @@ def residue_curve(
     Integration is an explicit Euler march with the composition re-projected onto
     the simplex each step, so the path stays a valid composition. The expensive part
     -- the bubble-point ``(T, y)`` at each point -- is one compiled, differentiable
-    solve (:func:`_bubble_ty`) reused across every step and every curve.
+    solve (`_bubble_ty`) reused across every step and every curve.
 
     Args:
         model: Any object with a ``bubble_temperature(p, x)`` method (e.g. an
-            :class:`~fugacio.thermo.EquilibriumModel` from :mod:`fugacio.sim.models`).
+            `EquilibriumModel` from `fugacio.sim.models`).
         x0: Starting liquid composition, shape ``(n,)``.
         p: Pressure (Pa).
         steps: Number of integration steps.
         ds: Pseudo-time step size.
         direction: ``+1`` toward heavies, ``-1`` toward lights.
-        t_min, t_max: Temperature bracket for the bubble-temperature solve.
+        t_min: Lower bound of the bubble-temperature search bracket (K).
+        t_max: Upper bound of the bubble-temperature search bracket (K).
 
     Returns:
-        A :class:`ResidueCurve` with the composition and temperature path
+        A `ResidueCurve` with the composition and temperature path
         (``steps + 1`` points).
     """
     x0 = _simplex(jnp.asarray(x0, dtype=float))
@@ -309,10 +310,11 @@ def residue_curve_map(
         p: Pressure (Pa).
         steps: Steps taken in *each* direction (the curve has ``2*steps + 1`` points).
         ds: Pseudo-time step size.
-        t_min, t_max: Temperature bracket for the bubble-temperature solves.
+        t_min: Lower bound of the bubble-temperature search bracket (K).
+        t_max: Upper bound of the bubble-temperature search bracket (K).
 
     Returns:
-        A list of ``k`` :class:`ResidueCurve` objects.
+        A list of ``k`` `ResidueCurve` objects.
     """
     starts = jnp.atleast_2d(jnp.asarray(starts, dtype=float))
     curves: list[ResidueCurve] = []

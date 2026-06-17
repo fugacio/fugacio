@@ -6,25 +6,25 @@ makes a finite-horizon MPC stabilizing, and the steady-state Kalman filter all
 reduce to its stabilizing solution. Fugacio needs those objects *inside* a
 differentiable stack -- an LQR terminal weight that depends on a model parameter,
 a Kalman gain whose covariances are being tuned -- so the solvers here are written
-against :mod:`jax.numpy` and are differentiable end to end.
+against `jax.numpy` and are differentiable end to end.
 
 The trick that keeps them differentiable is the same one
-:func:`fugacio.sim.dynamics.odeint` uses for implicit integrator steps: a *fixed*
+`fugacio.sim.dynamics.odeint` uses for implicit integrator steps: a *fixed*
 iteration count. Both Riccati solvers converge **quadratically**, so a fixed,
 generous number of doubling / Newton steps reaches machine precision and -- being
-a plain :func:`jax.lax.scan` of dense linear algebra -- is reverse-mode
+a plain `jax.lax.scan` of dense linear algebra -- is reverse-mode
 differentiable without any custom rule.
 
-* **Discrete ARE** (:func:`dare`) is solved by the structure-preserving doubling
+* **Discrete ARE** (`dare`) is solved by the structure-preserving doubling
   algorithm (SDA): each step squares the effective horizon, so ~30 iterations span
   a horizon of ``2**30`` and the solution is converged to roundoff.
-* **Continuous ARE** (:func:`care`) is solved by the matrix-sign-function Newton
+* **Continuous ARE** (`care`) is solved by the matrix-sign-function Newton
   iteration on the Hamiltonian with determinantal scaling, then the stabilizing
   solution is recovered by Roberts' least-squares extraction from the sign matrix.
 
 From the stabilizing solution the gains are one linear solve away
-(:func:`dlqr`, :func:`lqr`), and the steady-state Kalman gain
-(:func:`kalman_gain`) is the dual discrete problem -- estimation is control run
+(`dlqr`, `lqr`), and the steady-state Kalman gain
+(`kalman_gain`) is the dual discrete problem -- estimation is control run
 backwards.
 """
 
@@ -71,7 +71,7 @@ def dare(
     Solves ``A^T X A - X - A^T X B (R + B^T X B)^{-1} B^T X A + Q = 0`` for the
     unique symmetric positive-semidefinite stabilizing solution by the
     structure-preserving doubling algorithm. The iteration is a fixed-length
-    :func:`jax.lax.scan`, so ``X`` is differentiable with respect to every input
+    `jax.lax.scan`, so ``X`` is differentiable with respect to every input
     matrix.
 
     Args:
@@ -122,7 +122,7 @@ def dlqr(
 
     Returns ``(K, X)`` for the optimal state feedback ``u = -K x`` that minimizes
     ``sum_k x_k^T Q x_k + u_k^T R u_k`` subject to ``x_{k+1} = A x_k + B u_k``,
-    with ``X`` the :func:`dare` solution (the cost-to-go ``x_0^T X x_0``) and
+    with ``X`` the `dare` solution (the cost-to-go ``x_0^T X x_0``) and
     ``K = (R + B^T X B)^{-1} B^T X A``.
     """
     a = jnp.asarray(a, dtype=float)
@@ -194,11 +194,11 @@ def lqr(
     *,
     iters: int = 40,
 ) -> tuple[Array, Array]:
-    """Continuous infinite-horizon LQR gain and cost-to-go.
+    r"""Continuous infinite-horizon LQR gain and cost-to-go.
 
     Returns ``(K, X)`` for the optimal feedback ``u = -K x`` minimizing
-    ``\\int x^T Q x + u^T R u`` subject to ``x' = A x + B u``, with ``X`` the
-    :func:`care` solution and ``K = R^{-1} B^T X``.
+    ``\int x^T Q x + u^T R u`` subject to ``x' = A x + B u``, with ``X`` the
+    `care` solution and ``K = R^{-1} B^T X``.
     """
     a = jnp.asarray(a, dtype=float)
     b = jnp.asarray(b, dtype=float)
@@ -227,7 +227,7 @@ def kalman_gain(
     *prior* error covariance) and ``L = P C^T (C P C^T + Rn)^{-1}`` is the
     a-posteriori update gain (``x_hat <- x_prior + L (y - C x_prior)``).
 
-    Estimation is control run backwards: ``P`` is :func:`dare` applied to the dual
+    Estimation is control run backwards: ``P`` is `dare` applied to the dual
     pair ``(A^T, C^T, Qn, Rn)``, so this shares the doubling solver and its
     differentiability.
     """

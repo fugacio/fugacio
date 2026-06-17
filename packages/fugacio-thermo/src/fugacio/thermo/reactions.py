@@ -3,30 +3,30 @@
 This module turns a chemical reaction into the temperature-dependent quantities
 that govern chemical equilibrium:
 
-* the standard enthalpy of reaction :func:`delta_h_rxn` (``DH_rxn(T)``),
-* the standard entropy of reaction :func:`delta_s_rxn` (``DS_rxn(T)``),
-* the standard Gibbs energy of reaction :func:`delta_g_rxn` (``DG_rxn(T)``), and
-* the thermodynamic equilibrium constant :func:`equilibrium_constant`
+* the standard enthalpy of reaction `delta_h_rxn` (``DH_rxn(T)``),
+* the standard entropy of reaction `delta_s_rxn` (``DS_rxn(T)``),
+* the standard Gibbs energy of reaction `delta_g_rxn` (``DG_rxn(T)``), and
+* the thermodynamic equilibrium constant `equilibrium_constant`
   (``K(T) = exp(-DG_rxn / R T)``).
 
 All four follow from the component standard formation properties
-(:attr:`~fugacio.thermo.components.Component.hform_ig` and ``gform_ig``, the
+(`hform_ig` and ``gform_ig``, the
 ideal-gas enthalpy and Gibbs energy of formation at 298.15 K) corrected to the
 reaction temperature with Kirchhoff's law, integrating the ideal-gas heat
-capacities (:func:`fugacio.thermo.ideal.enthalpy_ig` / ``entropy_ig``)::
+capacities (`fugacio.thermo.ideal.enthalpy_ig` / ``entropy_ig``)::
 
     DH_rxn(T) = sum_i nu_i [ Hf_i + integral_{T0}^{T} Cp_i dT ]
     DS_rxn(T) = DS_rxn(T0) + sum_i nu_i integral_{T0}^{T} (Cp_i / T) dT
     DG_rxn(T) = DH_rxn(T) - T DS_rxn(T)
 
 with ``DS_rxn(T0) = (DH_rxn(T0) - DG_rxn(T0)) / T0``. Everything is written in
-:mod:`jax.numpy`, so ``K(T)`` is differentiable in temperature *and* in the
+`jax.numpy`, so ``K(T)`` is differentiable in temperature *and* in the
 underlying formation/heat-capacity parameters (handy for data regression and for
 sensitivity of conversion to thermochemistry).
 
 The standard state is the ideal gas at ``P_REF`` (1 bar), matching the tabulated
 formation data; the equilibrium constant is therefore in terms of fugacities
-referenced to 1 bar (see :mod:`fugacio.thermo.reaction_equilibrium`).
+referenced to 1 bar (see `fugacio.thermo.reaction_equilibrium`).
 """
 
 from __future__ import annotations
@@ -139,7 +139,7 @@ class Reaction:
 
     @staticmethod
     def parse(equation: str, components: Sequence[str]) -> Reaction:
-        """Build a reaction from an equation string (see :func:`parse_reaction`)."""
+        """Build a reaction from an equation string (see `parse_reaction`)."""
         return Reaction(tuple(components), parse_reaction(equation, components))
 
     @property
@@ -265,11 +265,11 @@ def equilibrium_constant(
 
 
 def reaction_properties(reaction: Reaction, t: ArrayLike) -> ReactionProperties:
-    """All standard reaction properties at ``t`` for a :class:`Reaction`.
+    """All standard reaction properties at ``t`` for a `Reaction`.
 
     Resolves the component formation/heat-capacity data from the curated database
-    and evaluates :func:`delta_h_rxn`, :func:`delta_s_rxn`, :func:`delta_g_rxn`,
-    and :func:`equilibrium_constant`.
+    and evaluates `delta_h_rxn`, `delta_s_rxn`, `delta_g_rxn`,
+    and `equilibrium_constant`.
     """
     hf, gf, (a, b, c, d, e) = reaction_arrays(reaction.components)
     nu = reaction.nu
@@ -281,7 +281,7 @@ def reaction_properties(reaction: Reaction, t: ArrayLike) -> ReactionProperties:
 
 
 def equilibrium_constant_of(reaction: Reaction, t: ArrayLike) -> Array:
-    """Equilibrium constant ``K(T)`` for a :class:`Reaction` (database-resolved)."""
+    """Equilibrium constant ``K(T)`` for a `Reaction` (database-resolved)."""
     return reaction_properties(reaction, t).k
 
 

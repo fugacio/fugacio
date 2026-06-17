@@ -1,7 +1,7 @@
 """Differential-testing oracles: reference values from external libraries.
 
 Fugacio validates its own results two ways: against first-principles identities
-(see, e.g., :mod:`fugacio.thermo.departure`) and against *independent reference
+(see, e.g., `fugacio.thermo.departure`) and against *independent reference
 implementations*. This module is the second kind -- thin wrappers over the
 third-party ``thermo`` / ``chemicals`` packages (and CoolProp where installed)
 that return reference activity coefficients, bubble pressures, and property
@@ -9,12 +9,12 @@ values for cross-checking.
 
 These backends are **never runtime dependencies**: imports are deferred and
 guarded, importing this module always succeeds, and each helper raises a clear
-:class:`RuntimeError` if its backend is absent. The companion oracle tests are
+`RuntimeError` if its backend is absent. The companion oracle tests are
 opt-in (``pytest -m oracle``) and excluded from the default suite so the unit
 tests stay fast and hermetic.
 
 The activity-coefficient oracles deliberately reuse Fugacio's own group
-assignments (:data:`fugacio.thermo.groupcontrib.unifac.COMPONENT_GROUPS` and the
+assignments (`fugacio.thermo.groupcontrib.unifac.COMPONENT_GROUPS` and the
 Dortmund table) when calling the reference UNIFAC, so a mismatch isolates the
 *kernel* implementation rather than a difference in group splitting.
 """
@@ -191,7 +191,7 @@ def modified_raoult_bubble_pressure(
     """Independent modified-Raoult bubble pressure ``P = sum_i x_i gamma_i Psat_i`` (Pa).
 
     Combines a *reference* set of activity coefficients ``gamma`` (e.g. from
-    :func:`thermo_nrtl_gamma`) with Fugacio's own EOS saturation pressures, giving
+    `thermo_nrtl_gamma`) with Fugacio's own EOS saturation pressures, giving
     a check on the gamma-phi bubble-point assembly that is independent of Fugacio's
     activity kernel.
     """
@@ -229,8 +229,8 @@ def _coolprop_index() -> dict[str, str]:
 def coolprop_fluid(name: str) -> str:
     """CoolProp fluid name for a database component, matched by CAS number.
 
-    Raises :class:`KeyError` if CoolProp has no reference EOS for the component,
-    so tests can build their fluid lists with :func:`coolprop_supports`.
+    Raises `KeyError` if CoolProp has no reference EOS for the component,
+    so tests can build their fluid lists with `coolprop_supports`.
     """
     _require("CoolProp", HAVE_COOLPROP)
     comp = get(name)
@@ -389,7 +389,7 @@ def chemicals_winterfeld_scriven_davis(
 # formation and its entropy equals the formation entropy ``(Hf - Gf)/T_REF`` --
 # elements cancel in any balanced reaction, so the reaction sums reproduce
 # Fugacio's ``DH_rxn``/``DS_rxn``/``K(T)`` exactly. The phase reference pressure
-# is pinned to :data:`~fugacio.thermo.constants.P_REF` (1 bar) so Cantera's
+# is pinned to `P_REF` (1 bar) so Cantera's
 # equilibrium reaction quotient uses the same standard state as Fugacio.
 
 _FORMULA_TOKEN = re.compile(r"([A-Z][a-z]?)(\d*)")
@@ -463,7 +463,7 @@ def cantera_reaction_properties(reaction: Reaction, t: float) -> dict[str, float
     Cantera evaluates the standard-state species enthalpies and Gibbs energies
     from the NASA-9 polynomials built out of Fugacio's formation data; the
     reaction values are the stoichiometric sums. Use to cross-check
-    :func:`fugacio.thermo.reactions.reaction_properties`.
+    `fugacio.thermo.reactions.reaction_properties`.
     """
     _require("cantera", HAVE_CANTERA)
     gas = _cantera_ideal_gas(reaction.components)
@@ -493,7 +493,7 @@ def cantera_equilibrium_composition(
     Cantera minimises the Gibbs energy subject to element conservation from the
     feed, giving an equilibrium composition that is independent of Fugacio's
     extent-of-reaction solver. Use to cross-check
-    :func:`fugacio.thermo.reaction_equilibrium.equilibrium`.
+    `fugacio.thermo.reaction_equilibrium.equilibrium`.
     """
     _require("cantera", HAVE_CANTERA)
     gas = _cantera_ideal_gas(components)

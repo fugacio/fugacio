@@ -7,7 +7,7 @@ full overview.
 Fugacio is built as three layered packages (strict direction
 **`thermo` < `sim` < `copilot`**, enforced in CI):
 
-- **`fugacio.thermo`** — differentiable properties + phase equilibrium: a curated
+- **`fugacio.thermo`**, differentiable properties + phase equilibrium: a curated
   open component database, ideal-gas correlations, cubic equations of state
   (vdW / RK / SRK / PR) with fugacity coefficients,
   [reference multiparameter Helmholtz EOS](reference-fluids.md) (IAPWS-95
@@ -15,7 +15,7 @@ Fugacio is built as three layered packages (strict direction
   IAPWS transport), real-fluid energy properties
   (residual/departure functions, enthalpy/entropy, isenthalpic & isentropic
   flashes), [liquid & transport properties](physical-properties.md) (density,
-  viscosity, thermal conductivity, surface tension, diffusivity — pure and
+  viscosity, thermal conductivity, surface tension, diffusivity, both pure and
   mixture), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
   UNIQUAC), group contribution (UNIFAC + Dortmund, Joback), EOS *and* γ–φ
   equilibrium solvers (Rachford-Rice, PT flash, saturation, bubble/dew), rigorous
@@ -23,7 +23,7 @@ Fugacio is built as three layered packages (strict direction
   regression with a bundled [ThermoML parameter
   bank](physical-properties.md#the-thermoml-parameter-bank), and [reaction
   thermochemistry, equilibrium, and kinetics](reactions.md).
-- **`fugacio.sim`** — flowsheet / unit-operation engine (depends on `thermo`):
+- **`fugacio.sim`**, flowsheet / unit-operation engine (depends on `thermo`):
   a differentiable `Stream` pytree, energy-balanced unit operations (`flash_drum`,
   `heater`, `valve`, `pump`, `compressor`, `turbine`, `mix`, `splitter`), a
   recycle/tear solver with implicit-diff gradients (`tear_solve`, `Flowsheet`),
@@ -44,19 +44,19 @@ Fugacio is built as three layered packages (strict direction
   [heat integration & pinch analysis](heat-integration.md) (differentiable
   minimum-utility/pinch targets, composite & grand composite curves, area/cost
   supertargeting for the optimal `dt_min`, and heat-exchanger-network synthesis).
-- **`fugacio.copilot`** — LLM design agent (depends on `sim`): a JSON tool
-  registry over the engine — properties, [steam tables &
+- **`fugacio.copilot`**, LLM design agent (depends on `sim`): a JSON tool
+  registry over the engine (properties, [steam tables &
   reference fluids](reference-fluids.md), unit operations, distillation, reactors,
   reaction equilibrium, [optimization, sizing & costing](optimization.md),
   [FOPDT identification & PID tuning](dynamics.md#the-ai-copilot-dynamically),
   [LQR & Kalman design, MPC simulation & tuning](advanced-control.md#the-ai-copilot-for-advanced-control),
-  [heat-integration targets & network synthesis](heat-integration.md#the-ai-copilot-integrated) —
+  [heat-integration targets & network synthesis](heat-integration.md#the-ai-copilot-integrated)),
   plus a vendor-neutral provider layer (OpenAI / Anthropic / mock) and a
   multi-turn, tool-calling [agent loop](optimization.md#the-ai-design-copilot).
 
 Everything is written in [JAX](https://github.com/jax-ml/jax) and the iterative
 solvers carry implicit-function-theorem gradient rules, so an entire flowsheet is
-end-to-end differentiable — including through phase equilibrium.
+end-to-end differentiable, including through phase equilibrium.
 
 ```python
 import jax
@@ -80,7 +80,7 @@ Physical correctness is continuously machine-checked: first-principles
 consistency laws that need no external data (Gibbs-Duhem, equifugacity,
 fugacity-pressure identity, phase stability), automatic-differentiation gradients
 checked against finite differences, and opt-in differential testing against open
-reference codes — [CoolProp](https://github.com/CoolProp/CoolProp) and
+reference codes: [CoolProp](https://github.com/CoolProp/CoolProp) and
 [`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties
 and the reference Helmholtz EOS layer (IAPWS-95, Span–Wagner),
 [`thermo`](https://github.com/CalebBell/thermo) /

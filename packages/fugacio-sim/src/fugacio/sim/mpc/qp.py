@@ -12,7 +12,7 @@ small dense problems an MPC horizon produces:
 * **Forward** -- the operator-splitting (ADMM) iteration on the canonical form
   ``min 0.5 z^T P z + q^T z  s.t.  l <= A z <= u``. The KKT coefficient matrix is
   constant across iterations, so it is factorised once and the fixed-length march
-  is a cheap :func:`jax.lax.scan`. A final *polish* solves the equality-constrained
+  is a cheap `jax.lax.scan`. A final *polish* solves the equality-constrained
   KKT system on the identified active set, recovering a solution accurate to
   linear-solve precision (and the constraint multipliers).
 * **Backward** -- a hand-written ``custom_vjp`` differentiates the *solution*, not
@@ -20,10 +20,10 @@ small dense problems an MPC horizon produces:
   conditions (the OptNet rule). Gradients with respect to every datum ``P, q, A,
   l, u`` cost a single linear solve and are independent of the ADMM iteration
   count -- exactly the "differentiate the converged solution" philosophy of
-  :func:`fugacio.sim.argmin` and :func:`fugacio.sim.tear_solve`.
+  `fugacio.sim.argmin` and `fugacio.sim.tear_solve`.
 
-:func:`solve_qp` is the ergonomic entry point (objective plus optional equality,
-inequality, and box constraints); :func:`solve_qp_canonical` exposes the bare
+`solve_qp` is the ergonomic entry point (objective plus optional equality,
+inequality, and box constraints); `solve_qp_canonical` exposes the bare
 ``l <= A z <= u`` form that the MPC layer builds directly.
 """
 
@@ -308,7 +308,7 @@ def solve_qp_canonical(
     """Differentiable minimizer of ``0.5 z^T P z + q^T z`` s.t. ``low <= A z <= up``.
 
     The bare canonical form the MPC layer assembles directly. Returns just the
-    optimal ``z`` (a la :func:`fugacio.sim.argmin`), carrying exact implicit-diff
+    optimal ``z`` (a la `fugacio.sim.argmin`), carrying exact implicit-diff
     gradients with respect to ``P, q, A, low, up``.
     """
     p = jnp.atleast_2d(jnp.asarray(p, dtype=float))
@@ -367,13 +367,16 @@ def solve_qp(
     Args:
         p: Symmetric positive-semidefinite Hessian ``(n, n)``.
         q: Linear term ``(n,)``.
-        a_eq, b_eq: Optional equality constraints ``A_eq z = b_eq``.
-        g_ineq, h_ineq: Optional inequality constraints ``G z <= h``.
-        lb, ub: Optional box bounds ``lb <= z <= ub`` (scalars broadcast).
-        settings: ADMM :class:`QPSettings`.
+        a_eq: Optional equality-constraint matrix ``A_eq`` in ``A_eq z = b_eq``.
+        b_eq: Optional equality-constraint vector ``b_eq``.
+        g_ineq: Optional inequality-constraint matrix ``G`` in ``G z <= h``.
+        h_ineq: Optional inequality-constraint vector ``h``.
+        lb: Optional lower box bound ``lb <= z`` (scalars broadcast).
+        ub: Optional upper box bound ``z <= ub`` (scalars broadcast).
+        settings: ADMM `QPSettings`.
 
     Returns:
-        A :class:`QPSolution`. The decision vector ``x`` is differentiable with
+        A `QPSolution`. The decision vector ``x`` is differentiable with
         respect to every datum (``p, q``, the constraint matrices/vectors) by the
         active-set implicit function theorem.
     """

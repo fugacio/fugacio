@@ -1,12 +1,12 @@
 """Assemble dynamic units and control loops into one differentiable flowsheet ODE.
 
-:class:`DynamicFlowsheet` is the dynamic counterpart of
-:class:`fugacio.sim.Flowsheet`: register time-varying feeds, connect dynamic units
-port-to-port, and close control loops, then :meth:`DynamicFlowsheet.simulate` over
+`DynamicFlowsheet` is the dynamic counterpart of
+`fugacio.sim.Flowsheet`: register time-varying feeds, connect dynamic units
+port-to-port, and close control loops, then `DynamicFlowsheet.simulate` over
 a time horizon. Internally the whole plant -- every unit holdup *and* every
 controller's integral/derivative state -- is concatenated into a single state
 pytree with one global right-hand side, which is handed to the differentiable
-:func:`fugacio.sim.dynamics.odeint`. The result is end-to-end differentiable: you
+`fugacio.sim.dynamics.odeint`. The result is end-to-end differentiable: you
 can take a gradient of any trajectory feature (a settling time proxy, an off-spec
 integral, a peak temperature) with respect to controller gains, setpoints, feed
 schedules, equipment parameters carried in ``theta``, or the initial state.
@@ -37,7 +37,7 @@ from fugacio.sim.stream import Stream
 
 ArrayLike = Array | float
 
-#: A feed is either a fixed :class:`Stream` or a callable ``(t, theta) -> Stream``.
+#: A feed is either a fixed `Stream` or a callable ``(t, theta) -> Stream``.
 FeedSpec = Stream | Callable[[Array, Any], Stream]
 #: A measurement reference: ``(unit, key)``, ``(unit, key, index)`` for a vector
 #: measurement, or a callable ``measurements -> scalar``.
@@ -69,7 +69,7 @@ class _Manip:
 
 
 class DynamicResult(NamedTuple):
-    """Trajectory returned by :meth:`DynamicFlowsheet.simulate`.
+    """Trajectory returned by `DynamicFlowsheet.simulate`.
 
     Attributes:
         ts: Output times (shape ``(T,)``).
@@ -132,7 +132,7 @@ class DynamicFlowsheet:
     _order: list[str] = field(default_factory=list)
 
     def feed(self, name: str, spec: FeedSpec) -> DynamicFlowsheet:
-        """Register a feed stream (a fixed :class:`Stream` or ``(t, theta) -> Stream``)."""
+        """Register a feed stream (a fixed `Stream` or ``(t, theta) -> Stream``)."""
         self.feeds[name] = spec
         return self
 
@@ -242,7 +242,7 @@ class DynamicFlowsheet:
         method: str = "rk4",
         substeps: int = 4,
     ) -> DynamicResult:
-        """Integrate the flowsheet over the output grid ``ts`` and return a :class:`DynamicResult`.
+        """Integrate the flowsheet over the output grid ``ts`` and return a `DynamicResult`.
 
         Args:
             ts: Strictly increasing output times.
@@ -250,7 +250,7 @@ class DynamicFlowsheet:
                 and a bumpless controller start).
             theta: Differentiable parameter pytree threaded to feeds, setpoints,
                 manipulations and units.
-            method: Integration method (see :data:`fugacio.sim.dynamics.FIXED_METHODS`).
+            method: Integration method (see `fugacio.sim.dynamics.FIXED_METHODS`).
             substeps: Inner steps per output interval.
 
         The returned trajectories of measurements and controller outputs are
@@ -280,9 +280,9 @@ def simulate(
     method: str = "rk4",
     substeps: int = 4,
 ) -> Any:
-    """Integrate a bare ``rhs(t, y, theta)`` over ``ts`` (a thin :func:`odeint` alias).
+    """Integrate a bare ``rhs(t, y, theta)`` over ``ts`` (a thin `odeint` alias).
 
-    For ad-hoc dynamic models that are not expressed as a :class:`DynamicFlowsheet`.
+    For ad-hoc dynamic models that are not expressed as a `DynamicFlowsheet`.
     Returns the state trajectory pytree (leading time axis), differentiable in
     ``y0`` and ``theta``.
     """

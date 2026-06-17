@@ -1,0 +1,54 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Needed by the gh-pages deploy step to push the built site to the branch.
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # Material's social-card plugin renders the cards with Cairo and Pango. The
+      # `imaging` extra installs the Python bindings (Pillow, CairoSVG), but the
+      # native libraries have to come from apt. Cards are only built when CI is
+      # set (see the `social` plugin in mkdocs.yml), so the strict build below
+      # needs these present.
+      - name: Install Cairo/Pango for social cards
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev \
+            libz-dev libpango-1.0-0 libpangocairo-1.0-0
+
+      # mkdocstrings imports the packages to read their docstrings, so the docs
+      # build needs the whole workspace installed, not just the docs tools.
+      - name: Sync workspace + docs deps
+        run: uv sync --locked --all-packages --group docs
+
+      # --strict turns broken links, unresolved cross-references, and missing
+      # docstrings into build failures, so the reference can't silently rot.
+      - name: Build site (strict)
+        run: uv run --no-sync mkdocs build --strict
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site

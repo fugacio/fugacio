@@ -7,7 +7,7 @@ All four classic cubics share one pressure-explicit form::
 and differ only in the constants ``(Omega_a, Omega_b, u, w)`` and the
 temperature dependence of the attractive term ``a(T) = a_c * alpha(T_r)``. This
 module implements that single generalized cubic and exposes the four families as
-ready-made :data:`PR`, :data:`SRK`, :data:`RK`, :data:`VDW` specifications.
+ready-made `PR`, `SRK`, `RK`, `VDW` specifications.
 
 In dimensionless form the molar compressibility ``Z = P V / (R T)`` is the root
 of::
@@ -21,7 +21,7 @@ with ``A = a P / (R T)**2`` and ``B = b P / (R T)``.
 liquid, largest for a vapour) is inherently non-smooth, so rather than
 differentiate through the closed-form cubic solution we compute ``Z`` by the
 analytic trigonometric/Cardano method and attach exact derivatives through the
-*implicit function theorem* applied to the cubic residual (a :func:`jax.custom_jvp`
+*implicit function theorem* applied to the cubic residual (a `jax.custom_jvp`
 rule). The result is clean, cheap gradients of ``Z`` -- and therefore of every
 downstream property and fugacity coefficient -- with respect to ``T``, ``P``,
 composition, and the EOS parameters themselves.

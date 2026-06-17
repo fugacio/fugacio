@@ -1,17 +1,17 @@
 """Curated parameter lookups: UNIQUAC ``r``/``q`` and binary NRTL / UNIQUAC.
 
 This is the convenience layer over the generated tables in
-:mod:`fugacio.thermo._binary_params`. It turns component *names* into ready, fully
-populated :class:`~fugacio.thermo.activity.models.NRTL` /
-:class:`~fugacio.thermo.activity.models.UNIQUAC` model objects, handling the
+`fugacio.thermo._binary_params`. It turns component *names* into ready, fully
+populated `NRTL` /
+`UNIQUAC` model objects, handling the
 pair-ordering bookkeeping (the tables are keyed by alphabetically sorted name
 pairs) and assembling the ``n x n`` interaction matrices.
 
 Pairs absent from the curated set default to athermal interaction (``b = 0``, so
 ``gamma -> 1`` for that pair) unless ``strict=True`` is requested, in which case a
 missing pair raises. For systems with no curated parameters at all, fall back to
-predictive UNIFAC (:func:`fugacio.thermo.groupcontrib.unifac_activity`) or fit
-parameters from data with :mod:`fugacio.thermo.regression`.
+predictive UNIFAC (`fugacio.thermo.groupcontrib.unifac_activity`) or fit
+parameters from data with `fugacio.thermo.regression`.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def nrtl_params(name_i: str, name_j: str) -> tuple[float, float, float] | None:
 def uniquac_params(name_i: str, name_j: str) -> tuple[float, float] | None:
     """Oriented binary UNIQUAC params ``(b_ij, b_ji)`` or ``None`` if absent.
 
-    ``tau_ij = exp(b_ij / T)``; lookup is order-insensitive (see :func:`nrtl_params`).
+    ``tau_ij = exp(b_ij / T)``; lookup is order-insensitive (see `nrtl_params`).
     """
     if (name_i, name_j) in UNIQUAC_BINARY:
         return UNIQUAC_BINARY[(name_i, name_j)]
@@ -68,7 +68,7 @@ def kij_from_database(components: list[str]) -> Array:
 
     Pairs without a curated value default to ``0`` (ideal van der Waals mixing).
     The result is an ``(n, n)`` array suitable for
-    :func:`fugacio.thermo.eos_model` / :func:`fugacio.sim.eos_model_for`.
+    `fugacio.thermo.eos_model` / `fugacio.sim.eos_model_for`.
     """
     n = len(components)
     k = [[0.0] * n for _ in range(n)]
@@ -97,7 +97,7 @@ def uniquac_rq(components: list[str]) -> tuple[Array, Array]:
 def nrtl_from_database(
     components: list[str], *, strict: bool = False, alpha_default: float = 0.3
 ) -> NRTL:
-    """Build an :class:`NRTL` model for ``components`` from curated binaries.
+    """Build an `NRTL` model for ``components`` from curated binaries.
 
     Args:
         components: Component names (any length ``>= 2``).
@@ -106,7 +106,7 @@ def nrtl_from_database(
         alpha_default: Non-randomness used for pairs without curated parameters.
 
     Returns:
-        A fully populated :class:`NRTL` whose ``b`` and ``alpha`` matrices are the
+        A fully populated `NRTL` whose ``b`` and ``alpha`` matrices are the
         curated coefficients (``a = e = 0``).
     """
     n = len(components)
@@ -135,7 +135,7 @@ def nrtl_from_database(
 
 
 def uniquac_from_database(components: list[str], *, strict: bool = False) -> UNIQUAC:
-    """Build a :class:`UNIQUAC` model for ``components`` from curated data.
+    """Build a `UNIQUAC` model for ``components`` from curated data.
 
     Uses curated ``r``/``q`` and binary ``b`` coefficients. Pairs without data
     default to ``b = 0`` (``tau = 1``) unless ``strict=True``.

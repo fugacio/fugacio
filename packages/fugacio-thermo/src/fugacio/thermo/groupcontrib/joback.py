@@ -10,9 +10,9 @@ ideal-gas heat-capacity polynomial from a simple count of functional groups::
     Vc = 17.5 + sum_k N_k * vc_k                              [cm^3/mol]
     Cp(T) = (A - 37.93) + (B + 0.210) T + (C - 3.91e-4) T**2 + (D + 2.06e-7) T**3
 
-with ``A = sum_k N_k * a_k`` etc. The bundled :data:`GROUPS` table is the public
+with ``A = sum_k N_k * a_k`` etc. The bundled `GROUPS` table is the public
 Joback contribution set (subset covering hydrocarbons, alcohols, ethers, and
-ketones). The result is returned as a :class:`fugacio.thermo.components.Component`
+ketones). The result is returned as a `fugacio.thermo.components.Component`
 so estimated species drop straight into the rest of the engine.
 """
 
@@ -87,7 +87,7 @@ def joback_estimate(
     """Estimate pure-component constants from Joback groups and return a Component.
 
     Args:
-        groups: Mapping of group label (see :data:`GROUPS`) to occurrence count.
+        groups: Mapping of group label (see `GROUPS`) to occurrence count.
         n_atoms: Total number of atoms in the molecule (hydrogens included),
             required by the critical-pressure correlation.
         name: Name to assign to the resulting component.
@@ -95,12 +95,12 @@ def joback_estimate(
         mw: Optional molar mass (g/mol); Joback does not estimate it.
 
     Returns:
-        A :class:`~fugacio.thermo.components.Component` with estimated ``tc``
+        A `Component` with estimated ``tc``
         (K), ``pc`` (Pa), ``vc`` (m^3/mol), ``tb`` (K), formation properties
         (J/mol), and an ideal-gas ``cp_ig`` correlation.
 
     Raises:
-        KeyError: if any group label is not in :data:`GROUPS`.
+        KeyError: if any group label is not in `GROUPS`.
     """
     unknown = [g for g in groups if g not in GROUPS]
     if unknown:

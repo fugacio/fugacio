@@ -3,17 +3,17 @@
 Fugacio's whole premise is that a flowsheet is *end-to-end differentiable*, so a
 design problem -- minimize a cost, maximize a yield, hit a purity at least
 operating cost -- is a smooth optimization that gradients can solve directly.
-This module supplies the optimizers, written against :mod:`jax.numpy` so they
+This module supplies the optimizers, written against `jax.numpy` so they
 compose with the rest of the engine, and -- crucially -- it differentiates
 *through the optimum*: the solution ``x*(theta)`` of a parametric optimization
 problem carries exact derivatives with respect to the parameters ``theta`` by the
 implicit function theorem applied to the optimality (KKT) conditions, exactly as
-:mod:`fugacio.thermo.implicit` differentiates a converged flash.
+`fugacio.thermo.implicit` differentiates a converged flash.
 
 The numeric core operates on a flat parameter vector, but every public entry
 point accepts an arbitrary JAX pytree as the decision variable (a dict of
-operating conditions, a :class:`~fugacio.sim.stream.Stream`, ...) and flattens it
-internally with :func:`jax.flatten_util.ravel_pytree`, so you optimize in the
+operating conditions, a `Stream`, ...) and flattens it
+internally with `jax.flatten_util.ravel_pytree`, so you optimize in the
 natural shape of your problem.
 
 Algorithms
@@ -34,7 +34,7 @@ Algorithms
 
 Differentiation
 ---------------
-:func:`argmin` returns just the optimal decision variable and attaches an
+`argmin` returns just the optimal decision variable and attaches an
 implicit-function-theorem ``custom_vjp``: for an unconstrained minimum the
 stationarity condition ``grad_x f(x*, theta) = 0`` is differentiated; with box
 bounds the active variables are held fixed and the reduced Hessian system is
@@ -554,8 +554,8 @@ def minimize(
         inner_iter: Inner-solve iteration cap (constrained problems only).
 
     Returns:
-        An :class:`OptimizeResult`. For gradients of the *solution* with respect
-        to ``theta``, use :func:`argmin`.
+        An `OptimizeResult`. For gradients of the *solution* with respect
+        to ``theta``, use `argmin`.
     """
     flat0, unravel = ravel_pytree(x0)
     n = flat0.shape[0]
@@ -604,7 +604,7 @@ def argmin(
 ) -> Any:
     """The minimizer ``x*(theta) = argmin_x fun(x, theta)``, differentiable in ``theta``.
 
-    Identical problem setup to :func:`minimize`, but returns only the optimal
+    Identical problem setup to `minimize`, but returns only the optimal
     decision pytree and -- the point of this function -- carries exact gradients
     with respect to ``theta`` by implicit differentiation of the optimality
     conditions. Use it to differentiate an optimized design with respect to
@@ -738,7 +738,7 @@ def least_squares(
 
     A damped Gauss-Newton method for nonlinear least squares -- parameter
     reconciliation, fitting a model to several measurements at once, or driving a
-    set of design residuals to zero. Returns an :class:`OptimizeResult` whose
+    set of design residuals to zero. Returns an `OptimizeResult` whose
     ``fun`` is the half-sum-of-squares.
     """
     flat0, unravel = ravel_pytree(x0)

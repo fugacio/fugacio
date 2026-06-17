@@ -1,11 +1,11 @@
 """Provider-neutral chat/tool-calling types for the Fugacio copilot.
 
 The copilot talks to language models through a tiny, vendor-independent surface:
-a :class:`Message` list goes in (with the tool schemas the engine exposes), a
-:class:`ChatResponse` comes back (either free text or one or more
-:class:`ToolCall` requests). Concrete providers -- :class:`OpenAIProvider`,
-:class:`AnthropicProvider`, or the deterministic :class:`MockProvider` used in
-tests -- implement the single-method :class:`LLMProvider` protocol by translating
+a `Message` list goes in (with the tool schemas the engine exposes), a
+`ChatResponse` comes back (either free text or one or more
+`ToolCall` requests). Concrete providers -- `OpenAIProvider`,
+`AnthropicProvider`, or the deterministic `MockProvider` used in
+tests -- implement the single-method `LLMProvider` protocol by translating
 to and from their own wire formats. Nothing here imports a vendor SDK, so the
 copilot is importable with no LLM dependency installed; the SDK is only needed
 when you actually construct a real provider.
@@ -98,8 +98,8 @@ class ChatResponse:
 class LLMProvider(Protocol):
     """A function-calling chat model.
 
-    Implementations translate the neutral :class:`Message` / tool-schema inputs to
-    their own API and parse the reply into a :class:`ChatResponse`.
+    Implementations translate the neutral `Message` / tool-schema inputs to
+    their own API and parse the reply into a `ChatResponse`.
     """
 
     def chat(

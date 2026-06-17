@@ -5,23 +5,23 @@ standard for thermophysical and thermochemical property data; the freely
 redistributable `ThermoML Archive
 <https://www.nist.gov/mml/acmd/trc/thermoml/thermoml-archive>`_ holds tens of
 thousands of experimental datasets. This module turns those files into tidy,
-typed tables you can feed straight into :mod:`fugacio.thermo.regression` -- so a
+typed tables you can feed straight into `fugacio.thermo.regression` -- so a
 model can be fitted to *real measurements*, and predictions graded against them.
 
 The parser is deliberately tolerant and dependency-free (standard-library
-:mod:`xml.etree.ElementTree` only):
+`xml.etree.ElementTree` only):
 
 * XML namespaces are stripped, so files declaring the ThermoML namespace (or none)
   parse identically;
 * compounds, mixtures, variables, properties, and the numeric value rows are read
   by their *local* element names, matching the published schema without binding to
   a specific version;
-* each :class:`Dataset` exposes its columns as aligned numeric rows plus
-  convenience accessors (:meth:`Dataset.temperature`, :meth:`Dataset.pressure`,
-  :meth:`Dataset.mole_fraction`) with pressure unit conversion to pascal.
+* each `Dataset` exposes its columns as aligned numeric rows plus
+  convenience accessors (`Dataset.temperature`, `Dataset.pressure`,
+  `Dataset.mole_fraction`) with pressure unit conversion to pascal.
 
 A couple of small, schema-faithful datasets ship with the package for tests and
-examples; see :func:`list_samples` / :func:`load_sample`.
+examples; see `list_samples` / `load_sample`.
 """
 
 from __future__ import annotations
@@ -123,7 +123,7 @@ class Compound:
 
 @dataclass(frozen=True)
 class Column:
-    """One variable or property column of a :class:`Dataset` table.
+    """One variable or property column of a `Dataset` table.
 
     Attributes:
         number: The ``nVarNumber`` / ``nPropNumber`` within the dataset.
@@ -175,6 +175,7 @@ class Dataset:
 
     @property
     def labels(self) -> tuple[str, ...]:
+        """Column labels, in column order."""
         return tuple(c.label for c in self.columns)
 
     def __len__(self) -> int:
@@ -257,6 +258,7 @@ class ThermoMLData:
     citation: str | None = None
 
     def compound(self, org_num: int) -> Compound:
+        """The compound with the given ``org_num`` (raises ``KeyError`` if absent)."""
         for c in self.compounds:
             if c.org_num == org_num:
                 return c
@@ -423,11 +425,11 @@ def read_thermoml(source: str | Path | IO[bytes] | IO[str]) -> ThermoMLData:
     """Parse a ThermoML document from a path or open file object.
 
     Args:
-        source: A filesystem path (``str``/:class:`~pathlib.Path`) or a readable
+        source: A filesystem path (``str``/`Path`) or a readable
             file object containing ThermoML XML.
 
     Returns:
-        The parsed :class:`ThermoMLData`.
+        The parsed `ThermoMLData`.
     """
     if isinstance(source, str | Path):
         tree = ET.parse(Path(source))
@@ -456,5 +458,5 @@ def sample_path(name: str) -> Path:
 
 
 def load_sample(name: str) -> ThermoMLData:
-    """Parse a bundled ThermoML sample by name (see :func:`list_samples`)."""
+    """Parse a bundled ThermoML sample by name (see `list_samples`)."""
     return read_thermoml(sample_path(name))

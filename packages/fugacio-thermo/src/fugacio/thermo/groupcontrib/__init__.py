@@ -1,8 +1,8 @@
 """Group-contribution methods for parameter-free property prediction.
 
-* :mod:`~fugacio.thermo.groupcontrib.unifac` predicts liquid-phase activity
+* `unifac` predicts liquid-phase activity
   coefficients from functional-group interactions.
-* :mod:`~fugacio.thermo.groupcontrib.joback` estimates pure-component constants
+* `joback` estimates pure-component constants
   (critical properties, boiling point, formation properties, ideal-gas Cp) from
   a count of functional groups.
 

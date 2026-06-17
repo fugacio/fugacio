@@ -1,8 +1,8 @@
-"""Stream property bridge: enthalpy, entropy, flows, and transport for a :class:`Stream`.
+"""Stream property bridge: enthalpy, entropy, flows, and transport for a `Stream`.
 
 Unit operations close *material and energy* balances, so they need a stream's
 enthalpy and entropy, not just its composition. This module resolves a stream's
-(static) component names to the array constants the :mod:`fugacio.thermo` kernels
+(static) component names to the array constants the `fugacio.thermo` kernels
 expect -- caching that lookup, since names never change during a solve -- and
 exposes the resulting molar and total-flow properties.
 
@@ -14,12 +14,12 @@ temperature, and pressure (the component constants are not differentiated, which
 is exactly right -- they are reference data, not decision variables).
 
 Sizing-grade physical properties are surfaced too: phase densities and
-volumetric flows (:func:`liquid_density`, :func:`vapor_volumetric_flow`),
+volumetric flows (`liquid_density`, `vapor_volumetric_flow`),
 viscosities, thermal conductivities, and surface tension, all evaluated at the
 stream's state through the curated correlations and mixture rules in
-:mod:`fugacio.thermo`. A stream-aware Souders-Brown helper
-(:func:`column_diameter_for`) wires them straight into the equipment-sizing
-correlations of :mod:`fugacio.sim.economics`.
+`fugacio.thermo`. A stream-aware Souders-Brown helper
+(`column_diameter_for`) wires them straight into the equipment-sizing
+correlations of `fugacio.sim.economics`.
 """
 
 from __future__ import annotations

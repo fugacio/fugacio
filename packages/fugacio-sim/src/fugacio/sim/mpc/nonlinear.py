@@ -6,22 +6,22 @@ about one operating point is only locally valid. Nonlinear MPC (NMPC) optimizes
 over the *true* nonlinear model each step. Fugacio's differentiable integrator and
 optimizer make this almost free: the prediction is a roll-out of the (discrete)
 dynamics, the cost is a sum over that roll-out, and the open-loop optimal control
-problem is handed to :func:`fugacio.sim.argmin`, which differentiates *through the
+problem is handed to `fugacio.sim.argmin`, which differentiates *through the
 optimum* -- so the receding-horizon law has exact sensitivities and the solve is
 warm-started from the previous step.
 
 Two objective styles are supported through one machinery:
 
 * **Tracking NMPC** -- the usual quadratic penalty on tracking error and input
-  effort/move (build the cost with :func:`quadratic_tracking`).
+  effort/move (build the cost with `quadratic_tracking`).
 * **Economic NMPC** -- an arbitrary stage cost (e.g. minimize energy or maximize
   product value directly), the form that closes the gap between control and
   real-time optimization.
 
 Input magnitude and move-rate limits are imposed as honest constraints inside the
 optimization; the prediction model is a *discrete* one-step map ``f(x, u, theta)``
-(use :func:`discretize` to build one from a continuous
-:func:`fugacio.sim.dynamics.odeint` right-hand side).
+(use `discretize` to build one from a continuous
+`fugacio.sim.dynamics.odeint` right-hand side).
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def discretize(
 ) -> Transition:
     """Turn a continuous right-hand side into a discrete one-step transition.
 
-    Wraps :func:`fugacio.sim.dynamics.odeint_final` to integrate
+    Wraps `fugacio.sim.dynamics.odeint_final` to integrate
     ``dx/dt = rhs(t, x, u, theta)`` over one sample ``dt`` holding ``u`` constant,
     yielding ``f(x, u, theta) -> x(dt)`` for use as an NMPC prediction model.
     """
@@ -101,7 +101,7 @@ def quadratic_tracking(
     The returned costs read the setpoint and reference input from ``theta`` (a dict
     with keys ``"r"`` and optional ``"u_ss"``); the stage cost is
     ``||y - r||^2_Q + ||u - u_ss||^2_R`` (with ``y = output(x)``, default ``y = x``)
-    and the terminal cost is ``||y_N - r||^2_Q``. Pair with :class:`NonlinearMPC`.
+    and the terminal cost is ``||y_N - r||^2_Q``. Pair with `NonlinearMPC`.
     """
     q_arr = jnp.asarray(q, dtype=float)
     r_arr = jnp.asarray(r, dtype=float)
@@ -129,14 +129,14 @@ def quadratic_tracking(
 
 
 class NMPCResult(NamedTuple):
-    """Outcome of a single :meth:`NonlinearMPC.solve`.
+    """Outcome of a single `NonlinearMPC.solve`.
 
     Attributes:
         u: The first input move to apply ``(m,)``.
         u_sequence: The optimal move sequence ``(Nc, m)``.
         trajectory: Predicted state trajectory under the optimum ``(Np + 1, n)``.
         cost: Optimal open-loop cost.
-        result: The underlying :class:`fugacio.sim.OptimizeResult`.
+        result: The underlying `fugacio.sim.OptimizeResult`.
     """
 
     u: Array
@@ -150,8 +150,8 @@ class NMPCResult(NamedTuple):
 class NonlinearMPC:
     """Receding-horizon nonlinear MPC over a discrete prediction model.
 
-    Construct with :func:`nonlinear_mpc`. The controller optimizes the move
-    sequence each call to :meth:`solve`; :meth:`step` runs one receding-horizon
+    Construct with `nonlinear_mpc`. The controller optimizes the move
+    sequence each call to `solve`; `step` runs one receding-horizon
     iteration and returns a shifted warm start for the next sample.
     """
 
@@ -284,17 +284,19 @@ def nonlinear_mpc(
     method: str = "bfgs",
     max_iter: int = 100,
 ) -> NonlinearMPC:
-    """Assemble a :class:`NonlinearMPC`.
+    """Assemble a `NonlinearMPC`.
 
     Args:
         transition: Discrete prediction model ``f(x, u, theta) -> x+`` (see
-            :func:`discretize` for one built from a continuous RHS).
+            `discretize` for one built from a continuous RHS).
         stage_cost: Stage cost ``g(x, u, theta) -> ()``.
         horizon: Prediction horizon ``Np``.
         n_input: Number of manipulated inputs ``m``.
         control_horizon: Move horizon ``Nc <= Np`` (defaults to ``Np``).
         terminal_cost: Optional terminal cost ``g(x, theta) -> ()``.
-        u_min, u_max, du_max: Input magnitude and per-step rate limits.
+        u_min: Lower input-magnitude limit.
+        u_max: Upper input-magnitude limit.
+        du_max: Per-step input-rate limit.
         method: Inner optimizer for the box-constrained solve (``"bfgs"`` default;
             switched to the constrained solver automatically for rate limits).
         max_iter: Optimizer iteration cap.

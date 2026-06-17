@@ -2,52 +2,52 @@
 
 The layer provides:
 
-* :class:`Stream` -- the differentiable material stream passed between units;
-* a stream property bridge (:func:`enthalpy_flow`, :func:`entropy_flow`,
-  :func:`molar_enthalpy`, :func:`molar_entropy`, :func:`mass_flow`) that gives any
-  stream a two-phase-aware enthalpy/entropy via :mod:`fugacio.thermo`;
+* `Stream` -- the differentiable material stream passed between units;
+* a stream property bridge (`enthalpy_flow`, `entropy_flow`,
+  `molar_enthalpy`, `molar_entropy`, `mass_flow`) that gives any
+  stream a two-phase-aware enthalpy/entropy via `fugacio.thermo`;
 * unit operations with rigorous material *and* energy balances
-  (:func:`flash_drum`, :func:`heater`, :func:`valve`, :func:`pump`,
-  :func:`compressor`, :func:`turbine`, :func:`mix`, :func:`splitter`,
-  :func:`component_separator`);
-* a thermodynamic-model bridge (:func:`eos_model_for`, :func:`nrtl_model_for`,
-  :func:`uniquac_model_for`, :func:`unifac_model_for`) that turns component names
-  into a ready EOS or gamma-phi :class:`~fugacio.thermo.EquilibriumModel`;
-* non-ideal separation units (:func:`flash_vle`, :func:`decanter`,
-  :func:`three_phase_flash`) and binary diagram / azeotrope / residue-curve helpers
-  (:func:`pxy_diagram`, :func:`txy_diagram`, :func:`azeotrope_pressure`,
-  :func:`azeotrope_temperature`, :func:`residue_curve`, :func:`residue_curve_map`);
-* reactor unit operations (:func:`equilibrium_reactor`,
-  :func:`stoichiometric_reactor`, :func:`cstr`, :func:`pfr`,
-  :func:`batch_reactor`) and reactive separations (:func:`reactive_flash`,
-  :func:`reactive_distillation`);
-* a differentiable optimization toolkit (:func:`minimize`, :func:`argmin`,
-  :func:`least_squares`) that differentiates *through the optimum* by the
+  (`flash_drum`, `heater`, `valve`, `pump`,
+  `compressor`, `turbine`, `mix`, `splitter`,
+  `component_separator`);
+* a thermodynamic-model bridge (`eos_model_for`, `nrtl_model_for`,
+  `uniquac_model_for`, `unifac_model_for`) that turns component names
+  into a ready EOS or gamma-phi `EquilibriumModel`;
+* non-ideal separation units (`flash_vle`, `decanter`,
+  `three_phase_flash`) and binary diagram / azeotrope / residue-curve helpers
+  (`pxy_diagram`, `txy_diagram`, `azeotrope_pressure`,
+  `azeotrope_temperature`, `residue_curve`, `residue_curve_map`);
+* reactor unit operations (`equilibrium_reactor`,
+  `stoichiometric_reactor`, `cstr`, `pfr`,
+  `batch_reactor`) and reactive separations (`reactive_flash`,
+  `reactive_distillation`);
+* a differentiable optimization toolkit (`minimize`, `argmin`,
+  `least_squares`) that differentiates *through the optimum* by the
   implicit function theorem;
-* design specifications and set-point controllers (:func:`meet_spec`,
-  :func:`solve_design`, :func:`controller`) that adjust a degree of freedom to
-  hit a target, plus end-to-end flowsheet optimization (:func:`optimize_flowsheet`);
+* design specifications and set-point controllers (`meet_spec`,
+  `solve_design`, `controller`) that adjust a degree of freedom to
+  hit a target, plus end-to-end flowsheet optimization (`optimize_flowsheet`);
 * equipment sizing, Turton bare-module costing, utility pricing, and financial
-  metrics (:func:`heat_exchanger_area`, :func:`bare_module_cost`,
-  :func:`utility_cost`, :func:`total_annual_cost`, :func:`npv`) for money-valued
+  metrics (`heat_exchanger_area`, `bare_module_cost`,
+  `utility_cost`, `total_annual_cost`, `npv`) for money-valued
   design objectives;
-* differentiable heat integration / pinch analysis (:func:`pinch_analysis`,
-  :func:`composite_curves`, :func:`grand_composite_curve`, :func:`area_target`,
-  :func:`optimal_dt_min`, :func:`synthesize_network`) for minimum-utility targets
-  and heat-exchanger-network synthesis (see :mod:`fugacio.sim.integration`);
+* differentiable heat integration / pinch analysis (`pinch_analysis`,
+  `composite_curves`, `grand_composite_curve`, `area_target`,
+  `optimal_dt_min`, `synthesize_network`) for minimum-utility targets
+  and heat-exchanger-network synthesis (see `fugacio.sim.integration`);
 * advanced process control -- model predictive control and state estimation
-  (:func:`linear_mpc`, :func:`nonlinear_mpc`, :func:`solve_qp`, :func:`dare`,
-  :func:`lqr`, :func:`kalman_gain`, :class:`KalmanFilter`,
-  :class:`ExtendedKalmanFilter`, :class:`UnscentedKalmanFilter`,
-  :func:`moving_horizon_estimate`, :func:`simulate_closed_loop`,
-  :func:`tune_mpc`) -- differentiable end to end, so the controller weights are
-  tunable by gradient descent (see :mod:`fugacio.sim.mpc`);
+  (`linear_mpc`, `nonlinear_mpc`, `solve_qp`, `dare`,
+  `lqr`, `kalman_gain`, `KalmanFilter`,
+  `ExtendedKalmanFilter`, `UnscentedKalmanFilter`,
+  `moving_horizon_estimate`, `simulate_closed_loop`,
+  `tune_mpc`) -- differentiable end to end, so the controller weights are
+  tunable by gradient descent (see `fugacio.sim.mpc`);
 * physical steam/cooling-water utilities on IAPWS-95 steam tables
-  (:func:`steam_heating`, :func:`cooling_water`, :func:`steam_turbine`,
-  :func:`condensate_flash_fraction`) for utility balances with real latent
+  (`steam_heating`, `cooling_water`, `steam_turbine`,
+  `condensate_flash_fraction`) for utility balances with real latent
   heats, differentiable end to end;
-* the original lightweight modified-Raoult helpers (:func:`bubble_pressure`,
-  :func:`antoine_psat`).
+* the original lightweight modified-Raoult helpers (`bubble_pressure`,
+  `antoine_psat`).
 """
 
 from fugacio.sim.column import (

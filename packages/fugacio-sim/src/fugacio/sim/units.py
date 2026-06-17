@@ -1,7 +1,7 @@
 """Differentiable unit operations with rigorous material *and* energy balances.
 
 Every block here is built on the equation-of-state phase equilibrium and the
-energy core in :mod:`fugacio.thermo`, so each one is differentiable end-to-end
+energy core in `fugacio.thermo`, so each one is differentiable end-to-end
 with respect to its operating conditions and feed. That is the headline Fugacio
 claim made concrete: you can take a gradient of a product purity, a duty, or a
 shaft power with respect to a drum temperature, an outlet pressure, a split
@@ -9,17 +9,17 @@ fraction, or a feed flow -- the basis for gradient-based flowsheet optimisation.
 
 The library covers the staples of a process flowsheet:
 
-* :func:`flash_drum` -- isothermal-isobaric vapour/liquid separator;
-* :func:`heater` -- heater/cooler on either a temperature or a duty spec;
-* :func:`valve` -- isenthalpic (Joule-Thomson) pressure letdown;
-* :func:`pump` -- incompressible-liquid pump with an efficiency;
-* :func:`compressor` / :func:`turbine` -- isentropic machines with an efficiency;
-* :func:`mix` -- adiabatic mixer (energy-balanced);
-* :func:`splitter` -- flow splitter;
-* :func:`component_separator` -- idealised component split.
+* `flash_drum` -- isothermal-isobaric vapour/liquid separator;
+* `heater` -- heater/cooler on either a temperature or a duty spec;
+* `valve` -- isenthalpic (Joule-Thomson) pressure letdown;
+* `pump` -- incompressible-liquid pump with an efficiency;
+* `compressor` / `turbine` -- isentropic machines with an efficiency;
+* `mix` -- adiabatic mixer (energy-balanced);
+* `splitter` -- flow splitter;
+* `component_separator` -- idealised component split.
 
 Outlet temperatures of the energy-specified blocks are found with the
-differentiable :func:`~fugacio.thermo.flash_ph` / :func:`~fugacio.thermo.flash_ps`
+differentiable `flash_ph` / `flash_ps`
 solves, whose temperatures carry implicit-function gradients.
 """
 
@@ -50,7 +50,7 @@ class HeaterResult(NamedTuple):
     """Outlet of a heater/cooler together with the heat duty.
 
     Attributes:
-        outlet: Product :class:`~fugacio.sim.stream.Stream`.
+        outlet: Product `Stream`.
         duty: Heat duty (W). Positive means heat *added*; negative means cooling.
     """
 
@@ -62,7 +62,7 @@ class PumpResult(NamedTuple):
     """Outlet of a pump together with the shaft work.
 
     Attributes:
-        outlet: Product :class:`~fugacio.sim.stream.Stream`.
+        outlet: Product `Stream`.
         work: Shaft power delivered to the fluid (W).
     """
 
@@ -74,7 +74,7 @@ class WorkResult(NamedTuple):
     """Outlet of a compressor/turbine with actual and ideal shaft work.
 
     Attributes:
-        outlet: Product :class:`~fugacio.sim.stream.Stream`.
+        outlet: Product `Stream`.
         work: Actual shaft power into the fluid (W); negative for a turbine
             (the fluid does work on the surroundings).
         ideal_work: Reversible (isentropic) shaft power into the fluid (W).
@@ -96,7 +96,7 @@ def flash_drum(
     """Flash a feed stream at temperature ``t`` and pressure ``p``.
 
     Args:
-        feed: Inlet :class:`~fugacio.sim.stream.Stream`.
+        feed: Inlet `Stream`.
         t: Drum temperature (K).
         p: Drum pressure (Pa).
         eos: Cubic equation of state to use (defaults to Peng-Robinson).
@@ -219,7 +219,7 @@ def _compress(
     *,
     is_turbine: bool,
 ) -> WorkResult:
-    """Shared isentropic-machine model for :func:`compressor` and :func:`turbine`."""
+    """Shared isentropic-machine model for `compressor` and `turbine`."""
     tc, pc, omega, _, cp = _resolve(feed.components)
     z = feed.z
     h_in = molar_enthalpy(feed, eos=eos, kij=kij)

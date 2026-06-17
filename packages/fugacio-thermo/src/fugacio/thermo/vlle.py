@@ -133,8 +133,8 @@ def flash_vlle(
 ) -> VLLEResult:
     """Isothermal-isobaric three-phase (V-L-L) flash of feed ``z`` at ``(T, P)``.
 
-    Seeds a vapour/liquid split from :func:`fugacio.thermo.gammaphi.flash_pt_gamma`
-    and a liquid/liquid split from :func:`fugacio.thermo.lle.flash_lle`, then drives
+    Seeds a vapour/liquid split from `fugacio.thermo.gammaphi.flash_pt_gamma`
+    and a liquid/liquid split from `fugacio.thermo.lle.flash_lle`, then drives
     both K-value sets to consistency with a 2x2 Rachford-Rice inner solve. Inspect
     ``three_phase`` to confirm a genuine three-phase root (otherwise one phase
     fraction has collapsed and the relevant two-phase flash applies).
@@ -238,7 +238,7 @@ def heterogeneous_azeotrope(
     differentiable in ``P`` and the model parameters.
 
     Returns:
-        A :class:`HeterogeneousAzeotrope` (the temperature, both liquid
+        A `HeterogeneousAzeotrope` (the temperature, both liquid
         compositions, and the common vapour). Use a ``feed`` mole fraction (of
         component 1) that lies inside the miscibility gap.
     """

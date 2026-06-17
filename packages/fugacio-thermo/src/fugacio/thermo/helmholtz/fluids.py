@@ -1,11 +1,11 @@
 """Reference-fluid registry: published Helmholtz EOS as JAX-ready dataclasses.
 
-Each :class:`HelmholtzFluid` packages one peer-reviewed multiparameter
+Each `HelmholtzFluid` packages one peer-reviewed multiparameter
 equation of state (IAPWS-95 for water, Span & Wagner for CO2, Setzmann &
 Wagner for methane, ...) in the reduced-Helmholtz form ``alpha(delta, tau)``
 together with its saturation ancillary equations and surface-tension
 correlation. The coefficient tables live in the generated
-:mod:`fugacio.thermo.helmholtz._data` (see ``scripts/gen_helmholtz.py`` for
+`fugacio.thermo.helmholtz._data` (see ``scripts/gen_helmholtz.py`` for
 provenance); this module turns them into frozen dataclasses registered as JAX
 pytrees, so every coefficient is a differentiable leaf and every downstream
 property can be differentiated with respect to the model itself as well as the
@@ -60,7 +60,7 @@ class HelmholtzFluid:
     The reduced Helmholtz energy ``alpha = a/(R T)`` is split into an ideal-gas
     part and a residual part, each a sum of standard term families evaluated at
     ``delta = rho/rho_reducing`` and ``tau = t_reducing/T``
-    (:mod:`fugacio.thermo.helmholtz.terms`). Coefficient arrays are pytree
+    (`fugacio.thermo.helmholtz.terms`). Coefficient arrays are pytree
     leaves; scalar metadata (bounds, reducing constants) is static.
 
     Note ``gas_constant`` is the molar gas constant *the EOS was published
@@ -163,7 +163,7 @@ jax.tree_util.register_dataclass(
     meta_fields=list(_META_FIELDS),
 )
 
-#: Common alternative names accepted by :func:`reference_fluid`.
+#: Common alternative names accepted by `reference_fluid`.
 ALIASES: dict[str, str] = {
     "steam": "water",
     "h2o": "water",
@@ -298,11 +298,11 @@ def reference_fluid(name: str) -> HelmholtzFluid:
             insensitive.
 
     Returns:
-        The cached :class:`HelmholtzFluid`.
+        The cached `HelmholtzFluid`.
 
     Raises:
         KeyError: If no reference EOS is vendored for the name (see
-            :func:`reference_fluid_names`).
+            `reference_fluid_names`).
     """
     key = name.strip().lower()
     key = ALIASES.get(key, key)
@@ -319,7 +319,7 @@ def reference_fluid_names() -> tuple[str, ...]:
 
 
 def has_reference_fluid(name: str) -> bool:
-    """Whether :func:`reference_fluid` knows the named fluid."""
+    """Whether `reference_fluid` knows the named fluid."""
     key = name.strip().lower()
     return ALIASES.get(key, key) in _CANONICAL
 

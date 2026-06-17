@@ -1,11 +1,11 @@
 """Copilot tools for the heat-integration / pinch-analysis layer.
 
-These expose :mod:`fugacio.sim.integration` to the LLM design agent as
+These expose `fugacio.sim.integration` to the LLM design agent as
 deterministic, JSON-in/JSON-out calculations: compute the minimum-utility and
 pinch targets for a set of process streams, return the composite / grand
 composite curves, find the cost-optimal minimum approach temperature, and
 synthesise a heat-exchanger network by the pinch design method. They are kept in
-their own module (rather than the already-large :mod:`fugacio.copilot.tools`) and
+their own module (rather than the already-large `fugacio.copilot.tools`) and
 folded into the registry there.
 
 A stream is supplied as ``{"t_supply", "t_target"}`` plus either a heat-capacity
@@ -34,7 +34,7 @@ JsonDict = dict[str, Any]
 
 
 def _build_streams(streams: list[JsonDict], default_h: float) -> list[Any]:
-    """Turn a list of stream dicts into :class:`HeatStream` objects."""
+    """Turn a list of stream dicts into `HeatStream` objects."""
     if not streams:
         raise ValueError("provide at least one stream")
     out = []

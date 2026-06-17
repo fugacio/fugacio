@@ -8,13 +8,13 @@ engine grows.
 
 Implemented laws:
 
-* :func:`partial_molar_symmetry_residual` -- the Gibbs-Duhem relation, expressed
+* `partial_molar_symmetry_residual` -- the Gibbs-Duhem relation, expressed
   as the symmetry of the Hessian of ``n_T g^E`` (equivalently of the Jacobian of
   ``ln gamma_i`` -- or ``ln phi_i`` -- with respect to mole numbers). This holds
   at constant ``T, P`` for any model derived from a single Gibbs-energy surface.
-* :func:`equifugacity_residual` -- equality of component fugacities between phases
+* `equifugacity_residual` -- equality of component fugacities between phases
   at equilibrium, ``x_i phi_i^L = y_i phi_i^V``.
-* :func:`fugacity_pressure_residual` -- the pure-fluid identity
+* `fugacity_pressure_residual` -- the pure-fluid identity
   ``(d ln phi / dP)_T = (Z - 1) / P``, a direct consequence of ``dG = V dP``.
 """
 

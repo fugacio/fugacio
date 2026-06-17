@@ -4,8 +4,8 @@ Fugacio's defining feature is that *everything* is differentiable, so a unique
 class of oracle is available for free: compare automatic-differentiation
 derivatives against finite differences. These helpers turn that comparison into a
 single number a test can assert on, covering the analytic ``custom_jvp`` /
-``custom_vjp`` rules in :mod:`fugacio.thermo.eos`,
-:mod:`fugacio.thermo.equilibrium`, and :mod:`fugacio.thermo.implicit`.
+``custom_vjp`` rules in `fugacio.thermo.eos`,
+`fugacio.thermo.equilibrium`, and `fugacio.thermo.implicit`.
 """
 
 from __future__ import annotations

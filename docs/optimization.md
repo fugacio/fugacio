@@ -5,7 +5,7 @@ specifications / controllers**, and **process economics** on top of the
 differentiable flowsheet engine, and `fugacio.copilot` exposes all of it to an
 LLM design agent through a JSON tool registry. Like the rest of the stack, every
 solver carries implicit-function-theorem gradient rules, so you can differentiate
-*through* an optimum, a met spec, or an annual-cost estimate — with respect to
+*through* an optimum, a met spec, or an annual-cost estimate, with respect to
 prices, feed conditions, or model parameters.
 
 ## Differentiable optimization
@@ -31,7 +31,7 @@ res.converged    # True
 
 The headline is `argmin`: it returns *only* the optimal `x*(theta)`, but with a
 custom VJP that differentiates the solution through the optimality (KKT)
-conditions by the implicit function theorem — exact and cheap, with no
+conditions by the implicit function theorem, exact and cheap, with no
 backprop-through-iterations. That makes an optimizer just another differentiable
 layer you can nest inside a larger gradient.
 
@@ -51,7 +51,7 @@ def loss(x, theta):
 dx_dtheta = jax.jacobian(lambda th: argmin(loss, jnp.zeros(2), th))(0.5)
 ```
 
-Bounds and constraints carry gradients too — for an active bound the sensitivity
+Bounds and constraints carry gradients too: for an active bound the sensitivity
 collapses to the constraint, for an interior solution it follows the reduced
 Hessian.
 
@@ -71,11 +71,11 @@ res.x  # -> [2, 2] on the active constraint
 ## Design specifications & controllers
 
 A **design spec** adjusts a manipulated variable until a controlled variable hits
-a target — the bread-and-butter of flowsheeting. `meet_spec` is the single-variable
+a target, the bread-and-butter of flowsheeting. `meet_spec` is the single-variable
 solver (bracketed bisection when given `[lo, hi]`, else damped Newton);
 `controller` builds a `DesignSpec` that reads like control language; and
 `solve_design` satisfies several (generally coupled) specs at once with a Newton
-system, re-running the flowsheet — recycles and all — at each step. The converged
+system, re-running the flowsheet (recycles and all) at each step. The converged
 manipulated values and the streams computed from them stay differentiable with
 respect to the *unmanipulated* parameters.
 
@@ -106,7 +106,7 @@ out.theta["T"], out.converged              # the temperature that hits 40 mol/s
 
 `optimize_flowsheet` ties the pieces together: choose `design_vars` out of the
 parameter mapping, pass an economic (or any) `objective(streams, theta)`, and it
-optimizes end to end — differentiating straight through the converged flowsheet.
+optimizes end to end, differentiating straight through the converged flowsheet.
 
 ```python
 import jax.numpy as jnp
@@ -126,7 +126,7 @@ res.theta["T"], res.objective, res.converged
 ## Process economics
 
 `fugacio.sim` includes differentiable equipment **sizing**, **Turton bare-module
-costing**, **utility** costing, and the usual **financial** metrics — so an
+costing**, **utility** costing, and the usual **financial** metrics, so an
 objective can be a real screening economics number, and its gradient with respect
 to a design variable is exact.
 
@@ -156,8 +156,8 @@ d_tac_d_area = jax.grad(
 `fugacio.copilot` wraps the whole engine in a registry of deterministic,
 JSON-in/JSON-out **tools** (properties, flash/units, distillation, reactors,
 optimization, sizing, costing, sensitivities) and drives them with an LLM. The
-provider layer is vendor-neutral — a small `LLMProvider` protocol with `OpenAI`,
-`Anthropic`, and `Mock` implementations — so the agent core never imports a
+provider layer is vendor-neutral (a small `LLMProvider` protocol with `OpenAI`,
+`Anthropic`, and `Mock` implementations), so the agent core never imports a
 specific SDK.
 
 ```python
@@ -185,6 +185,6 @@ result.answer        # natural-language summary
 result.transcript    # ordered tool calls + results
 ```
 
-Finally, `fugacio.copilot.report` turns results into Markdown an engineer expects
-— `stream_table`, `summarize_optimization`, `summarize_economics`, and
+Finally, `fugacio.copilot.report` turns results into Markdown an engineer expects:
+`stream_table`, `summarize_optimization`, `summarize_economics`, and
 `summarize_transcript`.

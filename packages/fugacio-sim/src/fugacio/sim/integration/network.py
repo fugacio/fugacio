@@ -15,9 +15,9 @@ module proposes an actual network of exchangers that meets the minimum-utility
 
 The synthesiser is a screening-level heuristic (it does not perform automatic
 multi-branch stream splitting), so its result is always passed through a rigorous
-:func:`verify_network`: per-exchanger terminal approaches, per-stream energy
+`verify_network`: per-exchanger terminal approaches, per-stream energy
 balances, and whether the design hits the MER utility targets. Areas use the
-film coefficients carried by each :class:`~fugacio.sim.integration.streams.HeatStream`.
+film coefficients carried by each `HeatStream`.
 
 Unlike the targeting layer this is a discrete design step, so it works in plain
 Python floats rather than as a differentiable computation.
@@ -218,10 +218,11 @@ def synthesize_network(
             process temperature.
         cold_utility_t: Cold-utility temperature (K); defaults to below the
             coldest process temperature.
-        hot_utility_h, cold_utility_h: Utility film coefficients (W/m^2/K).
+        hot_utility_h: Hot-utility film coefficient (W/m^2/K).
+        cold_utility_h: Cold-utility film coefficient (W/m^2/K).
 
     Returns:
-        A verified :class:`HeatExchangerNetwork`. Inspect ``feasible`` and
+        A verified `HeatExchangerNetwork`. Inspect ``feasible`` and
         ``achieves_mer`` to confirm the design.
     """
     dt = float(dt_min)
@@ -305,7 +306,7 @@ def _design_threshold(streams: list[HeatStream], dt: float) -> list[Exchanger]:
     With no pinch the design starts from the end that needs no utility -- the hot
     end when only cold utility is required, the cold end when only hot utility is
     -- so driving forces only open up away from it. The CP rule (a pinch concept)
-    does not apply; feasibility is confirmed afterwards by :func:`verify_network`.
+    does not apply; feasibility is confirmed afterwards by `verify_network`.
     """
     casc = heat_cascade(streams, dt)
     anchor_hot_end = float(casc.hot_utility) <= float(casc.cold_utility)

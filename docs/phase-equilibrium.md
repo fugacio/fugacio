@@ -3,7 +3,7 @@
 Beyond cubic equations of state, Fugacio carries a full **γ–φ property system**:
 liquid-phase activity coefficients combined with a vapour-phase fugacity model,
 plus rigorous liquid-liquid and vapour-liquid-liquid equilibria. This is the route
-that captures azeotropes, partial miscibility, and strongly non-ideal mixtures —
+that captures azeotropes, partial miscibility, and strongly non-ideal mixtures,
 the regime where ideal-K and single-EOS methods quietly give wrong answers.
 
 ## The γ–φ property model
@@ -39,9 +39,9 @@ state is assembled from `liquid_reference_fugacity`, `poynting_factor`,
 
 ## Liquid-liquid & three-phase equilibria
 
-- `flash_lle` — isoactivity liquid-liquid flash, with `tie_line`, `binodal_curve`,
+- `flash_lle`: isoactivity liquid-liquid flash, with `tie_line`, `binodal_curve`,
   and `binary_binodal` for the miscibility envelope.
-- `flash_vlle` — three-phase vapour-liquid-liquid flash, plus the binary
+- `flash_vlle`: three-phase vapour-liquid-liquid flash, plus the binary
   `heterogeneous_azeotrope` solver.
 - **Tangent-plane stability** (TPD): `tangent_plane_distance`, `liquid_stability`,
   and the general `stability_analysis_general` decide how many phases are actually
@@ -87,7 +87,7 @@ The `fugacio.sim` layer builds the classic non-ideal diagrams from any binary
 model: `pxy_diagram`, `txy_diagram`, and the `azeotrope_pressure` /
 `azeotrope_temperature` finders. For ternary screening, `residue_curve` integrates
 a single open-evaporation trajectory and `residue_curve_map` sweeps a family of
-them — the standard tool for laying out distillation boundaries.
+them, the standard tool for laying out distillation boundaries.
 
 ```python
 import jax.numpy as jnp
@@ -103,5 +103,5 @@ curve.x   # liquid-composition trajectory toward the high-boiling node
 The activity kernels are cross-checked in the opt-in oracle suite (`just oracles`)
 against the [`thermo`](https://github.com/CalebBell/thermo) library (NRTL, UNIQUAC,
 classic & Dortmund UNIFAC, Wilson) and, when a Julia install is present, against
-[Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) — passing identical
+[Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl), passing identical
 interaction parameters so a discrepancy isolates the kernel rather than the inputs.

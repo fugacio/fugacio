@@ -7,13 +7,13 @@ calculations: flowsheets, equipment sizing, and (eventually) techno-economic /
 life-cycle analysis.
 
 The bridge between a language model and the differentiable engine is a **tool
-registry** — deterministic, JSON-in/JSON-out functions exposed with the same
+registry**, deterministic, JSON-in/JSON-out functions exposed with the same
 function-calling schemas OpenAI/Anthropic expect:
 
 - **Properties & equilibrium**: `list_components`, `component_properties`,
   `saturation_pressure`, `bubble_pressure`, `flash_drum`.
 - **Unit operations**: `heat_exchanger`, `compressor` (and turbine), `pump`,
-  `valve` — each closing a rigorous energy balance.
+  `valve`, each closing a rigorous energy balance.
 - **Distillation**: `shortcut_distillation` (Fenske-Underwood-Gilliland) and
   `rigorous_distillation` (multistage column with duties).
 - **Gradient-based optimization**: `optimize_flash_temperature` and

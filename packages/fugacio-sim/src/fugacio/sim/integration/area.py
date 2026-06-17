@@ -1,19 +1,19 @@
 """Area, unit-count, and capital targeting, and the capital-energy trade-off.
 
-Energy targets (:mod:`fugacio.sim.integration.targeting`) fix the *operating*
+Energy targets (`fugacio.sim.integration.targeting`) fix the *operating*
 cost floor; to trade it against *capital* you need the network's area and unit
 count before designing it. This module supplies the classic targets:
 
-* :func:`area_target` -- the **Bath formula** minimum heat-transfer area from the
+* `area_target` -- the **Bath formula** minimum heat-transfer area from the
   balanced composite curves (vertical heat exchange), accounting for individual
   stream film coefficients;
-* :func:`units_target` -- the minimum number of heat-exchange units from Euler's
+* `units_target` -- the minimum number of heat-exchange units from Euler's
   graph relation, respecting the pinch division (the MER unit count);
-* :func:`capital_cost_target` -- an installed-capital estimate from the area and
+* `capital_cost_target` -- an installed-capital estimate from the area and
   unit targets via a smooth exchanger cost law;
-* :func:`supertarget` and :func:`total_annual_cost_target` -- the total annual
+* `supertarget` and `total_annual_cost_target` -- the total annual
   cost (annualised capital plus utilities) at a given ``dt_min``;
-* :func:`optimal_dt_min` -- the ``dt_min`` that minimises total annual cost,
+* `optimal_dt_min` -- the ``dt_min`` that minimises total annual cost,
   found by gradient-based optimisation straight through the differentiable
   targets (the "supertargeting" curve), the showcase of an end-to-end
   differentiable heat-integration model.
@@ -43,7 +43,7 @@ from fugacio.sim.integration.targeting import (
 
 ArrayLike = Array | float
 
-#: Reciprocal golden ratio, for the golden-section search in :func:`optimal_dt_min`.
+#: Reciprocal golden ratio, for the golden-section search in `optimal_dt_min`.
 _INV_PHI = 0.6180339887498949
 
 #: Default smooth exchanger installed-cost law ``cost = a + b * A**c`` ($, A in m^2).
@@ -115,7 +115,8 @@ def area_target(
             hottest process temperature.
         cold_utility_t: Cold-utility temperature (K); defaults to just below the
             coldest process temperature.
-        hot_utility_h, cold_utility_h: Utility film coefficients (W/m^2/K).
+        hot_utility_h: Hot-utility film coefficient (W/m^2/K).
+        cold_utility_h: Cold-utility film coefficient (W/m^2/K).
 
     Returns:
         The area target (m^2).
@@ -280,15 +281,16 @@ def total_annual_cost_target(
     Args:
         streams: Hot and cold process streams.
         dt_min: Minimum approach temperature (K).
-        hot_utility, cold_utility: Utility keys priced via
-            :data:`fugacio.sim.economics.UTILITIES`.
+        hot_utility: Hot-utility key priced via `fugacio.sim.economics.UTILITIES`.
+        cold_utility: Cold-utility key priced via `fugacio.sim.economics.UTILITIES`.
         hours_per_year: Operating hours per year.
-        interest_rate, years: Capital-recovery-factor inputs.
+        interest_rate: Annual interest rate for the capital-recovery factor.
+        years: Project life (years) for the capital-recovery factor.
         area_cost: ``(a, b, c)`` exchanger cost-law coefficients.
-        area_kwargs: Extra keyword arguments forwarded to :func:`area_target`.
+        area_kwargs: Extra keyword arguments forwarded to `area_target`.
 
     Returns:
-        A :class:`SuperTargetResult`.
+        A `SuperTargetResult`.
     """
     casc = heat_cascade(streams, dt_min)
     area = area_target(streams, dt_min, **(area_kwargs or {}))
@@ -316,9 +318,9 @@ def supertarget(
     dt_min_grid: ArrayLike,
     **kwargs: object,
 ) -> SuperTargetResult:
-    """Vectorised :func:`total_annual_cost_target` over a grid of ``dt_min`` values.
+    """Vectorised `total_annual_cost_target` over a grid of ``dt_min`` values.
 
-    Returns a :class:`SuperTargetResult` whose fields are arrays aligned with
+    Returns a `SuperTargetResult` whose fields are arrays aligned with
     ``dt_min_grid`` -- the data behind the supertargeting (cost-vs-``dt_min``)
     plot.
     """
@@ -337,7 +339,7 @@ class OptimalDtMin(NamedTuple):
     Attributes:
         dt_min: Optimal minimum approach temperature (K).
         total_annual_cost: Total annual cost at the optimum ($/yr).
-        target: The full :class:`SuperTargetResult` at the optimum.
+        target: The full `SuperTargetResult` at the optimum.
         converged: Whether the optimiser converged.
     """
 
@@ -371,18 +373,23 @@ def optimal_dt_min(
     vectorised **grid scan** (which locates the global basin despite the jumps)
     followed by a **golden-section polish** inside the smooth neighbouring bracket.
     The total-annual-cost target itself is fully differentiable between kinks (see
-    :func:`total_annual_cost_target`).
+    `total_annual_cost_target`).
 
     Args:
         streams: Hot and cold process streams.
         bounds: ``(lower, upper)`` search interval for ``dt_min`` (K).
         grid: Number of grid points for the global scan.
         refine_iters: Golden-section iterations for the local polish.
-        hot_utility, cold_utility, hours_per_year, interest_rate, years,
-        area_cost, area_kwargs: Forwarded to :func:`total_annual_cost_target`.
+        hot_utility: Hot-utility key, forwarded to `total_annual_cost_target`.
+        cold_utility: Cold-utility key, forwarded to `total_annual_cost_target`.
+        hours_per_year: Operating hours per year, forwarded to `total_annual_cost_target`.
+        interest_rate: Annual interest rate, forwarded to `total_annual_cost_target`.
+        years: Project life (years), forwarded to `total_annual_cost_target`.
+        area_cost: Exchanger cost-law coefficients, forwarded to `total_annual_cost_target`.
+        area_kwargs: Extra `area_target` keyword arguments, forwarded to the target.
 
     Returns:
-        An :class:`OptimalDtMin` with the optimal approach temperature and the
+        An `OptimalDtMin` with the optimal approach temperature and the
         full target breakdown there.
     """
 

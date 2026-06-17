@@ -14,7 +14,7 @@ For a fixed point ``x* = g(x*, theta)`` the sensitivity to the parameters
 so a single linear solve (here a contraction iteration that reuses ``g``'s own
 vector-Jacobian product) yields exact gradients regardless of how many
 iterations the forward solve took. This is the same trick used by the cubic-root
-:func:`fugacio.thermo.eos.compress_factor`, generalized to vector unknowns.
+`fugacio.thermo.eos.compress_factor`, generalized to vector unknowns.
 """
 
 from __future__ import annotations
@@ -115,7 +115,7 @@ def newton_root(
     The forward Newton step uses the *autodiff* slope ``dr/dx`` and an optional
     ``damping`` (step multiplier in ``(0, 1]``) for stability; the converged root
     is differentiated with respect to ``params`` by the implicit function theorem
-    (the iteration itself is not traced). Prefer :func:`bracketed_root` when a
+    (the iteration itself is not traced). Prefer `bracketed_root` when a
     reliable bracket is available; ``newton_root`` is for smooth residuals where a
     good initial guess is cheap (saturation updates, Poynting corrections).
 
@@ -188,7 +188,6 @@ def newton_system(
     Returns:
         The converged root ``x*``; differentiable with respect to ``theta``.
     """
-
     # Damping candidates for the backtracking line search (full step first).
     alphas = jnp.array([1.0, 0.5, 0.25, 0.1, 0.03, 0.01])
 

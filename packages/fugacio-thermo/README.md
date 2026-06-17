@@ -2,8 +2,8 @@
 
 Differentiable thermodynamics and physical-property engine for the
 [Fugacio](https://github.com/owenthcarey/fugacio) stack. Every model is written
-in [JAX](https://github.com/jax-ml/jax), so any output — a fugacity coefficient,
-a saturation pressure, a flash result — is differentiable with respect to
+in [JAX](https://github.com/jax-ml/jax), so any output (a fugacity coefficient,
+a saturation pressure, a flash result) is differentiable with respect to
 temperature, pressure, composition, *and* model parameters. The iterative solvers
 (cubic-EOS root, flash, saturation, bubble/dew) carry hand-written
 implicit-function-theorem rules, so gradients flow exactly through them rather
@@ -16,8 +16,8 @@ than through unrolled iterations.
   capacities for common species.
 - **Ideal-gas properties**: `cp_ig`, `enthalpy_ig`, `entropy_ig`, `gibbs_ig`
   (plus mixture variants).
-- **Cubic equations of state** — van der Waals, Redlich-Kwong, SRK, Peng-Robinson
-  (`VDW`, `RK`, `SRK`, `PR`) — with mixing rules, a differentiable compressibility
+- **Cubic equations of state**: van der Waals, Redlich-Kwong, SRK, Peng-Robinson
+  (`VDW`, `RK`, `SRK`, `PR`), with mixing rules, a differentiable compressibility
   solver, fugacity coefficients (`ln_phi_mixture`, `ln_phi_pure`), and molar
   volume.
 - **Real-fluid energy properties**: residual/departure functions
@@ -25,10 +25,10 @@ than through unrolled iterations.
   real-fluid molar properties (`molar_enthalpy`, `molar_entropy`, `molar_gibbs`,
   `molar_cp`, `stable_phase`), two-phase `mixture_enthalpy` / `mixture_entropy`,
   and energy-specified flashes `flash_ph` (isenthalpic) and `flash_ps`
-  (isentropic) — the backbone of adiabatic units, valves, compressors, and
+  (isentropic), the backbone of adiabatic units, valves, compressors, and
   turbines.
 - **Activity-coefficient models**: Margules, van Laar, Wilson, NRTL, UNIQUAC, and
-  predictive regular-solution / Flory-Huggins — available both as functions and
+  predictive regular-solution / Flory-Huggins, available both as functions and
   as differentiable `ActivityModel` objects (`nrtl`, `uniquac`, ...) whose
   parameters are themselves gradient leaves.
 - **Group contribution**: predictive `unifac_activity` and `joback_estimate`
@@ -38,7 +38,7 @@ than through unrolled iterations.
 - **EOS phase equilibrium**: `rachford_rice`, `flash_pt`, `psat_eos`,
   `bubble_pressure_eos`, `dew_pressure_eos`, and Michelsen `stability_analysis`.
 - **Non-ideal (gamma-phi) VLE**: `flash_pt_gamma`, `bubble_pressure_gamma`,
-  `dew_pressure_gamma`, and the temperature duals — the route that captures
+  `dew_pressure_gamma`, and the temperature duals, the route that captures
   azeotropes and strongly polar mixtures.
 - **Liquid-liquid & three-phase equilibria**: isoactivity `flash_lle` with
   `tie_line` / `binodal_curve`, three-phase `flash_vlle`, the binary
@@ -60,7 +60,7 @@ than through unrolled iterations.
   `MassActionReversible`, `LHHW`, `Arrhenius`).
 - **Validation harness**: first-principles consistency checks (Gibbs-Duhem,
   equifugacity, the `(d ln phi / dP)_T` identity), an AD-vs-finite-difference
-  checker, and optional differential-testing oracles — CoolProp / `chemicals`
+  checker, and optional differential-testing oracles: CoolProp / `chemicals`
   (pure-fluid properties), `thermo` / Clapeyron.jl (activity coefficients), and
   Cantera (reaction equilibrium and standard-state thermochemistry).
 

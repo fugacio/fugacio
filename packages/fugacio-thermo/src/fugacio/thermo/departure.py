@@ -6,13 +6,13 @@ ideal-gas property at the **same temperature, pressure, and composition**::
     M_real(T, P, x) = M_ideal_gas(T, P, x) + M_residual(T, P, x)
 
 so the residual functions here are exactly what must be added to the ideal-gas
-integrals in :mod:`fugacio.thermo.ideal` to obtain real-fluid enthalpy, entropy,
+integrals in `fugacio.thermo.ideal` to obtain real-fluid enthalpy, entropy,
 and Gibbs energy. They are the keystone that turns the property engine into one
 that can close *energy* balances (heat duties, adiabatic mixing, compression),
 not just material balances.
 
 The closed forms are written in terms of the same departure log-term ``g`` that
-:func:`fugacio.thermo.eos.ln_phi_mixture` already uses, so they are *consistent
+`fugacio.thermo.eos.ln_phi_mixture` already uses, so they are *consistent
 by construction* with the fugacity coefficients that are validated against
 CoolProp. Writing ``A = aP/(RT)^2``, ``B = bP/(RT)`` and
 ``g = ln[(Z+sigma B)/(Z+epsilon B)] / (sigma - epsilon)``::
@@ -25,7 +25,7 @@ with ``a' = da/dT`` for the mixture (obtained by automatic differentiation of
 the van der Waals one-fluid mixing rule, so binary interaction parameters and
 any ``alpha(T)`` law are handled exactly). One can verify
 ``G_res = H_res - T S_res`` and ``H_res = G_res - T (dG_res/dT)_P`` directly;
-:mod:`fugacio.thermo.tests` turns those identities into graded consistency
+`fugacio.thermo.tests` turns those identities into graded consistency
 checks.
 """
 
@@ -110,7 +110,7 @@ def residual_properties(
     log-term, and ``da/dT``, which the individual accessors below simply select
     from. The Gibbs residual equals ``R T sum_i x_i ln(phi_i)`` -- the
     partial-molar identity tying this module to
-    :func:`fugacio.thermo.eos.ln_phi_mixture`.
+    `fugacio.thermo.eos.ln_phi_mixture`.
     """
     t = jnp.asarray(t, dtype=float)
     p = jnp.asarray(p, dtype=float)
@@ -189,7 +189,7 @@ def residual_cp(
     """Residual molar heat capacity ``Cp - Cp_ig`` at fixed ``T, P`` (J/mol/K).
 
     Obtained as ``(d H_res / dT)_P`` by automatic differentiation of
-    :func:`residual_enthalpy`, so it needs no separately derived second-derivative
+    `residual_enthalpy`, so it needs no separately derived second-derivative
     formula and stays consistent with the enthalpy departure.
     """
     t = jnp.asarray(t, dtype=float)

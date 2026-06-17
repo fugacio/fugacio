@@ -4,14 +4,14 @@ Classical tuning is a two-step recipe: reduce the process to a first-order-plus-
 dead-time (FOPDT) model ``K e^{-L s} / (tau s + 1)``, then apply a correlation
 that maps ``(K, tau, L)`` to PID gains. This module provides both halves:
 
-* :func:`fit_fopdt` identifies ``(K, tau, L)`` from a measured step response by
-  differentiable least squares (reusing :func:`fugacio.sim.least_squares`); and
-* the tuning rules -- :func:`ziegler_nichols`, :func:`cohen_coon`,
-  :func:`imc_tuning` (lambda tuning), and :func:`amigo` -- turn an FOPDT model
-  into a ready :class:`~fugacio.sim.control.pid.PID`.
+* `fit_fopdt` identifies ``(K, tau, L)`` from a measured step response by
+  differentiable least squares (reusing `fugacio.sim.least_squares`); and
+* the tuning rules -- `ziegler_nichols`, `cohen_coon`,
+  `imc_tuning` (lambda tuning), and `amigo` -- turn an FOPDT model
+  into a ready `PID`.
 
 For a closed-loop, performance-index-optimal tune that exploits the fully
-differentiable plant, see :func:`fugacio.sim.dynamics.tune_pid`, which descends an
+differentiable plant, see `fugacio.sim.dynamics.tune_pid`, which descends an
 IAE/ISE objective on the gains directly.
 """
 

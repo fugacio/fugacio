@@ -2,7 +2,7 @@
 
 Given one or more reactions, a feed (in moles), and ``(T, P)``, this module finds
 the extents of reaction that make each reaction's activity quotient equal to its
-equilibrium constant ``K_j(T)`` (from :mod:`fugacio.thermo.reactions`). For a gas
+equilibrium constant ``K_j(T)`` (from `fugacio.thermo.reactions`). For a gas
 phase the activity of species ``i`` is
 
 * ``a_i = y_i P / P_ref`` for an ideal gas (``basis="ideal-gas"``), or
@@ -17,7 +17,7 @@ composition is ``n = n_feed + xi . Nu``. A single reaction is solved by a robust
 bracketed root over the physically feasible extent range; several simultaneous
 reactions are solved by a damped Newton system. Both solvers differentiate the
 *converged* extent with respect to ``T``, ``P``, and the feed by implicit
-differentiation (see :mod:`fugacio.thermo.implicit`), so conversions and yields
+differentiation (see `fugacio.thermo.implicit`), so conversions and yields
 carry exact gradients.
 
 The standard state is the ideal gas at ``P_ref`` (1 bar), matching the tabulated
@@ -117,7 +117,7 @@ def equilibrium(
     """Solve for the equilibrium composition of a reacting gas mixture.
 
     Args:
-        reactions: A single :class:`~fugacio.thermo.reactions.Reaction` or several
+        reactions: A single `Reaction` or several
             sharing the same component ordering.
         n_feed: Feed amounts per component (mol), shape ``(n,)``.
         t: Temperature (K).
@@ -125,11 +125,15 @@ def equilibrium(
         basis: ``"ideal-gas"`` (``a_i = y_i P/P_ref``) or ``"phi"`` (EOS fugacity
             coefficients).
         eos: Cubic EOS used when ``basis="phi"``.
-        tc, pc, omega, kij: Component constants for the EOS (required for ``"phi"``).
-        tol, max_iter: Solver tolerances.
+        tc: Component critical temperatures (K), required for ``"phi"``.
+        pc: Component critical pressures (Pa), required for ``"phi"``.
+        omega: Component acentric factors, required for ``"phi"``.
+        kij: Optional binary interaction matrix for the EOS.
+        tol: Convergence tolerance on the reaction extents.
+        max_iter: Maximum number of solver iterations.
 
     Returns:
-        An :class:`EquilibriumResult` with extents, moles, mole fractions, and
+        An `EquilibriumResult` with extents, moles, mole fractions, and
         ``K(T)``. Differentiable in ``t``, ``p``, and ``n_feed``.
     """
     rxns = _as_list(reactions)
