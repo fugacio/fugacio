@@ -5,10 +5,10 @@ These blocks turn the reaction thermochemistry and kinetics in
 `Stream` objects, just like the separation units in
 `fugacio.sim.units`. Two families are provided:
 
-* *Equilibrium* / *stoichiometric* reactors -- the conversion is set by chemical
+* *Equilibrium* / *stoichiometric* reactors: the conversion is set by chemical
   equilibrium (`fugacio.thermo.reaction_equilibrium.equilibrium`) or by a
   specified extent/conversion; no rate law is needed.
-* *Kinetic* reactors -- `cstr`, `pfr`, and `batch_reactor`
+* *Kinetic* reactors: `cstr`, `pfr`, and `batch_reactor`
   integrate the rate laws of `fugacio.thermo.kinetics` over reactor volume
   (CSTR/PFR) or time (batch).
 
@@ -24,7 +24,7 @@ the ideal-gas relation ``c_i = y_i P / (R T)``.
 Because the underlying solves (equilibrium root-finds, the CSTR Newton system,
 the explicit RK4 marches) are differentiable, a reactor's conversion, outlet
 temperature, and duty are differentiable in the feed, the operating conditions,
-*and* the reaction/kinetic parameters -- ready for gradient-based design.
+*and* the reaction/kinetic parameters, ready for gradient-based design.
 """
 
 from __future__ import annotations

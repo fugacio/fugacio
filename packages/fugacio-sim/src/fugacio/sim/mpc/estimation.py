@@ -1,26 +1,26 @@
 """Differentiable state estimation: Kalman, EKF, UKF, and moving-horizon estimation.
 
-Control is only half of feedback; the other half is *estimation* -- reconstructing
+Control is only half of feedback; the other half is *estimation*, reconstructing
 the plant state (and the unmeasured disturbances) from noisy, partial
 measurements, because MPC and every state-feedback law need a state to act on.
 This module supplies the standard recursive estimators and their optimization-
 based counterpart, all written against `jax.numpy` so they slot into the
 differentiable stack:
 
-* `KalmanFilter` -- the exact recursive Bayesian filter for a linear-
+* `KalmanFilter`: the exact recursive Bayesian filter for a linear-
   Gaussian model (Joseph-form covariance update for numerical robustness).
-* `ExtendedKalmanFilter` -- the Kalman filter on the *autodiff*
+* `ExtendedKalmanFilter`: the Kalman filter on the *autodiff*
   linearization of a nonlinear model; the Jacobians are exact ``jax.jacobian``
   evaluations, not finite differences.
-* `UnscentedKalmanFilter` -- the scaled unscented transform (Wan & van der
+* `UnscentedKalmanFilter`: the scaled unscented transform (Wan & van der
   Merwe), which propagates a deterministic set of sigma points through the true
   nonlinear maps and is typically more accurate than the EKF for strong
   nonlinearity, with no Jacobians at all.
-* `moving_horizon_estimate` -- estimation as *optimization*: fit the state
+* `moving_horizon_estimate`: estimation as *optimization*: fit the state
   trajectory over a sliding window to the measurements subject to the model, with
   an arrival cost summarizing the past. It is the estimation dual of MPC, it can
-  honor constraints (state positivity, bounds), and -- because it is solved with
-  `fugacio.sim.argmin` -- it differentiates through the optimum. For a
+  honor constraints (state positivity, bounds), and (because it is solved with
+  `fugacio.sim.argmin`) it differentiates through the optimum. For a
   linear-Gaussian model with no constraints it reproduces the Kalman filter.
 """
 
@@ -218,7 +218,7 @@ class UnscentedKalmanFilter:
 
     Propagates ``2n + 1`` deterministic sigma points through the true nonlinear
     transition ``f(x, u)`` and measurement ``h(x)`` and reconstructs the Gaussian
-    by weighted moments -- no Jacobians, and accurate to higher order than the EKF
+    by weighted moments: no Jacobians, and accurate to higher order than the EKF
     for strongly nonlinear maps. ``alpha``/``beta``/``kappa`` are the standard
     spread parameters.
     """

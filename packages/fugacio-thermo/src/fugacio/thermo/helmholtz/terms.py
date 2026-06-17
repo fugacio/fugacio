@@ -6,8 +6,8 @@ Helmholtz energy
     alpha(delta, tau) = alpha0(delta, tau) + alphar(delta, tau),
 
 with ``delta = rho/rho_reducing`` and ``tau = t_reducing/T``. Every
-thermodynamic property -- pressure, heat capacities, speed of sound, fugacity,
-Joule-Thomson coefficient -- is an algebraic combination of partial
+thermodynamic property (pressure, heat capacities, speed of sound, fugacity,
+Joule-Thomson coefficient) is an algebraic combination of partial
 derivatives of ``alpha`` (`fugacio.thermo.helmholtz.props`). Reference
 implementations hand-derive and hand-code those derivatives term family by
 term family; Fugacio instead evaluates the scalar ``alpha`` and lets
@@ -24,7 +24,7 @@ Term families (the union needed by the vendored fluids):
   and the GaoB terms of the 2023 ammonia EOS.
 
 The non-analytic terms are genuinely singular *at* the critical point (by
-design -- they reproduce critical anomalies), so their derivatives are guarded
+design, they reproduce critical anomalies), so their derivatives are guarded
 with the "double where" trick to return finite values on the critical
 isochore/isotherm instead of NaN.
 """
@@ -131,7 +131,7 @@ class AlphaDerivatives:
     Subscripts denote reduced-variable partials: ``ar_d`` is
     ``d(alphar)/d(delta)`` at constant ``tau``, ``a0_tt`` is
     ``d^2(alpha0)/d(tau)^2``, and so on. All are produced by `jax.grad`
-    of the scalar term sums -- no hand-derived derivative code exists in this
+    of the scalar term sums: no hand-derived derivative code exists in this
     package.
     """
 
@@ -156,7 +156,7 @@ jax.tree_util.register_dataclass(
 def first_derivatives(
     fluid: HelmholtzFluid, rho: ArrayLike, t: ArrayLike
 ) -> tuple[Array, Array, Array, Array, Array]:
-    """``(a0, a0_t, ar, ar_d, ar_t)`` -- the bundle first-law properties need.
+    """``(a0, a0_t, ar, ar_d, ar_t)``, the bundle first-law properties need.
 
     One reverse-mode pass over each scalar term sum produces both reduced
     partials at once, which keeps the traced graph small enough to embed in

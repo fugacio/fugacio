@@ -17,7 +17,7 @@ The catch is the ever-present *trivial* solution ``x^I = x^II = z`` (``K = 1``);
 avoid it by seeding the iteration from the unstable trial phase found by the
 tangent-plane test in `fugacio.thermo.stability`. The converged split is
 differentiable in temperature, feed, and the model parameters via implicit
-differentiation of the fixed point -- so tie-lines move smoothly under a gradient,
+differentiation of the fixed point, so tie-lines move smoothly under a gradient,
 which matters for solvent-selection optimisation and parameter fitting to
 mutual-solubility data.
 
@@ -129,7 +129,7 @@ def binary_binodal(
 ) -> tuple[Array, Array]:
     """Mutual-solubility (binodal) compositions of a binary at temperature ``t``.
 
-    Returns ``(x1_phase_I, x1_phase_II)`` -- the mole fraction of component 1 in
+    Returns ``(x1_phase_I, x1_phase_II)``, the mole fraction of component 1 in
     each conjugate liquid (the tie-line ends). Any ``feed`` inside the gap gives the
     same pair; the default 50/50 feed sits squarely in a symmetric gap.
     """
@@ -149,7 +149,7 @@ def tie_line(
     """One ternary tie-line through feed ``z``: ``(x_raffinate, x_extract, psi)``.
 
     A thin wrapper over `flash_lle` returning the two conjugate-phase
-    compositions and the phase fraction -- the unit of a ternary LLE diagram.
+    compositions and the phase fraction, the unit of a ternary LLE diagram.
     """
     res = flash_lle(model, t, z, tol=tol, max_iter=max_iter)
     return res.x_i, res.x_ii, res.psi
@@ -166,7 +166,7 @@ def binodal_curve(
     """Binary binodal branches over a temperature range.
 
     Maps `binary_binodal` across ``temperatures`` and returns
-    ``(x1_phase_I, x1_phase_II)`` arrays aligned with the input -- the two branches
+    ``(x1_phase_I, x1_phase_II)`` arrays aligned with the input, the two branches
     of the solubility envelope that meet at the upper (or lower) critical solution
     temperature.
     """

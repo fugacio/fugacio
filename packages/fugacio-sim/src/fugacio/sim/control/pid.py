@@ -16,7 +16,7 @@ differentiable ODE. Two things make it production-grade rather than a toy:
 The `PID` parameters are a registered JAX pytree, so the *gains themselves*
 are differentiable: you can take a gradient of a closed-loop performance index
 (IAE, overshoot, settling time) with respect to ``kc``, ``tau_i``, ``tau_d`` and
-let an optimizer tune them -- see `fugacio.sim.dynamics.tune_pid`.
+let an optimizer tune them (see `fugacio.sim.dynamics.tune_pid`).
 
 Sign convention: the controller computes the error ``e = setpoint - measurement``
 and a *positive* ``kc`` increases the output when the measurement is below
@@ -59,7 +59,7 @@ class PID:
         tau_i: Integral (reset) time, s. Use ``inf`` to disable integral action.
         tau_d: Derivative (rate) time, s. ``0`` disables derivative action.
         beta: Setpoint weight on the proportional term (``0..1``; ``1`` is classic).
-        gamma: Setpoint weight on the derivative term (usually ``0`` -- derivative
+        gamma: Setpoint weight on the derivative term (usually ``0``, derivative
             on measurement only, to avoid derivative kick).
         u_bias: Output bias / nominal output at zero error (manual reset).
         u_min: Lower output limit (saturation).

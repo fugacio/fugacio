@@ -8,7 +8,7 @@ The functional kernels in this package (``nrtl_ln_gamma``, ``uniquac_ln_gamma``,
 * expose a single uniform method ``model.ln_gamma(x, T)`` so the
   gamma-phi equilibrium engine, the liquid-liquid solver, and the parameter
   regressor can treat every model interchangeably; and
-* are registered as JAX pytrees whose *parameters are differentiable leaves* --
+* are registered as JAX pytrees whose *parameters are differentiable leaves*,
   so fitting a model to data is a plain gradient problem and a model can be
   threaded through ``jax.grad``/``jax.jit`` as part of a parameter pytree.
 
@@ -66,7 +66,7 @@ def excess_gibbs(model: ActivityModel, x: Array, t: ArrayLike) -> Array:
 
     This identity holds for *every* activity model (the log activity coefficients
     are the partial molar excess Gibbs energies), so it gives a single, exact,
-    model-independent ``g^E`` -- handy for plotting and for stability tests.
+    model-independent ``g^E``, handy for plotting and for stability tests.
     """
     x = jnp.asarray(x)
     return jnp.sum(x * model.ln_gamma(x, t))

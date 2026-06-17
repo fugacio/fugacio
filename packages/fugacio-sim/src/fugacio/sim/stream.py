@@ -1,8 +1,8 @@
 """Material streams: the data passed between flowsheet unit operations.
 
 A `Stream` carries per-component molar flows together with temperature and
-pressure. It is registered as a JAX pytree -- the *flows*, ``T`` and ``P`` are
-differentiable leaves while the component *names* are static metadata -- so an
+pressure. It is registered as a JAX pytree (the *flows*, ``T`` and ``P`` are
+differentiable leaves while the component *names* are static metadata) so an
 entire flowsheet built from streams remains end-to-end differentiable. You can
 take a gradient of any downstream quantity with respect to a feed flow,
 temperature, or pressure.

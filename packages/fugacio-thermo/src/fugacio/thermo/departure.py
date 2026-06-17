@@ -108,7 +108,7 @@ def residual_properties(
 
     Computing them together shares the compressibility root, the departure
     log-term, and ``da/dT``, which the individual accessors below simply select
-    from. The Gibbs residual equals ``R T sum_i x_i ln(phi_i)`` -- the
+    from. The Gibbs residual equals ``R T sum_i x_i ln(phi_i)``, the
     partial-molar identity tying this module to
     `fugacio.thermo.eos.ln_phi_mixture`.
     """

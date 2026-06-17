@@ -1,18 +1,18 @@
-"""Riccati equations, LQR, and the steady-state Kalman gain -- differentiably.
+"""Riccati equations, LQR, and the steady-state Kalman gain: differentiably.
 
 The algebraic Riccati equation is the algebraic heart of optimal control and
 optimal estimation: the infinite-horizon LQR feedback law, the terminal cost that
 makes a finite-horizon MPC stabilizing, and the steady-state Kalman filter all
 reduce to its stabilizing solution. Fugacio needs those objects *inside* a
-differentiable stack -- an LQR terminal weight that depends on a model parameter,
-a Kalman gain whose covariances are being tuned -- so the solvers here are written
+differentiable stack (an LQR terminal weight that depends on a model parameter,
+a Kalman gain whose covariances are being tuned), so the solvers here are written
 against `jax.numpy` and are differentiable end to end.
 
 The trick that keeps them differentiable is the same one
 `fugacio.sim.dynamics.odeint` uses for implicit integrator steps: a *fixed*
 iteration count. Both Riccati solvers converge **quadratically**, so a fixed,
-generous number of doubling / Newton steps reaches machine precision and -- being
-a plain `jax.lax.scan` of dense linear algebra -- is reverse-mode
+generous number of doubling / Newton steps reaches machine precision and, being
+a plain `jax.lax.scan` of dense linear algebra, is reverse-mode
 differentiable without any custom rule.
 
 * **Discrete ARE** (`dare`) is solved by the structure-preserving doubling
@@ -24,7 +24,7 @@ differentiable without any custom rule.
 
 From the stabilizing solution the gains are one linear solve away
 (`dlqr`, `lqr`), and the steady-state Kalman gain
-(`kalman_gain`) is the dual discrete problem -- estimation is control run
+(`kalman_gain`) is the dual discrete problem: estimation is control run
 backwards.
 """
 

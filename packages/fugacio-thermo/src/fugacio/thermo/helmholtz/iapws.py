@@ -2,15 +2,15 @@
 
 Implements the two current IAPWS formulations for ordinary water:
 
-* viscosity -- IAPWS R12-08 (Huber et al., J. Phys. Chem. Ref. Data 38, 2009);
-* thermal conductivity -- IAPWS R15-11 (Huber et al., J. Phys. Chem. Ref.
+* viscosity: IAPWS R12-08 (Huber et al., J. Phys. Chem. Ref. Data 38, 2009);
+* thermal conductivity: IAPWS R15-11 (Huber et al., J. Phys. Chem. Ref.
   Data 41, 2012).
 
 Both are products of a dilute-gas term, a finite-density residual, and a
 *critical enhancement*. The enhancement is where this implementation differs
 from every transcription in open property libraries: it needs the isothermal
 compressibility ``(d rho/d P)_T`` evaluated at the state *and* at the
-reference temperature ``1.5 Tc`` -- reference codes either require the caller
+reference temperature ``1.5 Tc``. Reference codes either require the caller
 to supply those derivatives or fall back to a tabulated fit. Here they are
 exact autodiff derivatives of the IAPWS-95 equation of state
 (`fugacio.thermo.helmholtz`), so the *scientific* (not just industrial)
@@ -180,7 +180,7 @@ def _water_thermal_conductivity(fluid: HelmholtzFluid, t: Array, rho: Array) -> 
     k1 = jnp.exp(rho_bar * (t_pows @ _K1_L @ rho_pows))
 
     # Critical enhancement (R15-11 eq. 17-22): needs cp, cv from IAPWS-95 and
-    # the full R12-08 viscosity (enhancement included -- the convention of the
+    # the full R12-08 viscosity (enhancement included, the convention of the
     # published check values), all on the same autodiff graph.
     xi = _correlation_length(fluid, rho, t)
     y = _K_QD * xi

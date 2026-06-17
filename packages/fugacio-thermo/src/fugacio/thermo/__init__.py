@@ -5,46 +5,46 @@ through the rest of the Fugacio stack (``fugacio.sim``, ``fugacio.copilot``).
 
 The public surface is grouped as:
 
-* **data** -- `Component`, the curated `DATABASE`, helpers, and a
+* **data**: `Component`, the curated `DATABASE`, helpers, and a
   NIST ThermoML archive reader (`read_thermoml`, `load_sample`);
-* **ideal gas** -- `cp_ig`, `enthalpy_ig`, `entropy_ig`;
-* **equations of state** -- `PR`, `SRK`, `RK`, `VDW`
+* **ideal gas**: `cp_ig`, `enthalpy_ig`, `entropy_ig`;
+* **equations of state**: `PR`, `SRK`, `RK`, `VDW`
   plus fugacity-coefficient and volume routines;
-* **activity models** -- Margules, van Laar, Wilson, NRTL, UNIQUAC, and
+* **activity models**: Margules, van Laar, Wilson, NRTL, UNIQUAC, and
   regular-solution / Flory-Huggins, both as functions and as differentiable
   `ActivityModel` objects;
-* **group contribution** -- `unifac_activity`, `joback_estimate`;
-* **reference state** -- `liquid_reference_fugacity`,
+* **group contribution**: `unifac_activity`, `joback_estimate`;
+* **reference state**: `liquid_reference_fugacity`,
   `poynting_factor`, `henry_constant`;
-* **reference fluids** -- `fugacio.thermo.helmholtz`, multiparameter
+* **reference fluids**: `fugacio.thermo.helmholtz`, multiparameter
   Helmholtz EOS of the REFPROP/CoolProp class (IAPWS-95 water/steam,
   Span-Wagner CO2, ...) with differentiable saturation lines, steam-table
   state functions (`state_tp`, `state_ph`, ...), and the IAPWS
   transport formulations for water;
-* **property correlations** -- DIPPR-form kernels and corresponding-states
+* **property correlations**: DIPPR-form kernels and corresponding-states
   estimators for enthalpy of vaporization and liquid heat capacity
   (`heat_of_vaporization`, `liquid_heat_capacity`), liquid/vapour
   volumetric properties (`liquid_density`, `mixture_liquid_volume`,
   Peneloux translation), and transport properties
   (`gas_viscosities`, `liquid_thermal_conductivities`,
   `surface_tensions`, `gas_diffusivity`, ...), pure and mixture;
-* **phase equilibrium** -- equation-of-state (`flash_pt`,
+* **phase equilibrium**: equation-of-state (`flash_pt`,
   `bubble_pressure_eos`, ...) *and* gamma-phi (`flash_pt_gamma`,
   `bubble_pressure_gamma`, ...) routes, plus liquid-liquid
   (`flash_lle`) and vapour-liquid-liquid (`flash_vlle`,
   `heterogeneous_azeotrope`) equilibria and tangent-plane stability;
-* **models** -- the unified `EOSModel` / `GammaPhiModel` interface;
-* **regression** -- differentiable parameter estimation
+* **models**: the unified `EOSModel` / `GammaPhiModel` interface;
+* **regression**: differentiable parameter estimation
   (`levenberg_marquardt`, `fit_nrtl_binary`, ...),
   UNIFAC-to-binary prediction (`predict_nrtl_from_unifac`), and the
   ThermoML batch driver / parameter bank (`fit_vle_dataset`,
   `ParameterBank`);
-* **reactions** -- stoichiometry and standard-state thermochemistry
+* **reactions**: stoichiometry and standard-state thermochemistry
   (`Reaction`, `reaction_properties`, `equilibrium_constant`),
   chemical-reaction equilibrium
   (`fugacio.thermo.reaction_equilibrium.equilibrium`), and differentiable
   rate laws (`PowerLaw`, `MassActionReversible`, `LHHW`);
-* **validation** -- consistency laws and finite-difference gradient checks, plus
+* **validation**: consistency laws and finite-difference gradient checks, plus
   `fugacio.thermo.oracles`, optional differential tests against the
   ``thermo`` / ``chemicals`` / Clapeyron.jl (activity) and Cantera (reaction)
   reference libraries.

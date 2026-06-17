@@ -1,7 +1,7 @@
 """Closed-loop simulation and gradient-based controller tuning.
 
 A controller is only as good as the loop it closes. This module runs a *discrete*
-closed loop -- plant, measurement, controller, repeat -- as a single
+closed loop (plant, measurement, controller, repeat) as a single
 `jax.lax.scan`, so the whole simulation is one differentiable, jit-able
 function. Two payoffs follow directly:
 
@@ -272,7 +272,7 @@ def tune_mpc(
         params0: Initial parameter pytree (e.g. ``{"q": ..., "r": ...}``; tune the
             *weights*, keeping integer horizons and constraint bounds static).
         performance: Scalar score ``ClosedLoop -> ()`` to minimize.
-        bounds: Optional ``(lower, upper)`` box on ``params`` (recommended -- keeps
+        bounds: Optional ``(lower, upper)`` box on ``params`` (recommended: keeps
             weights positive).
         method: Unconstrained optimizer forwarded to `fugacio.sim.minimize`.
         max_iter: Maximum optimizer iterations forwarded to `fugacio.sim.minimize`.

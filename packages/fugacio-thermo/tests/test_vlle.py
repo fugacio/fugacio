@@ -14,7 +14,7 @@ BW = comp.component_arrays(["benzene", "water"])
 TERN = comp.component_arrays(["water", "benzene", "ethanol"])
 
 # A synthetic but realistic ternary: water/benzene strongly immiscible, ethanol
-# the partially-distributing entrainer -- a genuine V-L-L former near 340 K, 1 atm.
+# the partially-distributing entrainer, a genuine V-L-L former near 340 K, 1 atm.
 _TERN_B = jnp.array([[0.0, 1500.0, 350.0], [1500.0, 0.0, 500.0], [200.0, 130.0, 0.0]])
 _TERN_ALPHA = jnp.array([[0.0, 0.2, 0.3], [0.2, 0.0, 0.3], [0.3, 0.3, 0.0]])
 

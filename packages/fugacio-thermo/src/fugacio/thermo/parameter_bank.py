@@ -4,7 +4,7 @@ This is the bridge between the ThermoML reader (`fugacio.thermo.thermoml`)
 and the differentiable fitters (`fugacio.thermo.regression`): point it at
 parsed documents (or the bundled samples) and it fits a binary activity model to
 every isothermal P-x VLE table it can understand, recording the fitted
-parameters together with their provenance -- source dataset, temperature range,
+parameters together with their provenance: source dataset, temperature range,
 point count, and the scaled root-mean-square pressure residual. The collected
 `FittedBinary` records form a `ParameterBank` that hands back
 ready-to-use `NRTL` models with the

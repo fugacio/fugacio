@@ -4,14 +4,14 @@ Because the integrator is end-to-end differentiable, the three classic
 "optimization over a dynamic model" problems collapse to gradients through a
 simulation composed with the existing optimizers in `fugacio.sim.optimize`:
 
-* `optimal_control` -- choose a (piecewise-constant) input trajectory to
+* `optimal_control`: choose a (piecewise-constant) input trajectory to
   minimize a running-plus-terminal cost, e.g. minimum-energy or minimum-time-like
   transitions; the control is the decision variable and the simulation supplies
   exact gradients of the cost with respect to it;
-* `estimate_dynamics` -- fit model parameters (and optionally the initial
+* `estimate_dynamics`: fit model parameters (and optionally the initial
   state) to time-series measurements by Levenberg-Marquardt least squares through
   the integrator (dynamic data reconciliation / parameter estimation);
-* `tune_pid` -- descend a closed-loop performance index (IAE / ISE / ITAE)
+* `tune_pid`: descend a closed-loop performance index (IAE / ISE / ITAE)
   directly on the controller gains, exploiting the fact that the gains are a
   differentiable pytree and the whole closed loop is differentiable.
 
@@ -217,7 +217,7 @@ def tune_pid(
     ``response(gains)`` must build the closed loop from the gains pytree, simulate
     it, and return the controlled-variable trajectory sampled on ``ts``. This
     function then minimizes the chosen error integral (``"iae"``, ``"ise"`` or
-    ``"itae"``) against ``setpoint`` over the gains -- gradients flow through the
+    ``"itae"``) against ``setpoint`` over the gains: gradients flow through the
     whole simulated loop, so the tune is exact first-order, not a grid search.
 
     Args:
@@ -226,7 +226,7 @@ def tune_pid(
         setpoint: Target value for the controlled variable.
         ts: Time grid matching ``response``'s output.
         objective: Error integral to minimize.
-        bounds: Optional ``(lower, upper)`` box on the gains (recommended -- keeps
+        bounds: Optional ``(lower, upper)`` box on the gains (recommended: keeps
             gains positive).
         method: Unconstrained optimizer used over the gains (e.g. ``"bfgs"``).
         max_iter: Maximum number of optimizer iterations.

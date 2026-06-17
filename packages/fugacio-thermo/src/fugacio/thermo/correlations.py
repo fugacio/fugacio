@@ -2,13 +2,13 @@
 
 Two layers live here:
 
-* **Correlation kernels** -- the classic DIPPR-numbered functional forms
+* **Correlation kernels**: the classic DIPPR-numbered functional forms
   (`dippr100`, `dippr101`, `dippr102`, `dippr105`,
   `dippr106`) plus the REFPROP-style `mulero_cachadina` surface-tension
   expansion. These are plain `jax.numpy` functions of temperature and their
   coefficients, so they are differentiable in both (handy when regressing
   coefficients to data).
-* **Corresponding-states estimators and dispatchers** -- enthalpy of vaporization
+* **Corresponding-states estimators and dispatchers**: enthalpy of vaporization
   (curated DIPPR-106 table, else `pitzer_hvap`; rescaled between
   temperatures by `watson_hvap`) and liquid heat capacity
   (`rowlinson_bondi_cp` on top of the ideal-gas ``Cp``). The name-based
@@ -148,7 +148,7 @@ def mulero_cachadina(
 def pitzer_hvap(t: ArrayLike, tc: ArrayLike, omega: ArrayLike) -> Array:
     """Pitzer acentric-factor enthalpy of vaporization (J/mol).
 
-    ``Hvap / (R*Tc) = 7.08*(1-Tr)^0.354 + 10.95*omega*(1-Tr)^0.456`` -- the
+    ``Hvap / (R*Tc) = 7.08*(1-Tr)^0.354 + 10.95*omega*(1-Tr)^0.456``, the
     three-parameter corresponding-states correlation recommended by Poling et al.
     (5th ed., eq. 7-9.4), good to a few percent for normal fluids over
     ``0.6 < Tr < 1``. Clipped to zero above the critical temperature.

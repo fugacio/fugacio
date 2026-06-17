@@ -9,15 +9,15 @@ flowrate** ``CP = m * cp`` (W/K); the duty is then ``CP * |Ts - Tt|``.
 
 The stream is a registered JAX pytree (temperatures, ``CP`` and the film
 coefficient are differentiable leaves; the name is static metadata), so every
-pinch target downstream -- minimum utilities, the pinch temperature, the area
-and capital targets -- is differentiable with respect to the stream data. That is
+pinch target downstream (minimum utilities, the pinch temperature, the area
+and capital targets) is differentiable with respect to the stream data. That is
 what lets `fugacio.sim.integration.optimal_dt_min` optimise heat recovery
 by gradients.
 
 `heat_stream` builds a `HeatStream` straight from a
 `Stream` and a target temperature, taking the duty
 (and hence ``CP``) from the two-phase-aware stream enthalpy in
-`fugacio.sim.properties` -- so the heat-integration model inherits the real
+`fugacio.sim.properties`, so the heat-integration model inherits the real
 thermodynamics of the flowsheet.
 """
 
@@ -129,7 +129,7 @@ def heat_stream(
     The duty is the *actual* enthalpy change of the stream between its temperature
     and ``t_target`` (computed with the two-phase-aware
     `fugacio.sim.properties.enthalpy_flow`), and the constant ``CP`` is that
-    duty divided by the temperature span -- so the heat-integration stream carries
+    duty divided by the temperature span, so the heat-integration stream carries
     the flowsheet's real thermodynamics. Differentiable in the stream state.
 
     Args:

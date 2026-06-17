@@ -3,18 +3,18 @@
 This module turns the cubic equation of state (`fugacio.thermo.eos`) into
 the equilibrium calculations a process simulator actually calls:
 
-* `wilson_k` -- the classic K-value initial guess;
-* `rachford_rice` -- the material-balance root for the vapour fraction;
-* `flash_pt` -- an isothermal-isobaric two-phase flash;
-* `psat_eos` -- pure-component saturation pressure by equifugacity;
-* `bubble_pressure_eos` / `dew_pressure_eos` -- phase envelopes;
-* `stability_analysis` -- Michelsen's tangent-plane-distance test.
+* `wilson_k`: the classic K-value initial guess;
+* `rachford_rice`: the material-balance root for the vapour fraction;
+* `flash_pt`: an isothermal-isobaric two-phase flash;
+* `psat_eos`: pure-component saturation pressure by equifugacity;
+* `bubble_pressure_eos` / `dew_pressure_eos`: phase envelopes;
+* `stability_analysis`: Michelsen's tangent-plane-distance test.
 
 Every iterative result is differentiable end-to-end: the scalar solves carry
 hand-written implicit-function-theorem rules (`jax.custom_jvp`) and the
 flash/saturation loops reuse `fugacio.thermo.implicit.fixed_point`. You can
 therefore take a gradient of *any* equilibrium output with respect to ``T``,
-``P``, composition, or model parameters -- the property that makes Fugacio a
+``P``, composition, or model parameters, the property that makes Fugacio a
 differentiable core rather than just another flash package.
 """
 
@@ -141,7 +141,7 @@ def flash_pt(
 
     Solves the equal-fugacity conditions ``phi_i^L x_i = phi_i^V y_i`` together
     with the Rachford-Rice material balance, starting from Wilson K-values. The
-    converged solution -- and therefore ``beta``, ``x``, ``y`` -- is
+    converged solution (and therefore ``beta``, ``x``, ``y``) is
     differentiable with respect to ``(T, P, z, ...)`` via implicit
     differentiation of the fixed point.
     """

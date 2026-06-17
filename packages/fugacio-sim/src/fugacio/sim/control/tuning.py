@@ -6,8 +6,8 @@ that maps ``(K, tau, L)`` to PID gains. This module provides both halves:
 
 * `fit_fopdt` identifies ``(K, tau, L)`` from a measured step response by
   differentiable least squares (reusing `fugacio.sim.least_squares`); and
-* the tuning rules -- `ziegler_nichols`, `cohen_coon`,
-  `imc_tuning` (lambda tuning), and `amigo` -- turn an FOPDT model
+* the tuning rules, `ziegler_nichols`, `cohen_coon`,
+  `imc_tuning` (lambda tuning), and `amigo`, turn an FOPDT model
   into a ready `PID`.
 
 For a closed-loop, performance-index-optimal tune that exploits the fully
@@ -95,7 +95,7 @@ def ziegler_nichols(model: FOPDTModel, *, controller: str = "PID", **kwargs: Arr
     """Ziegler-Nichols open-loop (reaction-curve) tuning from an FOPDT model.
 
     ``controller`` is ``"P"``, ``"PI"`` or ``"PID"``. Aggressive (quarter-amplitude
-    decay) tuning -- a classic baseline, often detuned in practice.
+    decay) tuning, a classic baseline, often detuned in practice.
     """
     k, tau, lag = jnp.asarray(model.gain), jnp.asarray(model.tau), _l(model)
     r = tau / (k * lag)

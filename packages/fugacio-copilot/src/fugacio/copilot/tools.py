@@ -395,7 +395,7 @@ def _safeguarded_newton(
     """Find an increasing scalar's root in ``[lo, hi]`` by gradient (Newton) + bisection.
 
     Uses ``jax.value_and_grad`` for the Newton step and falls back to bisection when
-    the step leaves the bracket or the slope is unusable -- robust and still
+    the step leaves the bracket or the slope is unusable: robust and still
     gradient-driven where the function is well behaved.
     """
     lo, hi = float(lo), float(hi)
@@ -1256,8 +1256,8 @@ def default_registry() -> dict[str, ToolSpec]:
             description=(
                 "Physical and transport properties of a mixture at T (and P): liquid "
                 "and vapour density, viscosity, thermal conductivity, surface tension, "
-                "heat of vaporization, and liquid heat capacity -- the inputs for "
-                "equipment sizing and heat-transfer calculations."
+                "heat of vaporization, and liquid heat capacity (the inputs for "
+                "equipment sizing and heat-transfer calculations)."
             ),
             parameters={
                 "type": "object",
@@ -1784,7 +1784,7 @@ def default_registry() -> dict[str, ToolSpec]:
             name="reactive_flash",
             description=(
                 "Flash with simultaneous chemical and vapour-liquid equilibrium for a "
-                "non-ideal (gamma-phi) liquid -- e.g. esterification. Returns the V/L "
+                "non-ideal (gamma-phi) liquid, e.g. esterification. Returns the V/L "
                 "split, product compositions and the reaction extent."
             ),
             parameters={

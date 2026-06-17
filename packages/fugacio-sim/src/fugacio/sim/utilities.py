@@ -4,9 +4,9 @@ The economics layer prices utilities per gigajoule; this module supplies the
 *physical* side: how many kg/s of steam a reboiler actually condenses, what a
 cooling-water circuit's return flow is, how much shaft power a backpressure
 turbine extracts from a header. All of it runs on the IAPWS-95 steam tables
-from `fugacio.thermo.helmholtz` -- real latent heats at the header
+from `fugacio.thermo.helmholtz`: real latent heats at the header
 pressure (not a constant 2257 kJ/kg), real liquid heat capacities, real
-isentropic enthalpy drops -- and stays differentiable end to end, so a
+isentropic enthalpy drops. It stays differentiable end to end, so a
 total-annual-cost objective can take exact gradients through the utility
 balances with respect to column duties, header pressures, or approach
 temperatures.
@@ -54,7 +54,7 @@ class SteamHeatingResult:
     Attributes:
         mass_flow: Steam consumed (kg/s).
         molar_flow: Steam consumed (mol/s).
-        t_steam: Steam supply temperature (K) -- saturation plus any superheat.
+        t_steam: Steam supply temperature (K), saturation plus any superheat.
         t_condensate: Condensate return temperature (K).
         p: Header pressure (Pa).
         duty: Heat delivered to the process (W, positive).
@@ -253,7 +253,7 @@ def steam_turbine(
     `fugacio.thermo.helmholtz.state_ps`); the real outlet enthalpy is
     ``h_in - eta * (h_in - h_s)``. Gradients flow through both state solves,
     so turbine power can be differentiated with respect to throttle pressure,
-    inlet superheat, or backpressure -- the classic Rankine design knobs.
+    inlet superheat, or backpressure: the classic Rankine design knobs.
 
     Args:
         mass_flow: Steam flow (kg/s).
@@ -301,7 +301,7 @@ def steam_quality_after_letdown(
 
     Saturated (or slightly superheated) steam throttled across a letdown valve
     flashes to the lower header pressure at constant enthalpy; the result is
-    the outlet quality (> 1 is impossible -- ``nan`` marks a superheated,
+    the outlet quality (> 1 is impossible; ``nan`` marks a superheated,
     single-phase outlet, matching `fugacio.thermo.helmholtz.FluidState`).
     """
     water = reference_fluid("water")

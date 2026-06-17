@@ -8,9 +8,9 @@ from fugacio.thermo.constants import ATM, R
 
 # Species for which "Antoine reproduces 1 atm at the normal boiling point" does not
 # physically hold, so they are excluded from that consistency check:
-#   * helium    -- a quantum cryogen (Tb = 4.2 K); the Antoine fit cannot be trusted
+#   * helium:      a quantum cryogen (Tb = 4.2 K); the Antoine fit cannot be trusted
 #                  in that regime.
-#   * acetylene -- its triple point (~1.27 atm) lies above 1 atm, so it sublimes and
+#   * acetylene:   its triple point (~1.27 atm) lies above 1 atm, so it sublimes and
 #                  has no normal (1 atm) boiling point; the tabulated "Tb" is a
 #                  sublimation temperature.
 _ANTOINE_TB_EXCLUDE = {"helium", "acetylene"}
@@ -52,7 +52,7 @@ def test_ideal_gas_cp_is_physical(name: str) -> None:
     value = R * (cp.a + cp.b * 298.15 + cp.c * 298.15**2 + cp.d / 298.15**2 + cp.e * 298.15**3)
     # Cp must not dip below the monatomic ideal-gas floor (5/2 R; the fitted
     # polynomials for the noble gases sit exactly on it, so allow float wiggle)
-    # and must stay sane -- the database tops out near n-eicosane's ~466 J/mol/K.
+    # and must stay sane: the database tops out near n-eicosane's ~466 J/mol/K.
     assert 2.5 * R * (1.0 - 1e-6) <= value < 600.0
 
 

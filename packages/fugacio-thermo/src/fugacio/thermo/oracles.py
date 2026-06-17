@@ -2,7 +2,7 @@
 
 Fugacio validates its own results two ways: against first-principles identities
 (see, e.g., `fugacio.thermo.departure`) and against *independent reference
-implementations*. This module is the second kind -- thin wrappers over the
+implementations*. This module is the second kind: thin wrappers over the
 third-party ``thermo`` / ``chemicals`` packages (and CoolProp where installed)
 that return reference activity coefficients, bubble pressures, and property
 values for cross-checking.
@@ -386,7 +386,7 @@ def chemicals_winterfeld_scriven_davis(
 # Fugacio's ``Cp/R = a + b T + c T^2 + d/T^2 + e T^3`` maps to
 # ``a0=d, a2=a, a3=b, a4=c, a5=e`` (``a1=a6=0``). The integration constants
 # ``b0, b1`` are fixed so the species enthalpy at ``T_REF`` equals its enthalpy of
-# formation and its entropy equals the formation entropy ``(Hf - Gf)/T_REF`` --
+# formation and its entropy equals the formation entropy ``(Hf - Gf)/T_REF``:
 # elements cancel in any balanced reaction, so the reaction sums reproduce
 # Fugacio's ``DH_rxn``/``DS_rxn``/``K(T)`` exactly. The phase reference pressure
 # is pinned to `P_REF` (1 bar) so Cantera's

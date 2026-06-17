@@ -1,7 +1,7 @@
 """Differential tests: the problem table algorithm vs an independent utility LP.
 
 Opt-in *oracle* tests (marker: ``oracle``) that pit Fugacio's analytic problem
-table cascade against a completely different formulation of the same target -- the
+table cascade against a completely different formulation of the same target: the
 Papoulias-Grossmann **transshipment linear program** solved by SciPy's
 ``linprog``. The LP minimises the hot utility subject to a non-negative heat
 cascade through the temperature intervals; its optimum is, by construction, the

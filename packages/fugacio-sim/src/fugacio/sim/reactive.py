@@ -1,21 +1,21 @@
 """Reactive separations: simultaneous chemical reaction and phase equilibrium.
 
-Real separation equipment often runs *with* a reaction happening inside it -- the
+Real separation equipment often runs *with* a reaction happening inside it: the
 whole point of reactive distillation is to push a reaction past its equilibrium
 limit by continuously pulling products into a different phase. This module adds
 two such units on top of the gamma-phi property system:
 
-* `reactive_flash` -- an isothermal flash in which the liquid simultaneously
+* `reactive_flash`: an isothermal flash in which the liquid simultaneously
   reaches **chemical** equilibrium (one or more reactions) and **phase**
   equilibrium (vapour-liquid). The extents of reaction and the V/L split are
   solved together, reusing the validated gamma-phi flash and the ideal-gas
   reaction thermochemistry. Works for any net mole change.
 
-* `reactive_distillation` -- a rigorous multistage column (Wang-Henke
+* `reactive_distillation`: a rigorous multistage column (Wang-Henke
   bubble-point, constant molar overflow) with a **rate-based** reaction source on
   each reactive stage: ``S_{j,i} = H_j * sum_r nu_{r,i} * rate_r(T_j, a_j)`` with
   the liquid-phase activities ``a_i = x_i gamma_i`` and a per-stage molar holdup
-  ``H_j``. For an equimolar reaction (``sum_i nu_i = 0`` -- the dominant reactive
+  ``H_j``. For an equimolar reaction (``sum_i nu_i = 0``, the dominant reactive
   distillation class: esterification, transesterification, metathesis,
   isomerisation) the source conserves total moles, so constant molar overflow is
   exact and the model is rigorous.
@@ -130,7 +130,7 @@ def reactive_flash(
     Solves for the reaction extents that satisfy chemical equilibrium *while* the
     mixture is split by a gamma-phi vapour-liquid flash at ``(T, P)``. The reaction
     equilibrium is imposed on the liquid activities (equivalently the equal vapour
-    fugacities), so it is consistent across the whole vapour-fraction range -- it
+    fugacities), so it is consistent across the whole vapour-fraction range; it
     even pins the bubble/dew composition when the flash is single-phase.
 
     Args:
@@ -139,7 +139,7 @@ def reactive_flash(
         t: Temperature (K).
         p: Pressure (Pa).
         model: A `GammaPhiModel` (activity liquid + EOS/ideal
-            vapour) -- the right tool for the non-ideal mixtures reactive flashes
+            vapour), the right tool for the non-ideal mixtures reactive flashes
             target.
         tol: Convergence tolerance on the reaction/flash residual.
         max_iter: Maximum number of solver iterations.

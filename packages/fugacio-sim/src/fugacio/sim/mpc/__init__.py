@@ -6,23 +6,23 @@ so a closed-loop performance index has exact gradients with respect to the
 *controller's own tuning*, and the controllers compose with the dynamic flowsheet
 they regulate. The subpackage is layered bottom-up:
 
-* `riccati` -- differentiable Riccati solvers (DARE/CARE),
+* `riccati`: differentiable Riccati solvers (DARE/CARE),
   the infinite-horizon LQR gain (`dlqr`, `lqr`) and the steady-state
   Kalman gain (`kalman_gain`), via fixed-iteration structured-doubling /
   matrix-sign recursions that backprop cleanly.
-* `qp` -- a small dense convex QP solver
+* `qp`: a small dense convex QP solver
   (`solve_qp`) in the OSQP/ADMM style with an active-set polish and an
   implicit-function-theorem ``custom_vjp``, the differentiable core of linear MPC.
-* `linear` -- condensed-QP linear and offset-free MPC
+* `linear`: condensed-QP linear and offset-free MPC
   (`linear_mpc`) with an LQR terminal cost, a disturbance-observer for
   zero steady-state offset, and hard input / soft output constraints.
-* `estimation` -- the Kalman filter, the extended and
+* `estimation`: the Kalman filter, the extended and
   unscented Kalman filters, and optimization-based moving-horizon estimation
   (`moving_horizon_estimate`), all differentiable.
-* `nonlinear` -- nonlinear and economic MPC
+* `nonlinear`: nonlinear and economic MPC
   (`nonlinear_mpc`) by direct single-shooting over the true nonlinear model,
   optimized with `fugacio.sim.argmin` (differentiating through the optimum).
-* `simulate` -- a one-``scan`` closed-loop harness
+* `simulate`: a one-``scan`` closed-loop harness
   (`simulate_closed_loop`) and gradient-based weight tuning
   (`tune_mpc`).
 """

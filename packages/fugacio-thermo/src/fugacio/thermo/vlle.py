@@ -1,7 +1,7 @@
 """Three-phase vapour-liquid-liquid equilibrium (VLLE).
 
-When a vapour coexists with two partially miscible liquids -- the heterogeneous
-azeotropes that make water/organic distillation and decantation work -- neither a
+When a vapour coexists with two partially miscible liquids (the heterogeneous
+azeotropes that make water/organic distillation and decantation work), neither a
 two-phase VLE flash nor an LLE flash alone suffices. VLLE couples them: a vapour
 ``V`` and two liquids ``I`` and ``II`` all at equal temperature, pressure, and
 component fugacity.
@@ -233,7 +233,7 @@ def heterogeneous_azeotrope(
     activities (``a_i = x_i gamma_i`` matches across the LLE tie-line), so they
     necessarily boil to the *same* vapour ``y_i = a_i Psat_i / P``. The
     heterogeneous azeotrope is the temperature at which that shared vapour's total
-    pressure ``sum_i a_i Psat_i`` reaches the system pressure ``P`` -- a single,
+    pressure ``sum_i a_i Psat_i`` reaches the system pressure ``P``, a single,
     well-posed scalar root, solved here with the bracketed solver and
     differentiable in ``P`` and the model parameters.
 

@@ -3,7 +3,7 @@
 These are data-free oracles: exact thermodynamic identities that must hold
 between *independently computed* quantities. Because every property and every
 solver in :mod:`fugacio.thermo.helmholtz` is differentiable, the identities
-can be checked through :func:`jax.grad` itself -- e.g. Clausius-Clapeyron
+can be checked through :func:`jax.grad` itself. For example, Clausius-Clapeyron
 compares the AD slope of the *solved* saturation line (a gradient through a
 2x2 Newton solve, via the implicit function theorem) against latent heat over
 volume change computed from plain property evaluations. Agreement to near
@@ -40,7 +40,7 @@ def test_saturation_temperature_gradient_is_reciprocal_slope() -> None:
 
 
 def test_pressure_is_density_derivative_of_helmholtz_energy() -> None:
-    """P = rho^2 d(a)/d(rho) at constant T -- the defining relation."""
+    """P = rho^2 d(a)/d(rho) at constant T, the defining relation."""
     rho, t = 40000.0, 500.0
     da_drho = jax.grad(lambda r: hh.helmholtz_energy(WATER, r, t))(jnp.asarray(rho))
     p_from_a = rho**2 * float(da_drho)
@@ -118,7 +118,7 @@ def test_density_solve_gradient_matches_finite_difference() -> None:
 
 
 def test_latent_heat_gradient_vanishes_at_critical_point() -> None:
-    """h_vap shrinks monotonically toward Tc -- AD slope must be negative."""
+    """h_vap shrinks monotonically toward Tc: AD slope must be negative."""
     dhvap_dt = jax.grad(lambda tt: hh.saturation_state(WATER, t=tt).h_vaporization)(
         jnp.asarray(550.0)
     )
@@ -128,7 +128,7 @@ def test_latent_heat_gradient_vanishes_at_critical_point() -> None:
 def test_gradient_with_respect_to_eos_coefficients() -> None:
     """The EOS itself is differentiable: d(psat)/d(n_k) matches finite differences.
 
-    This is the capability classical property libraries cannot offer -- the
+    This is the capability classical property libraries cannot offer: the
     saturation pressure differentiated with respect to a *published
     correlation coefficient*, through the Maxwell construction, enabling
     sensitivity studies and EOS refitting by gradient descent.

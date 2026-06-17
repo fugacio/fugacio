@@ -2,7 +2,7 @@
 
 The layer provides:
 
-* `Stream` -- the differentiable material stream passed between units;
+* `Stream`: the differentiable material stream passed between units;
 * a stream property bridge (`enthalpy_flow`, `entropy_flow`,
   `molar_enthalpy`, `molar_entropy`, `mass_flow`) that gives any
   stream a two-phase-aware enthalpy/entropy via `fugacio.thermo`;
@@ -35,12 +35,12 @@ The layer provides:
   `composite_curves`, `grand_composite_curve`, `area_target`,
   `optimal_dt_min`, `synthesize_network`) for minimum-utility targets
   and heat-exchanger-network synthesis (see `fugacio.sim.integration`);
-* advanced process control -- model predictive control and state estimation
+* advanced process control: model predictive control and state estimation
   (`linear_mpc`, `nonlinear_mpc`, `solve_qp`, `dare`,
   `lqr`, `kalman_gain`, `KalmanFilter`,
   `ExtendedKalmanFilter`, `UnscentedKalmanFilter`,
   `moving_horizon_estimate`, `simulate_closed_loop`,
-  `tune_mpc`) -- differentiable end to end, so the controller weights are
+  `tune_mpc`), differentiable end to end, so the controller weights are
   tunable by gradient descent (see `fugacio.sim.mpc`);
 * physical steam/cooling-water utilities on IAPWS-95 steam tables
   (`steam_heating`, `cooling_water`, `steam_turbine`,

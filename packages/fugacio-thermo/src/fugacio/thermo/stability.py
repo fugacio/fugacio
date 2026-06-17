@@ -13,8 +13,8 @@ coefficient ``gamma_i`` for a liquid activity model, or the fugacity coefficient
 ``ln_coeff_fn`` makes one implementation serve both worlds.
 
 The companion of equilibrium: while `fugacio.thermo.equilibrium` answers
-"given that it splits, into what?", this module answers "does it split at all?"
--- the test that decides whether a feed is one phase, needs a VLE flash, or (for
+"given that it splits, into what?", this module answers "does it split at all?",
+the test that decides whether a feed is one phase, needs a VLE flash, or (for
 a liquid activity model with a miscibility gap) needs the liquid-liquid solver in
 `fugacio.thermo.lle`. The most negative trial result also gives an excellent
 *initial guess* for those splits, which those modules consume directly.
@@ -41,7 +41,7 @@ class TangentPlaneResult(NamedTuple):
     Attributes:
         stable: ``True`` if the feed is single-phase stable (no negative ``tm``).
         tpd: The smallest modified tangent-plane distance found across all trials.
-        split: The (normalised) trial composition that achieved ``tpd`` -- a ready
+        split: The (normalised) trial composition that achieved ``tpd``, a ready
             initial guess for the incipient phase when the feed is unstable.
     """
 
@@ -110,7 +110,7 @@ def _enrichment_trials(z: Array, *, strength: float = 0.9) -> Array:
     """Trial compositions enriched toward each pure component (LLE seeds).
 
     For each component ``i``, builds a composition that mixes the feed with a spike
-    toward pure ``i`` -- a robust starting set for detecting a miscibility gap.
+    toward pure ``i``, a robust starting set for detecting a miscibility gap.
     """
     z = jnp.asarray(z)
     n = z.shape[0]

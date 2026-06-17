@@ -1,7 +1,7 @@
 """Reference multiparameter (Helmholtz-energy) equations of state.
 
 This subpackage gives Fugacio *reference-grade* pure-fluid properties: the
-same class of model behind NIST REFPROP and CoolProp -- IAPWS-95 for
+same class of model behind NIST REFPROP and CoolProp, namely IAPWS-95 for
 water/steam, Span & Wagner for CO2, Setzmann & Wagner for methane, and the
 short technical formulations for the other vendored process fluids
 (`reference_fluid_names` lists all 26).
@@ -32,7 +32,7 @@ Example::
     sat = saturation_state(steam, p=10e5)          # 10 bar saturation
     sat.t, sat.h_vaporization                      # 453.03 K, 2014.6 kJ/kg * M
 
-    # d(Tsat)/dP along the solved line -- the Clausius-Clapeyron slope:
+    # d(Tsat)/dP along the solved line, the Clausius-Clapeyron slope:
     jax.grad(lambda p: saturation_state(steam, p=p).t)(10e5)
 """
 

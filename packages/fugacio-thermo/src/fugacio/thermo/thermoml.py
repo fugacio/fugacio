@@ -5,7 +5,7 @@ standard for thermophysical and thermochemical property data; the freely
 redistributable `ThermoML Archive
 <https://www.nist.gov/mml/acmd/trc/thermoml/thermoml-archive>`_ holds tens of
 thousands of experimental datasets. This module turns those files into tidy,
-typed tables you can feed straight into `fugacio.thermo.regression` -- so a
+typed tables you can feed straight into `fugacio.thermo.regression`, so a
 model can be fitted to *real measurements*, and predictions graded against them.
 
 The parser is deliberately tolerant and dependency-free (standard-library

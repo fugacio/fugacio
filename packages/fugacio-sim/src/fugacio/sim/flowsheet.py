@@ -7,8 +7,8 @@ with the recycle guess, run the units, return the recomputed recycle), the
 converged flowsheet is the fixed point ``tear* = g(tear*, theta)``.
 
 `tear_solve` finds that fixed point with a **Wegstein-accelerated**
-iteration -- the workhorse of sequential-modular simulators, far more robust than
-plain direct substitution on tight recycles -- and differentiates the *converged*
+iteration (the workhorse of sequential-modular simulators, far more robust than
+plain direct substitution on tight recycles) and differentiates the *converged*
 solution by the implicit function theorem (a hand-written ``custom_vjp``). The
 forward iteration count never appears in the backward pass, so a gradient of any
 product spec with respect to an operating variable costs one adjoint solve, no
@@ -156,7 +156,7 @@ def tear_solve(
             returns the recomputed tear stream(s) in the *same* pytree structure.
         tear0: Initial guess for the torn stream(s).
         theta: Differentiable parameter pytree (operating conditions, specs, feed).
-            Pass the quantities you want to differentiate through here -- gradients
+            Pass the quantities you want to differentiate through here; gradients
             flow to ``theta`` by implicit differentiation. Closed-over constants are
             fine but are treated as non-differentiable.
         q_min: Lower bound on the Wegstein acceleration factor.

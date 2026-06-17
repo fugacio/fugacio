@@ -1,7 +1,7 @@
 # fugacio-sim
 
 Differentiable process-simulation layer for the
-[Fugacio](https://github.com/owenthcarey/fugacio) stack: flowsheet and
+[Fugacio](https://github.com/fugacio/fugacio) stack: flowsheet and
 unit-operation models built on top of `fugacio.thermo`.
 
 The core abstraction is the `Stream`, a JAX pytree whose molar flows,

@@ -12,7 +12,7 @@ CoolProp is itself a faithful transcription of the peer-reviewed reference
 formulations (IAPWS-95 for water, Span & Wagner for CO2, Setzmann & Wagner for
 methane, ...); the BibTeX key of the source paper is recorded per fluid. Only
 term families that :mod:`fugacio.thermo.helmholtz.terms` implements are
-accepted -- the script fails loudly if a fluid needs an unsupported term, so a
+accepted; the script fails loudly if a fluid needs an unsupported term, so a
 regeneration can never silently change the model class.
 
 Run with ``uv run --group oracles python scripts/gen_helmholtz.py`` (requires
@@ -305,7 +305,7 @@ fluid library, which transcribes the peer-reviewed source formulations; the
 source paper of each EOS is recorded in ``bibtex_eos`` (e.g. IAPWS-95 for
 water is ``Wagner-JPCRD-2002``). The per-fluid ``gas_constant`` is the value
 the EOS was fitted with and must be used in place of the CODATA constant when
-evaluating it. Do not edit by hand -- regenerate instead.
+evaluating it. Do not edit by hand; regenerate instead.
 """
 
 from __future__ import annotations

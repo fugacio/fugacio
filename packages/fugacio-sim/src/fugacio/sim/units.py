@@ -5,18 +5,18 @@ energy core in `fugacio.thermo`, so each one is differentiable end-to-end
 with respect to its operating conditions and feed. That is the headline Fugacio
 claim made concrete: you can take a gradient of a product purity, a duty, or a
 shaft power with respect to a drum temperature, an outlet pressure, a split
-fraction, or a feed flow -- the basis for gradient-based flowsheet optimisation.
+fraction, or a feed flow: the basis for gradient-based flowsheet optimisation.
 
 The library covers the staples of a process flowsheet:
 
-* `flash_drum` -- isothermal-isobaric vapour/liquid separator;
-* `heater` -- heater/cooler on either a temperature or a duty spec;
-* `valve` -- isenthalpic (Joule-Thomson) pressure letdown;
-* `pump` -- incompressible-liquid pump with an efficiency;
-* `compressor` / `turbine` -- isentropic machines with an efficiency;
-* `mix` -- adiabatic mixer (energy-balanced);
-* `splitter` -- flow splitter;
-* `component_separator` -- idealised component split.
+* `flash_drum`: isothermal-isobaric vapour/liquid separator;
+* `heater`: heater/cooler on either a temperature or a duty spec;
+* `valve`: isenthalpic (Joule-Thomson) pressure letdown;
+* `pump`: incompressible-liquid pump with an efficiency;
+* `compressor` / `turbine`: isentropic machines with an efficiency;
+* `mix`: adiabatic mixer (energy-balanced);
+* `splitter`: flow splitter;
+* `component_separator`: idealised component split.
 
 Outlet temperatures of the energy-specified blocks are found with the
 differentiable `flash_ph` / `flash_ps`
@@ -172,8 +172,8 @@ def valve(
 ) -> Stream:
     """Isenthalpic (Joule-Thomson) pressure letdown to ``p_out``.
 
-    Enthalpy is conserved, so the outlet temperature -- and any flashing that
-    results from the pressure drop -- follows from an isenthalpic solve. The
+    Enthalpy is conserved, so the outlet temperature (and any flashing that
+    results from the pressure drop) follows from an isenthalpic solve. The
     outlet may be two-phase; it is returned as a single bulk stream at the solved
     temperature.
     """
@@ -298,7 +298,7 @@ def component_separator(
 
     ``split_to_top`` is a per-component fraction (aligned with ``feed.components``)
     sent to the top outlet; the remainder leaves in the bottom. This is the
-    workhorse "spec" separator for conceptual flowsheets -- a stand-in for a column
+    workhorse "spec" separator for conceptual flowsheets, a stand-in for a column
     or absorber whose recoveries are known. Product temperatures and pressures
     default to the feed's.
     """

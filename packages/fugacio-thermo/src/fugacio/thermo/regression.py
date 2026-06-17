@@ -3,12 +3,12 @@
 Because every equilibrium output is differentiable with respect to the
 activity-model parameters (see `fugacio.thermo.gammaphi`,
 `fugacio.thermo.lle`), fitting a model to data is *plain* gradient-based
-optimisation -- no finite-difference parameter sweeps, no black-box derivatives.
+optimisation: no finite-difference parameter sweeps, no black-box derivatives.
 This module supplies:
 
-* two self-contained optimisers -- `levenberg_marquardt` for nonlinear
+* two self-contained optimisers, `levenberg_marquardt` for nonlinear
   least squares (exact Gauss-Newton Hessian, adaptive damping) and a simple
-  `gradient_descent` -- that operate on an arbitrary parameter *pytree*;
+  `gradient_descent`, that operate on an arbitrary parameter *pytree*;
 * residual builders that turn experimental data into a residual vector:
   `bubble_pressure_residuals` (isothermal/isobaric P-x-y VLE),
   `activity_residuals` (measured ``ln gamma``), and
@@ -59,7 +59,7 @@ def levenberg_marquardt(
     growing it after a rejected one. Operates on any parameter pytree ``theta0``.
 
     Returns:
-        ``(theta, cost)`` -- the fitted parameter pytree and the final
+        ``(theta, cost)``: the fitted parameter pytree and the final
         half-sum-of-squares cost.
     """
     flat0, unravel = ravel_pytree(theta0)
@@ -265,7 +265,7 @@ def unifac_ln_gamma_grid(
     """Sample (modified) UNIFAC ``ln gamma`` on a binary composition/temperature grid.
 
     This turns a *predictive* group-contribution model into pseudo-data for fitting
-    a *correlative* NRTL/UNIQUAC model -- the standard way to obtain binary
+    a *correlative* NRTL/UNIQUAC model, the standard way to obtain binary
     interaction parameters for a pair that has no measured VLE.
 
     Args:

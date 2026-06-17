@@ -4,7 +4,7 @@ To *optimize* a process you need an objective with units of money, and that mean
 sizing equipment and costing it. This module supplies smooth, differentiable
 correlations for both, so a total-annual-cost or net-present-value objective
 plugs straight into the gradient-based optimizers in
-`fugacio.sim.optimize` -- you can take the derivative of installed cost with
+`fugacio.sim.optimize`: you can take the derivative of installed cost with
 respect to a reflux ratio or a heat-exchanger approach temperature.
 
 Sizing
@@ -32,7 +32,7 @@ not a substitute for a vendor quote.
 Operating cost & finance
 ------------------------
 Utility pricing on an energy basis, the capital-recovery factor, total annual
-cost, net present value, and discounted payback -- all differentiable.
+cost, net present value, and discounted payback, all differentiable.
 """
 
 from __future__ import annotations
@@ -216,7 +216,7 @@ def vessel_volume(
 
 
 def cylinder_volume(diameter: ArrayLike, height: ArrayLike) -> Array:
-    """Volume of a vertical cylinder (m^3) -- a column shell from its size."""
+    """Volume of a vertical cylinder (m^3), a column shell from its size."""
     d = jnp.asarray(diameter)
     return jnp.pi * d**2 / 4.0 * jnp.asarray(height)
 
@@ -355,7 +355,7 @@ def annualized_capital(
 def total_annual_cost(
     capex: ArrayLike, opex: ArrayLike, *, rate: ArrayLike = 0.1, years: ArrayLike = 10.0
 ) -> Array:
-    """Total annual cost ``TAC = CRF * CAPEX + OPEX`` ($/yr) -- the screening objective."""
+    """Total annual cost ``TAC = CRF * CAPEX + OPEX`` ($/yr), the screening objective."""
     return annualized_capital(capex, rate=rate, years=years) + jnp.asarray(opex)
 
 

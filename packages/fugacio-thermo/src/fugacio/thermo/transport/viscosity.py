@@ -2,10 +2,10 @@
 
 Pure components come from two routes, dispatched per component:
 
-* **curated fits** -- DIPPR-101 (liquid) and DIPPR-102 (dilute gas) coefficients
+* **curated fits**: DIPPR-101 (liquid) and DIPPR-102 (dilute gas) coefficients
   transcribed/refitted from open data into
   `fugacio.thermo._property_data`;
-* **corresponding states** -- the Chung et al. dilute-gas method
+* **corresponding states**: the Chung et al. dilute-gas method
   (`chung_viscosity_gas`, needing only ``Tc``, ``Vc``, ``omega``, ``MW``
   and the dipole moment) and Letsou-Stiel for liquids
   (`letsou_stiel_viscosity`), used when no fit is tabulated.
@@ -14,7 +14,7 @@ Mixtures use the standard kinetic-theory combination rules: Wilke's
 approximation for gases (`wilke_mixture_viscosity`) and the
 Grunberg-Nissan logarithmic rule with zero interaction parameters for liquids
 (`grunberg_nissan_viscosity`). Everything is `jax.numpy`, so
-viscosities are differentiable in temperature and composition -- and the oracle
+viscosities are differentiable in temperature and composition, and the oracle
 suite grades both routes against CoolProp's reference correlations.
 
 All viscosities are in Pa*s.
@@ -136,7 +136,7 @@ def wilke_mixture_viscosity(y: Array, mu: Array, mw: Array) -> Array:
 def grunberg_nissan_viscosity(x: Array, mu: Array, g: Array | None = None) -> Array:
     """Grunberg-Nissan rule for the viscosity of a liquid mixture (Pa*s).
 
-    ``ln eta_m = sum_i x_i ln eta_i + (1/2) sum_i sum_j x_i x_j G_ij`` -- the
+    ``ln eta_m = sum_i x_i ln eta_i + (1/2) sum_i sum_j x_i x_j G_ij``: the
     interaction matrix ``G`` defaults to zero (ideal logarithmic mixing), which
     is the standard engineering assumption when no binary data exist.
     """

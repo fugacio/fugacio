@@ -1,17 +1,17 @@
 """Steam-table style state functions for reference fluids.
 
 Process specifications arrive as ``(T, P)``, ``(P, h)``, ``(P, s)`` or a
-saturation quality -- not as the ``(rho, T)`` a Helmholtz EOS natively speaks.
+saturation quality, not as the ``(rho, T)`` a Helmholtz EOS natively speaks.
 This module resolves those specifications into a `FluidState` snapshot
 of every property, handling the two-phase dome:
 
-* `state_tp` -- single-phase states (a ``(T, P)`` specification only
+* `state_tp`: single-phase states (a ``(T, P)`` specification only
   pins a two-phase mixture on the saturation line itself, a measure-zero set);
-* `state_ph` / `state_ps` -- the energy-balance workhorses; inside
+* `state_ph` / `state_ps`: the energy-balance workhorses; inside
   the dome they return the saturation temperature and vapor quality ``q``
   (this is exactly the "steam tables" calculation, e.g. finding the wetness at
   a steam-turbine exhaust);
-* `state_tq` / `state_pq` -- states on the dome by quality.
+* `state_tq` / `state_pq`: states on the dome by quality.
 
 All solves are wrapped in implicit-differentiation rules, so the returned
 state is exactly differentiable with respect to the specification: the
@@ -244,7 +244,7 @@ def _inverse_state(fluid: HelmholtzFluid, p: Array, target: Array, prop: str) ->
     value = props.enthalpy if prop == "h" else props.entropy
 
     # Saturation bracket at this pressure (clipped into the subcritical band;
-    # the clipped solve also runs -- and is discarded -- for supercritical p).
+    # the clipped solve also runs, and is discarded, for supercritical p).
     p_sat = jnp.clip(p, fluid.p_triple, 0.9999 * fluid.p_critical)
     t_sat = saturation_temperature(fluid, p_sat)
     rho_liquid_sat, rho_vapor_sat = saturation_densities(
@@ -318,7 +318,7 @@ def _state_ps(fluid: HelmholtzFluid, p: Array, s: Array) -> FluidState:
 def state_ps(fluid: HelmholtzFluid, p: ArrayLike, s: ArrayLike) -> FluidState:
     """The state at pressure ``p`` (Pa) and molar entropy ``s`` (J/mol/K).
 
-    The isentropic twin of `state_ph` -- the building block of ideal
+    The isentropic twin of `state_ph`, the building block of ideal
     compressor/turbine outlets. Same dome semantics.
     """
     return _state_ps(fluid, jnp.asarray(p, dtype=float), jnp.asarray(s, dtype=float))

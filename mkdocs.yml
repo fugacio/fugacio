@@ -2,8 +2,8 @@ site_name: Fugacio
 site_description: Open, differentiable thermodynamics + process simulation, with an AI design copilot.
 site_author: Owen Carey
 site_url: https://fugacio.com/
-repo_url: https://github.com/owenthcarey/fugacio
-repo_name: owenthcarey/fugacio
+repo_url: https://github.com/fugacio/fugacio
+repo_name: fugacio/fugacio
 edit_uri: edit/main/docs/
 
 theme:
@@ -56,7 +56,7 @@ extra:
   generator: false
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/owenthcarey/fugacio
+      link: https://github.com/fugacio/fugacio
       name: Fugacio on GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/fugacio-thermo/
@@ -172,7 +172,7 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.magiclink:
       repo_url_shorthand: true
-      user: owenthcarey
+      user: fugacio
       repo: fugacio
   - pymdownx.mark
   - pymdownx.smartsymbols

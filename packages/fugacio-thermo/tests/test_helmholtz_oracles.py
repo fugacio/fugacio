@@ -4,7 +4,7 @@ CoolProp implements the *same published equations of state* from independent
 code (hand-derived analytic derivatives in C++, its own density and Maxwell
 solvers), so agreement here checks coefficient transcription, the autodiff
 derivative pipeline, and the solver stack end to end. Tolerances are far
-tighter than for correlation-vs-correlation oracles -- two implementations of
+tighter than for correlation-vs-correlation oracles: two implementations of
 one EOS must agree to solver precision (~1e-8), not correlation scatter.
 
 Six workhorse fluids get dense grids (saturation curve, single-phase property

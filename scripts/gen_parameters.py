@@ -5,11 +5,11 @@ in the Fugacio component database that can be resolved:
 
 * its UNIFAC subgroup assignment (DDBST, via the molecule's InChI key), the
   subgroup ``R_k``/``Q_k`` (UNIFAC ``UFSG``) and main-group interaction matrix
-  (``UFIP``) -- written to ``groupcontrib/_unifac_data.py``;
+  (``UFIP``), written to ``groupcontrib/_unifac_data.py``;
 * the UNIQUAC pure-component ``r``/``q`` derived from the same group assignment
   (``r_i = sum nu_k R_k``, ``q_i = sum nu_k Q_k``); and
 * curated binary NRTL and UNIQUAC interaction coefficients from the open ChemSep
-  database (``thermo.interaction_parameters``) -- both written to
+  database (``thermo.interaction_parameters``), both written to
   ``_binary_params.py``.
 
 The unit conventions were verified to reproduce ``thermo`` exactly:
@@ -170,7 +170,7 @@ def _write_unifac(
 Subgroup ``R_k``/``Q_k`` and main-group interaction energies are the public
 UNIFAC (Hansen VLE) parameters bundled in the open ``thermo`` package; the
 component-to-subgroup assignments are from the DDBST public set. Do not edit by
-hand -- regenerate instead.
+hand; regenerate instead.
 """
 
 from __future__ import annotations
@@ -211,7 +211,7 @@ Dortmund subgroup ``R_k``/``Q_k`` and the temperature-dependent main-group
 interaction parameters ``(a_mn, b_mn, c_mn)`` (psi = exp(-(a + b T + c T^2)/T))
 are the published modified-UNIFAC values bundled in the open ``thermo`` package
 (``DOUFSG`` / ``DOUFIP2006``); assignments are the DDBST modified-UNIFAC set. Do
-not edit by hand -- regenerate instead.
+not edit by hand; regenerate instead.
 """
 
 from __future__ import annotations
@@ -254,7 +254,7 @@ group assignment (``r_i = sum nu_k R_k``, ``q_i = sum nu_k Q_k``). The binary
 interaction coefficients are from the open ChemSep database; both use the
 ``tau_ij`` conventions of :mod:`fugacio.thermo.activity.models`
 (NRTL ``tau = b/T``; UNIQUAC ``tau = exp(b/T)``), keyed by name pairs sorted
-alphabetically. Do not edit by hand -- regenerate instead.
+alphabetically. Do not edit by hand; regenerate instead.
 """
 
 from __future__ import annotations

@@ -60,7 +60,7 @@ class TestKernels:
 
     def test_dippr106_vanishes_at_critical(self) -> None:
         # Tr is clipped at 1 - 1e-12 to keep autodiff finite, so the value at Tc
-        # is not exactly zero -- just negligible against the J/mol scale of c1.
+        # is not exactly zero, just negligible against the J/mol scale of c1.
         tc = 647.096
         assert float(dippr106(tc, tc, 5.2053e4, 0.3199, -0.212, 0.25795)) == pytest.approx(
             0.0, abs=5.0

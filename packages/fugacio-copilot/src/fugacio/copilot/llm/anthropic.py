@@ -1,8 +1,8 @@
 """Anthropic (Claude) Messages-API adapter for the Fugacio copilot.
 
 Translates the neutral `Message` / tool schemas
-to Anthropic's Messages format -- system prompt hoisted to a top-level argument,
-``tool_use`` / ``tool_result`` content blocks -- and parses tool calls back out.
+to Anthropic's Messages format (system prompt hoisted to a top-level argument,
+``tool_use`` / ``tool_result`` content blocks) and parses tool calls back out.
 The ``anthropic`` SDK is imported lazily, so importing this module never requires
 the dependency; install it with the ``llm`` extra.
 """

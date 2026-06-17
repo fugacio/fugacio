@@ -11,7 +11,7 @@ damped Newton of `fugacio.thermo.implicit` and seeded by the published
 saturation ancillary equations. Because the solve is wrapped in an implicit
 ``custom_vjp``, the saturation line is *differentiable*: ``d(psat)/dT``
 computed by `jax.grad` through this solve reproduces the
-Clausius-Clapeyron relation ``dP/dT = h_vap / (T dv)`` to machine precision --
+Clausius-Clapeyron relation ``dP/dT = h_vap / (T dv)`` to machine precision,
 one of the consistency oracles in the test suite.
 
 ``saturation_state`` evaluates the full coexistence state (densities,

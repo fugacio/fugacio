@@ -3,9 +3,9 @@
 The copilot talks to language models through a tiny, vendor-independent surface:
 a `Message` list goes in (with the tool schemas the engine exposes), a
 `ChatResponse` comes back (either free text or one or more
-`ToolCall` requests). Concrete providers -- `OpenAIProvider`,
+`ToolCall` requests). Concrete providers (`OpenAIProvider`,
 `AnthropicProvider`, or the deterministic `MockProvider` used in
-tests -- implement the single-method `LLMProvider` protocol by translating
+tests) implement the single-method `LLMProvider` protocol by translating
 to and from their own wire formats. Nothing here imports a vendor SDK, so the
 copilot is importable with no LLM dependency installed; the SDK is only needed
 when you actually construct a real provider.

@@ -5,7 +5,7 @@ data: a molecule is decomposed into functional subgroups, and the only adjustabl
 quantities are group volume/area parameters (``R_k``, ``Q_k``) and a matrix of
 group-group interaction energies (``a_mn``) regressed once, globally. This is how
 Fugacio fills in activity-coefficient parameters for pairs where curated binary
-data are proprietary -- exactly the role the project README assigns to UNIFAC.
+data are proprietary, exactly the role the project README assigns to UNIFAC.
 
 ``ln(gamma_i) = ln(gamma_i^comb) + ln(gamma_i^res)``; the combinatorial part is
 the UNIQUAC size/shape term and the residual part is a sum over group residual

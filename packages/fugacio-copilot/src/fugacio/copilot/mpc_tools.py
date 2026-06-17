@@ -4,14 +4,14 @@ These expose `fugacio.sim.mpc` to the LLM design agent as deterministic,
 JSON-in/JSON-out calculations over a *linear state-space* plant ``x+ = A x + B u``,
 ``y = C x``:
 
-* ``lqr_design`` -- the infinite-horizon LQR gain and closed-loop poles for given
+* ``lqr_design``: the infinite-horizon LQR gain and closed-loop poles for given
   state/input weights (discrete or continuous);
-* ``kalman_design`` -- the steady-state Kalman filter gain, error covariance and
+* ``kalman_design``: the steady-state Kalman filter gain, error covariance and
   estimator poles for given process/measurement noise;
-* ``simulate_mpc`` -- run a constrained, offset-free linear MPC in closed loop
+* ``simulate_mpc``: run a constrained, offset-free linear MPC in closed loop
   against a setpoint (optionally with a constant output disturbance) and report the
   response/input trajectories and step metrics;
-* ``tune_mpc_weights`` -- descend the closed-loop tracking cost on the MPC weights
+* ``tune_mpc_weights``: descend the closed-loop tracking cost on the MPC weights
   themselves, exploiting the differentiability of the controller's own QP.
 
 Matrices are passed as nested lists; weights may be a scalar, a per-channel list
@@ -277,7 +277,7 @@ def _tune_mpc_weights(
     """Tune scalar output/input MPC weights ``(q, r)`` to minimize closed-loop cost.
 
     Descends the tracking ISE (plus an optional input-effort term) on the log of the
-    weights -- the gradient flows through the controller's own QP -- and reports the
+    weights (the gradient flows through the controller's own QP) and reports the
     cost before and after.
     """
     model = _state_space(a, b, c)
@@ -426,7 +426,7 @@ def mpc_tool_specs() -> list[Any]:
             name="tune_mpc_weights",
             description=(
                 "Tune the scalar MPC output/input weights (q, r) by gradient descent "
-                "on the closed-loop tracking cost -- the gradient flows through the "
+                "on the closed-loop tracking cost: the gradient flows through the "
                 "controller's own optimization. Returns the cost before/after and the "
                 "tuned weights."
             ),

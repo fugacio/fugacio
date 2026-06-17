@@ -5,7 +5,7 @@ group assignment (``r_i = sum nu_k R_k``, ``q_i = sum nu_k Q_k``). The binary
 interaction coefficients are from the open ChemSep database; both use the
 ``tau_ij`` conventions of `fugacio.thermo.activity.models`
 (NRTL ``tau = b/T``; UNIQUAC ``tau = exp(b/T)``), keyed by name pairs sorted
-alphabetically. Do not edit by hand -- regenerate instead.
+alphabetically. Do not edit by hand; regenerate instead.
 """
 
 from __future__ import annotations

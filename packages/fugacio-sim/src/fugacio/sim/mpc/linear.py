@@ -5,7 +5,7 @@ solved afresh every sample: predict the plant's response over a finite horizon,
 choose the input sequence that minimizes a tracking-plus-effort cost subject to
 the actuator and safety constraints, apply the first move, and repeat. It is the
 workhorse of modern advanced process control precisely because it handles
-multivariable interaction and hard constraints in one shot -- which a PID loop
+multivariable interaction and hard constraints in one shot, which a PID loop
 cannot.
 
 This module builds the *condensed* QP (the optimizer decides the input sequence;
@@ -15,20 +15,20 @@ production-grade rather than a textbook regulator:
 
 * **A stabilizing terminal cost.** The terminal weight defaults to the discrete
   LQR cost-to-go (`fugacio.sim.mpc.dare`), so an *unconstrained* horizon-one
-  controller reproduces the infinite-horizon LQR law exactly -- the finite horizon
+  controller reproduces the infinite-horizon LQR law exactly: the finite horizon
   inherits the LQR's nominal stability.
 * **Offset-free tracking.** An augmented output-disturbance model is estimated by
   a steady-state Kalman filter and a steady-state target ``(x_ss, u_ss)`` is
   recomputed each step, so the controlled outputs reach their setpoints with *zero
   steady-state error* under unmeasured constant disturbances and plant/model
-  mismatch -- the property that makes MPC usable on a real plant.
+  mismatch, the property that makes MPC usable on a real plant.
 * **Constraints.** Hard input magnitude and rate limits, plus optional *soft*
   output limits (slack-relaxed so the QP is always feasible), are imposed honestly
   inside the optimization.
 
 Because the whole step is the differentiable QP, a gradient of a closed-loop
-performance index flows straight through the controller's optimization -- see
-`fugacio.sim.mpc.tune_mpc`.
+performance index flows straight through the controller's optimization (see
+`fugacio.sim.mpc.tune_mpc`).
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def _to_floats(v: ArrayLike) -> list[float]:
     """Flatten a *static* bound (scalar or concrete array) to a list of Python floats.
 
     Constraint presence fixes the QP's structure, so it must be decided without a
-    traced value -- this reads the concrete bound (a scalar or array supplied by the
+    traced value: this reads the concrete bound (a scalar or array supplied by the
     caller, never a differentiated quantity) with pure Python so the controller can
     be *built inside* a traced function (e.g. gradient-based tuning via ``tune_mpc``).
     """
@@ -517,7 +517,7 @@ def linear_mpc(
         y_min: Lower output limit, imposed as a *soft* (slack) constraint.
         y_max: Upper output limit, imposed as a *soft* (slack) constraint.
         soft_weight: Linear penalty on output-constraint slacks.
-        terminal: Terminal cost -- ``"lqr"`` (DARE cost-to-go, stabilizing) or
+        terminal: Terminal cost, ``"lqr"`` (DARE cost-to-go, stabilizing) or
             ``"none"`` (use ``q`` mapped to states).
         disturbance: ``"output"`` for offset-free output-disturbance tracking or
             ``"none"`` to disable the disturbance model.

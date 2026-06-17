@@ -3,7 +3,7 @@
 Two classic *predictive-ish* models that need only pure-component descriptors,
 not fitted binary parameters:
 
-* **Scatchard-Hildebrand regular solution** -- non-polar mixtures whose excess
+* **Scatchard-Hildebrand regular solution**: non-polar mixtures whose excess
   enthalpy is driven by differences in the cohesive energy density (the
   solubility parameter ``delta_i``)::
 
@@ -14,7 +14,7 @@ not fitted binary parameters:
   Regular-solution theory assumes an athermal *entropy* of mixing, so the excess
   Gibbs energy is purely the enthalpic term above (all ``gamma_i >= 1``).
 
-* **Flory-Huggins** -- the athermal size-asymmetry (combinatorial) contribution
+* **Flory-Huggins**: the athermal size-asymmetry (combinatorial) contribution
   for mixtures of very different molecular volumes (polymer/solvent)::
 
       ln(gamma_i) = ln(phi_i / x_i) + 1 - phi_i / x_i

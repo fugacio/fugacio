@@ -1,7 +1,7 @@
 """Real multi-turn tool-calling loop, exercised with a deterministic mock provider.
 
 Verifies that the LLM agent calls the requested tool, feeds the JSON result back
-into the conversation, and returns the model's final text -- and that bad tool
+into the conversation, and returns the model's final text, and that bad tool
 calls are turned into recoverable error results rather than crashing the loop.
 """
 

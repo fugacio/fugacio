@@ -3,16 +3,16 @@
 This is the bridge that assembles ``M_real = M_ideal_gas + M_residual`` for a
 real mixture, combining `fugacio.thermo.ideal` (the temperature-dependent
 ideal-gas backbone) with `fugacio.thermo.departure` (the pressure- and
-composition-dependent residual). The outputs -- molar enthalpy, entropy, Gibbs
-energy, and heat capacity -- are exactly what energy balances need, and they are
+composition-dependent residual). The outputs (molar enthalpy, entropy, Gibbs
+energy, and heat capacity) are exactly what energy balances need, and they are
 differentiable with respect to ``T``, ``P``, composition, and every model
 parameter just like the rest of the engine.
 
 Enthalpy and entropy are reported relative to an **ideal-gas reference state** at
 ``T_REF`` and ``P_REF`` (the same reference the ideal-gas integrals use). Only
 *differences* are physically meaningful, and any consistent reference cancels in
-a balance; callers that need an absolute (formation-based) enthalpy -- a chemical
-reactor, say -- add the standard enthalpies of formation themselves.
+a balance; callers that need an absolute (formation-based) enthalpy (a chemical
+reactor, say) add the standard enthalpies of formation themselves.
 
 Each function accepts an explicit ``phase`` (``"vapor"`` or ``"liquid"``) or
 ``"auto"``, which evaluates both cubic roots and selects the one with the lower
@@ -155,7 +155,7 @@ def stable_phase(
     The stable root is the one with the lower molar Gibbs energy; when only one
     real root exists (a compressed liquid or a supercritical fluid, where both
     cubic-root selections collapse onto it) the two Gibbs energies tie, so the
-    phase is then classified by the stable root's compressibility -- liquid-like
+    phase is then classified by the stable root's compressibility: liquid-like
     below the cubic critical scale ``Z = 1/3``, vapour-like above it. This is a
     host-side convenience that materialises a Python ``bool``; the differentiable
     path is the ``phase="auto"`` option on the property functions.

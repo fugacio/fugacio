@@ -1,9 +1,9 @@
 """Residual (departure) functions: consistency with fugacity, Gibbs-Helmholtz, AD.
 
 These tests need no external data: they assert the first-principles identities the
-residual functions must obey -- the partial-molar Gibbs relation tying them to the
+residual functions must obey (the partial-molar Gibbs relation tying them to the
 validated fugacity coefficients, the Gibbs-Helmholtz/Maxwell links between G, H, S,
-and the ideal-gas limit -- turning them into graded correctness oracles.
+and the ideal-gas limit), turning them into graded correctness oracles.
 """
 
 import jax

@@ -2,16 +2,16 @@
 
 A *design spec* is the everyday inverse problem of process design: instead of
 "given the reflux ratio, what purity do I get?", you ask "what reflux ratio hits
-99.5 % purity?". You nominate a **manipulated** variable (a degree of freedom --
+99.5 % purity?". You nominate a **manipulated** variable (a degree of freedom:
 a duty, a reflux, a split fraction, a feed temperature) and a **controlled**
-variable (a calculated result -- a purity, a recovery, a temperature) with a
+variable (a calculated result: a purity, a recovery, a temperature) with a
 **target**, and the solver adjusts the manipulated variable until the controlled
 variable meets its target. Several specs are solved simultaneously, so coupled
 targets (a column's distillate *and* bottoms purity, set by reflux *and* reboiler
 duty) converge together.
 
 Because the whole engine is differentiable, a met spec is itself differentiable:
-the adjusted manipulated variable -- and everything computed from it -- carries
+the adjusted manipulated variable (and everything computed from it) carries
 exact gradients with respect to the *unmanipulated* parameters (feed, prices,
 model parameters). The spec solve reuses the implicit-function-theorem root
 finders in `fugacio.thermo.implicit`, so those gradients cost a single
@@ -150,7 +150,7 @@ def solve_design(
     Solves the (generally coupled) system "set each manipulated variable so its
     controlled variable equals its target" with a single Newton iteration over
     the stacked specs, re-running ``simulate`` (recycles and all) at each step.
-    The converged manipulated values -- and the streams computed from them --
+    The converged manipulated values (and the streams computed from them)
     are differentiable with respect to the unmanipulated entries of ``theta``.
 
     Args:

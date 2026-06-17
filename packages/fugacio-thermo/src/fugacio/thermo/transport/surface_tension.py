@@ -51,7 +51,7 @@ def winterfeld_scriven_davis(x: Array, sigma: Array, v_liquid: Array) -> Array:
     """Winterfeld-Scriven-Davis mixture surface tension (N/m).
 
     ``sigma_m = sum_i sum_j x_i x_j V_i V_j sqrt(sigma_i sigma_j)
-    / (sum_i x_i V_i)^2`` -- volume-fraction-squared weighting of the geometric
+    / (sum_i x_i V_i)^2``: volume-fraction-squared weighting of the geometric
     pair means (Winterfeld, Scriven & Davis 1978). Exact in the pure limits.
     """
     x = jnp.asarray(x)

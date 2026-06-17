@@ -3,14 +3,14 @@
 This is the differentiable heart of heat integration. Given a set of hot and cold
 `HeatStream` objects and a minimum
 approach temperature ``dt_min``, the **problem table algorithm** computes the
-thermodynamic minimum hot- and cold-utility duties and locates the **pinch** -- the
+thermodynamic minimum hot- and cold-utility duties and locates the **pinch**, the
 temperature that divides the process into a heat-deficit region (above) and a
 heat-surplus region (below) and sets the ceiling on heat recovery.
 
 The construction is the textbook one (Linnhoff & Flower):
 
-1. *Shift* temperatures into a common interval scale -- hot streams down by
-   ``dt_min / 2`` and cold streams up by ``dt_min / 2`` -- so that a hot and a
+1. *Shift* temperatures into a common interval scale (hot streams down by
+   ``dt_min / 2`` and cold streams up by ``dt_min / 2``) so that a hot and a
    cold stream exactly ``dt_min`` apart in real temperature coincide, and any
    overlap in shifted temperature is feasible heat exchange.
 2. Form temperature intervals at the shifted supply/target temperatures and, in
@@ -23,7 +23,7 @@ The construction is the textbook one (Linnhoff & Flower):
 
 Every quantity is a smooth (a.e.) function of the stream temperatures, the
 heat-capacity flowrates, and ``dt_min``, so ``jax.grad`` flows through the whole
-target -- the basis for gradient-based heat-recovery optimisation.
+target, the basis for gradient-based heat-recovery optimisation.
 
 Composite curves (`composite_curves`) and the grand composite curve
 (`grand_composite_curve`) return the canonical temperature-enthalpy data
@@ -191,7 +191,7 @@ def pinch_analysis(streams: list[HeatStream], dt_min: ArrayLike) -> PinchResult:
 
 
 def minimum_utilities(streams: list[HeatStream], dt_min: ArrayLike) -> tuple[Array, Array]:
-    """Return just ``(hot_utility, cold_utility)`` minimum duties (W) -- a convenience."""
+    """Return just ``(hot_utility, cold_utility)`` minimum duties (W), a convenience."""
     casc = heat_cascade(streams, dt_min)
     return casc.hot_utility, casc.cold_utility
 
@@ -206,7 +206,7 @@ class CompositeSegments(NamedTuple):
         h_hi: Cumulative enthalpy at ``t_hi`` (W), shape ``(k,)``.
         cp: Total heat-capacity flowrate of the segment (W/K), shape ``(k,)``.
         inv_h: Enthalpy-weighted mean film resistance ``sum(CP/h)/sum(CP)``
-            (m^2*K/W), shape ``(k,)`` -- the area-target weight of the segment.
+            (m^2*K/W), shape ``(k,)``, the area-target weight of the segment.
     """
 
     t_lo: Array

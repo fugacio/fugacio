@@ -18,8 +18,8 @@ pure saturation point), the saturation pressure ``Psat_i`` and the Poynting fact
 correcting the liquid fugacity from ``Psat_i`` up to the system pressure ``P``. At
 low pressure ``phi_i^sat -> 1`` and ``Poynting -> 1``, recovering the familiar
 modified Raoult's law ``p_i = x_i gamma_i Psat_i``. This module supplies each
-piece -- saturation pressures (from the EOS or an Antoine fit), the Poynting
-factor, and Henry's-law constants for non-condensable gases -- all differentiable
+piece: saturation pressures (from the EOS or an Antoine fit), the Poynting
+factor, and Henry's-law constants for non-condensable gases, all differentiable
 in temperature, pressure, and the underlying parameters.
 """
 
@@ -111,7 +111,7 @@ def liquid_reference_fugacity(
     elementary modified Raoult's law.
 
     Returns:
-        ``(f_ref, psat)`` -- the reference fugacities and the saturation pressures
+        ``(f_ref, psat)``: the reference fugacities and the saturation pressures
         used to build them (the latter is handy for K-value initialisation).
     """
     psat = saturation_pressures(eos, t, tc, pc, omega)

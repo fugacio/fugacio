@@ -189,7 +189,7 @@ def reaction_arrays(components: Sequence[str]) -> tuple[Array, Array, CpCoeffs]:
     """Standard formation data for ``components`` from the curated database.
 
     Returns:
-        ``(hf, gf, (a, b, c, d, e))`` -- ideal-gas formation enthalpies and Gibbs
+        ``(hf, gf, (a, b, c, d, e))``: ideal-gas formation enthalpies and Gibbs
         energies (J/mol at 298.15 K) and the stacked ideal-gas ``Cp`` coefficients.
 
     Raises:

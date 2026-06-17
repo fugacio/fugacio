@@ -1,7 +1,7 @@
 # Fugacio
 
 Open, differentiable thermodynamics and process simulation, with an AI design
-copilot. See the [project README](https://github.com/owenthcarey/fugacio) for the
+copilot. See the [project README](https://github.com/fugacio/fugacio) for the
 full overview.
 
 Fugacio is built as three layered packages (strict direction

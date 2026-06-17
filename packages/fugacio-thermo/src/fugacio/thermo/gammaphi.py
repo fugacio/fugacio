@@ -2,8 +2,8 @@
 
 The cubic-EOS flash in `fugacio.thermo.equilibrium` describes both phases
 with one equation of state (the *phi-phi* approach). For the low-pressure, polar,
-strongly non-ideal mixtures that dominate real separations -- ethanol/water and
-other azeotropes, alcohol/ketone/water systems -- a cubic EOS with zero binary
+strongly non-ideal mixtures that dominate real separations (ethanol/water and
+other azeotropes, alcohol/ketone/water systems), a cubic EOS with zero binary
 interaction parameters is simply the wrong tool. The standard answer is the
 *gamma-phi* approach: model the liquid with an activity-coefficient model and the
 vapour with an equation of state (or as an ideal gas at low pressure).
@@ -18,13 +18,13 @@ so the K-values are
 
 With an ideal vapour (``phi^V = 1``) and the plain saturation reference
 (``f^{0,L} = Psat``), this collapses to modified Raoult's law
-``K_i = gamma_i Psat_i / P`` -- enough to reproduce azeotropes that the
+``K_i = gamma_i Psat_i / P``, enough to reproduce azeotropes that the
 zero-``kij`` cubic cannot. The richer reference (saturation fugacity coefficient +
 Poynting, see `fugacio.thermo.reference`) and an EOS vapour are available via
 keyword flags.
 
-Every routine here -- K-values, the four saturation calculations (bubble/dew at
-fixed ``T`` or ``P``), and the isothermal flash -- is a fixed point or a
+Every routine here, K-values, the four saturation calculations (bubble/dew at
+fixed ``T`` or ``P``), and the isothermal flash, is a fixed point or a
 bracketed root solved by the implicit-diff primitives in
 `fugacio.thermo.implicit`, so each output is differentiable end-to-end with
 respect to ``T``, ``P``, composition, *and* the activity-model parameters. That

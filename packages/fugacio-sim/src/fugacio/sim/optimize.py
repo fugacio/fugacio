@@ -1,10 +1,10 @@
 """Differentiable numerical optimization for process design.
 
 Fugacio's whole premise is that a flowsheet is *end-to-end differentiable*, so a
-design problem -- minimize a cost, maximize a yield, hit a purity at least
-operating cost -- is a smooth optimization that gradients can solve directly.
+design problem (minimize a cost, maximize a yield, hit a purity at least
+operating cost) is a smooth optimization that gradients can solve directly.
 This module supplies the optimizers, written against `jax.numpy` so they
-compose with the rest of the engine, and -- crucially -- it differentiates
+compose with the rest of the engine, and (crucially) it differentiates
 *through the optimum*: the solution ``x*(theta)`` of a parametric optimization
 problem carries exact derivatives with respect to the parameters ``theta`` by the
 implicit function theorem applied to the optimality (KKT) conditions, exactly as
@@ -18,18 +18,18 @@ natural shape of your problem.
 
 Algorithms
 ----------
-* **BFGS** (dense inverse-Hessian quasi-Newton) -- the robust default for smooth
+* **BFGS** (dense inverse-Hessian quasi-Newton): the robust default for smooth
   unconstrained problems of modest dimension, with an Armijo backtracking line
   search and a curvature-safeguarded update.
-* **Gradient descent** with optional momentum and a line search -- a simple,
+* **Gradient descent** with optional momentum and a line search: a simple,
   dependable fallback.
-* **Newton** -- full-Hessian steps with a line search, for cheap, well-behaved
+* **Newton**: full-Hessian steps with a line search, for cheap, well-behaved
   Hessians (small design problems).
-* **Spectral projected gradient (SPG)** -- Barzilai-Borwein steps projected onto
+* **Spectral projected gradient (SPG)**: Barzilai-Borwein steps projected onto
   box bounds with a non-monotone line search, for bound-constrained problems.
-* **Augmented Lagrangian** -- equality and inequality constraints wrapped around
+* **Augmented Lagrangian**: equality and inequality constraints wrapped around
   any of the inner solvers above (the workhorse for constrained design).
-* **Levenberg-Marquardt** -- damped Gauss-Newton for nonlinear least squares
+* **Levenberg-Marquardt**: damped Gauss-Newton for nonlinear least squares
   (data fitting, multi-spec reconciliation).
 
 Differentiation
@@ -74,7 +74,7 @@ class OptimizeResult(NamedTuple):
     Attributes:
         x: The optimal decision variable, in the pytree structure of ``x0``.
         fun: Objective value at ``x``.
-        grad_norm: Max-norm of the (projected) gradient at ``x`` -- the
+        grad_norm: Max-norm of the (projected) gradient at ``x``, the
             first-order optimality residual.
         n_iter: Number of outer iterations taken.
         converged: Whether the optimality/feasibility tolerances were met.
@@ -542,7 +542,7 @@ def minimize(
         fun: Scalar objective ``fun(x, theta) -> ()``.
         x0: Initial decision pytree (its structure defines the unknown).
         theta: Optional parameter pytree forwarded to ``fun`` and the constraints.
-        method: Unconstrained inner method -- ``"bfgs"`` (default),
+        method: Unconstrained inner method, one of ``"bfgs"`` (default),
             ``"gradient-descent"``, or ``"newton"``. Ignored when bounds or
             constraints are present (SPG / augmented Lagrangian take over).
         bounds: Optional ``(lower, upper)`` box. Each side may be a scalar or a
@@ -605,7 +605,7 @@ def argmin(
     """The minimizer ``x*(theta) = argmin_x fun(x, theta)``, differentiable in ``theta``.
 
     Identical problem setup to `minimize`, but returns only the optimal
-    decision pytree and -- the point of this function -- carries exact gradients
+    decision pytree and (the point of this function) carries exact gradients
     with respect to ``theta`` by implicit differentiation of the optimality
     conditions. Use it to differentiate an optimized design with respect to
     prices, feed specifications, or thermodynamic-model parameters.
@@ -736,7 +736,7 @@ def least_squares(
 ) -> OptimizeResult:
     """Solve ``min_x 0.5 ||residual(x, theta)||^2`` by Levenberg-Marquardt.
 
-    A damped Gauss-Newton method for nonlinear least squares -- parameter
+    A damped Gauss-Newton method for nonlinear least squares: parameter
     reconciliation, fitting a model to several measurements at once, or driving a
     set of design residuals to zero. Returns an `OptimizeResult` whose
     ``fun`` is the half-sum-of-squares.

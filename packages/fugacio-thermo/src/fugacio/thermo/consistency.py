@@ -3,18 +3,18 @@
 These checks need no external reference data: they encode laws that *any* correct
 model must obey, and return a residual that should be zero (to numerical
 precision). They are the backbone of the README's "executable acceptance
-harness" -- thousands of small graded checks that anchor correctness as the
+harness": thousands of small graded checks that anchor correctness as the
 engine grows.
 
 Implemented laws:
 
-* `partial_molar_symmetry_residual` -- the Gibbs-Duhem relation, expressed
+* `partial_molar_symmetry_residual`: the Gibbs-Duhem relation, expressed
   as the symmetry of the Hessian of ``n_T g^E`` (equivalently of the Jacobian of
-  ``ln gamma_i`` -- or ``ln phi_i`` -- with respect to mole numbers). This holds
+  ``ln gamma_i``, or ``ln phi_i``, with respect to mole numbers). This holds
   at constant ``T, P`` for any model derived from a single Gibbs-energy surface.
-* `equifugacity_residual` -- equality of component fugacities between phases
+* `equifugacity_residual`: equality of component fugacities between phases
   at equilibrium, ``x_i phi_i^L = y_i phi_i^V``.
-* `fugacity_pressure_residual` -- the pure-fluid identity
+* `fugacity_pressure_residual`: the pure-fluid identity
   ``(d ln phi / dP)_T = (Z - 1) / P``, a direct consequence of ``dG = V dP``.
 """
 
