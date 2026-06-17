@@ -34,7 +34,7 @@ workspace:
 | Package | Import | Responsibility |
 | --- | --- | --- |
 | `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
-| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
+| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), **advanced control** (differentiable QP, offset-free linear MPC, Kalman/EKF/UKF/moving-horizon estimation, nonlinear & economic MPC, gradient-based tuning), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
 The dependency direction is strict — **`thermo` < `sim` < `copilot`** — and is
@@ -163,6 +163,32 @@ def response(gains):
 jax.grad(lambda g: iae(ts, response(g), sp))({"kc": jnp.asarray(0.5), "tau_i": jnp.asarray(8.0)})
 ```
 
+Single PID loops are not the whole control story. The `fugacio.sim.mpc` layer adds
+**model predictive control** and **state estimation**, and keeps them
+differentiable through their own solvers. A differentiable OSQP-style QP (with an
+implicit-function-theorem `custom_vjp`) backs a condensed, offset-free **linear
+MPC** — LQR terminal cost, hard input / soft output constraints, and a
+disturbance observer for zero steady-state offset; Kalman / extended / unscented
+filters and moving-horizon estimation reconstruct the state; and **nonlinear &
+economic MPC** optimize over the true model via `argmin`. Because the QP itself is
+differentiable, `tune_mpc` descends a closed-loop index on the controller weights
+— exact first-order tuning of the optimizer (see
+[the advanced-control guide](docs/advanced-control.md)):
+
+```python
+import jax.numpy as jnp
+from fugacio.sim import StateSpace, linear_mpc
+
+# Constrained, offset-free MPC on a discrete double integrator (position, velocity).
+dt = 0.1
+ss = StateSpace(a=jnp.array([[1.0, dt], [0.0, 1.0]]), b=jnp.array([[0.5 * dt**2], [dt]]),
+                c=jnp.array([[1.0, 0.0]]), d=jnp.zeros((1, 1)))
+mpc = linear_mpc(ss, q=10.0, r=0.1, horizon=20, u_min=-1.0, u_max=1.0, du_max=0.3)
+
+state = mpc.init_state(jnp.zeros(2))
+u, state = mpc.step(state, jnp.array([0.0]), jnp.array([1.0]))   # first constrained, optimal move
+```
+
 The energy bill of a plant is fixed before any exchanger is drawn, so
 `fugacio.sim.integration` brings the whole **pinch-technology** workflow — and
 keeps it differentiable. The problem table algorithm gives the minimum hot/cold
@@ -195,9 +221,10 @@ net.feasible, net.achieves_mer, net.n_units
 
 The `fugacio.copilot` agent exposes all of this — properties, steam tables,
 unit ops, distillation, reactors, optimization, sizing, costing, FOPDT
-identification / PID tuning, and heat-integration targeting & network synthesis —
-as a JSON tool registry, driven by a vendor-neutral provider layer
-(OpenAI / Anthropic / mock) through a multi-turn, tool-calling loop.
+identification / PID tuning, LQR & Kalman design, constrained MPC simulation &
+weight tuning, and heat-integration targeting & network synthesis — as a JSON
+tool registry, driven by a vendor-neutral provider layer (OpenAI / Anthropic /
+mock) through a multi-turn, tool-calling loop.
 
 ## Development
 

@@ -10,4 +10,5 @@ nav:
   - Reactions & reactors: reactions.md
   - Optimization, design & economics: optimization.md
   - Dynamics & process control: dynamics.md
+  - Advanced control (MPC & estimation): advanced-control.md
   - Heat integration & pinch analysis: heat-integration.md

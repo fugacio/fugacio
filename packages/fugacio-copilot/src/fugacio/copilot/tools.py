@@ -23,6 +23,7 @@ import jax.numpy as jnp
 
 from fugacio.copilot.dynamics_tools import dynamics_tool_specs
 from fugacio.copilot.integration_tools import integration_tool_specs
+from fugacio.copilot.mpc_tools import mpc_tool_specs
 from fugacio.sim import (
     STEAM_LEVELS,
     Stream,
@@ -2060,6 +2061,7 @@ def default_registry() -> dict[str, ToolSpec]:
     ]
     specs.extend(dynamics_tool_specs())
     specs.extend(integration_tool_specs())
+    specs.extend(mpc_tool_specs())
     return {spec.name: spec for spec in specs}
 
 
