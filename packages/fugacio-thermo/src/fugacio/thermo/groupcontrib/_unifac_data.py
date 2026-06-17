@@ -3,7 +3,7 @@
 Subgroup ``R_k``/``Q_k`` and main-group interaction energies are the public
 UNIFAC (Hansen VLE) parameters bundled in the open ``thermo`` package; the
 component-to-subgroup assignments are from the DDBST public set. Do not edit by
-hand -- regenerate instead.
+hand; regenerate instead.
 """
 
 from __future__ import annotations

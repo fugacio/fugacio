@@ -5,12 +5,12 @@ evaluate equations of state, ideal-gas properties, and saturation pressures for
 one chemical species. The values bundled in `DATABASE` are textbook
 reference data drawn from open sources:
 
-* critical constants and acentric factors -- Poling, Prausnitz & O'Connell,
+* critical constants and acentric factors: Poling, Prausnitz & O'Connell,
   *The Properties of Gases and Liquids* (5th ed.), Appendix A;
-* ideal-gas heat capacities -- Smith, Van Ness & Abbott,
+* ideal-gas heat capacities: Smith, Van Ness & Abbott,
   *Introduction to Chemical Engineering Thermodynamics* (7th ed.), Table C.1,
   in the form ``Cp/R = a + b*T + c*T**2 + d/T**2``;
-* Antoine vapour-pressure constants -- NIST Chemistry WebBook, in the form
+* Antoine vapour-pressure constants: NIST Chemistry WebBook, in the form
   ``log10(P/bar) = a - b / (T/K + c)``.
 
 ``Component`` instances are deliberately *static* Python objects (not JAX

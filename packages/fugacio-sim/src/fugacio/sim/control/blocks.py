@@ -12,7 +12,7 @@ is offered two ways:
   dropped into a dynamic simulation and integrated with everything else.
 
 Everything is `jax.numpy`, hence differentiable in the block parameters
-(gain, time constants, damping) -- the basis for gradient-based identification.
+(gain, time constants, damping), the basis for gradient-based identification.
 """
 
 from __future__ import annotations

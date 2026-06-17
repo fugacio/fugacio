@@ -1,8 +1,8 @@
 """Dynamic unit operations: holdups carried as ODE states.
 
 A steady-state unit (in `fugacio.sim.units`) maps inlet streams to outlet
-streams instantaneously. A *dynamic* unit has memory -- inventory of material and
-energy -- so its outlets depend on accumulated holdup, and its behaviour is an
+streams instantaneously. A *dynamic* unit has memory (inventory of material and
+energy), so its outlets depend on accumulated holdup, and its behaviour is an
 ODE. Every model here follows the same recipe, which keeps the differentiable
 index at one and reuses the existing thermodynamics:
 
@@ -70,8 +70,8 @@ def _warm_components(components: tuple[str, ...]) -> None:
 
     `fugacio.sim.properties._resolve` memoizes its (static) physical-constant
     arrays. If its first call happened *inside* a traced integration the cache would
-    capture tracers and leak; warming it here -- when the unit is built, outside any
-    trace -- guarantees the cached arrays are plain constants by the time the dynamic
+    capture tracers and leak; warming it here (when the unit is built, outside any
+    trace) guarantees the cached arrays are plain constants by the time the dynamic
     solver runs.
     """
     _resolve(components)
@@ -114,7 +114,7 @@ class DynamicUnit(ABC):
     def measured(self, state: Any) -> dict[str, Array]:
         """State-only measurements (level, T, P, composition) available to controllers.
 
-        These depend on the unit state alone -- not on the inlet streams -- so a
+        These depend on the unit state alone, not on the inlet streams, so a
         controller can read them before the units are advanced, which keeps the
         instantaneous control algebra explicit (see `DynamicFlowsheet`).
         """
@@ -336,7 +336,7 @@ class CSTRState(NamedTuple):
 
 @dataclass(frozen=True)
 class DynamicCSTR(DynamicUnit):
-    """A non-isothermal, constant-volume liquid CSTR -- the canonical control plant.
+    """A non-isothermal, constant-volume liquid CSTR: the canonical control plant.
 
     Works in concentration space: state is the vector of species concentrations
     ``C`` (mol/m^3) and the reactor temperature ``T``. The reactor has volume
@@ -502,8 +502,8 @@ class DynamicFlash(DynamicUnit):
     """An isothermal-isobaric flash drum with liquid holdup and equilibrium vapor.
 
     State is the per-component liquid holdup ``M`` (mol). The vapour drawn off is in
-    instantaneous phase equilibrium with the well-mixed holdup -- its composition is
-    the equilibrium vapour of a `flash_pt` on the holdup at ``(T, P)`` -- and
+    instantaneous phase equilibrium with the well-mixed holdup (its composition is
+    the equilibrium vapour of a `flash_pt` on the holdup at ``(T, P)``) and
     leaves at a commanded rate; the liquid product leaves at the holdup composition.
     This captures the composition response of a separator to feed and draw
     disturbances while reusing the rigorous EOS equilibrium.

@@ -247,7 +247,7 @@ def integration_tool_specs() -> list[Any]:
             description=(
                 "Return the hot and cold composite curves and the grand composite "
                 "curve (temperature-enthalpy data) for a set of process streams at "
-                "a given minimum approach temperature -- the diagrams behind utility "
+                "a given minimum approach temperature: the diagrams behind utility "
                 "selection and heat-recovery targeting."
             ),
             parameters={

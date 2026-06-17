@@ -22,8 +22,8 @@ liquid, largest for a vapour) is inherently non-smooth, so rather than
 differentiate through the closed-form cubic solution we compute ``Z`` by the
 analytic trigonometric/Cardano method and attach exact derivatives through the
 *implicit function theorem* applied to the cubic residual (a `jax.custom_jvp`
-rule). The result is clean, cheap gradients of ``Z`` -- and therefore of every
-downstream property and fugacity coefficient -- with respect to ``T``, ``P``,
+rule). The result is clean, cheap gradients of ``Z`` (and therefore of every
+downstream property and fugacity coefficient) with respect to ``T``, ``P``,
 composition, and the EOS parameters themselves.
 """
 

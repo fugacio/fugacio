@@ -5,14 +5,14 @@ T-x-y envelopes and, above all, *where the azeotrope is* (it bounds what ordinar
 distillation can reach). These helpers turn any binary
 `EquilibriumModel` into:
 
-* `pxy_diagram` / `txy_diagram` -- the bubble (liquid) and the
+* `pxy_diagram` / `txy_diagram`: the bubble (liquid) and the
   equilibrium-vapour curves on a composition grid, from one bubble sweep each; and
-* `azeotrope_pressure` / `azeotrope_temperature` -- the azeotropic
+* `azeotrope_pressure` / `azeotrope_temperature`: the azeotropic
   composition (where ``y_1 = x_1``) at fixed ``T`` or ``P``, returned with an
   ``exists`` flag so a non-azeotropic system is reported, not faked.
 
 All outputs are differentiable: the diagram arrays through the bubble solves, and
-the azeotrope locus through the bracketed root's implicit derivative -- so an
+the azeotrope locus through the bracketed root's implicit derivative, so an
 azeotrope's pressure sensitivity to a model parameter is a single
 `jax.grad` away.
 """
@@ -252,8 +252,8 @@ def residue_curve(
     it back toward the low-boiling node.
 
     Integration is an explicit Euler march with the composition re-projected onto
-    the simplex each step, so the path stays a valid composition. The expensive part
-    -- the bubble-point ``(T, y)`` at each point -- is one compiled, differentiable
+    the simplex each step, so the path stays a valid composition. The expensive part,
+    the bubble-point ``(T, y)`` at each point, is one compiled, differentiable
     solve (`_bubble_ty`) reused across every step and every curve.
 
     Args:
@@ -301,7 +301,7 @@ def residue_curve_map(
 
     Each start is integrated *both* directions (toward the light and the heavy node)
     and the two halves are stitched into a single curve passing through the start.
-    This is the ternary distillation designer's master diagram -- distillation
+    This is the ternary distillation designer's master diagram: distillation
     boundaries and reachable products fall out of the family of curves.
 
     Args:

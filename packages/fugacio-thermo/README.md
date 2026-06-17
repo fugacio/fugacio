@@ -1,7 +1,7 @@
 # fugacio-thermo
 
 Differentiable thermodynamics and physical-property engine for the
-[Fugacio](https://github.com/owenthcarey/fugacio) stack. Every model is written
+[Fugacio](https://github.com/fugacio/fugacio) stack. Every model is written
 in [JAX](https://github.com/jax-ml/jax), so any output (a fugacity coefficient,
 a saturation pressure, a flash result) is differentiable with respect to
 temperature, pressure, composition, *and* model parameters. The iterative solvers

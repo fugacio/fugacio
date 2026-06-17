@@ -1,16 +1,16 @@
 """Energy-balance phase equilibrium: two-phase enthalpy/entropy and PH/PS flash.
 
 The isothermal flash in `fugacio.thermo.equilibrium` answers "what splits?"
-at a *given* temperature. Process units instead fix an *energy* specification --
-a heat duty, an adiabatic mix, an isentropic compression -- and the temperature
+at a *given* temperature. Process units instead fix an *energy* specification
+(a heat duty, an adiabatic mix, an isentropic compression) and the temperature
 is unknown. This module supplies:
 
-* `mixture_enthalpy` / `mixture_entropy` -- the molar enthalpy and
+* `mixture_enthalpy` / `mixture_entropy`: the molar enthalpy and
   entropy of an equilibrium feed at ``(T, P)``, correctly blending the vapour and
   liquid products of the flash (so the latent heat is included automatically);
-* `flash_ph` -- the isenthalpic (adiabatic) flash: solve for the
+* `flash_ph`: the isenthalpic (adiabatic) flash: solve for the
   temperature at which the mixture enthalpy meets a target, then return the split;
-* `flash_ps` -- the isentropic flash, the backbone of compressor and
+* `flash_ps`: the isentropic flash, the backbone of compressor and
   turbine models.
 
 Both flashes solve a scalar, monotone energy residual (enthalpy or entropy minus
@@ -19,7 +19,7 @@ forward pass brackets the root in ``[t_min, t_max]`` and only ever evaluates the
 residual's value (never its gradient), falling back to bisection whenever a
 Newton step would leave the bracket. This is robust even when a trial temperature
 crosses a phase boundary, where the underlying flash gradient is ill-defined. The
-converged temperature -- and everything derived from it -- is differentiable with
+converged temperature (and everything derived from it) is differentiable with
 respect to the energy specification, pressure, feed, and model parameters by the
 implicit function theorem (a hand-written ``custom_jvp`` rule), with no
 differentiation through the iteration itself.
@@ -131,7 +131,7 @@ def _implicit_temperature(
 
     The forward pass is a safeguarded Newton iteration. It maintains a bracket
     ``[lo, hi]`` (initialised to ``[t_min, t_max]``) that always contains the root,
-    using only residual *values* -- the slope is estimated by a one-sided finite
+    using only residual *values*: the slope is estimated by a one-sided finite
     difference rather than ``jax.grad``, because a Newton trial can cross a phase
     boundary where the flash gradient is undefined (``NaN``). A Newton step is
     accepted only if it stays inside the bracket and the slope is usable; otherwise

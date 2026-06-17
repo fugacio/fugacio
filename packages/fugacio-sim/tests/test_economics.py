@@ -2,7 +2,7 @@
 
 Checks the correlations against known values and limits, that costs behave
 sensibly (monotone in size, installed > purchased, pressure factor >= 1), and
-that the money objectives are differentiable -- the whole point of a cost model
+that the money objectives are differentiable, the whole point of a cost model
 in a gradient-based design tool.
 """
 

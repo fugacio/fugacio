@@ -6,7 +6,7 @@ the pinch geometry (their closest approach is exactly ``dt_min``), the grand
 composite against the cascade it is built from, and the area target against the
 analytic ``Q/(U*LMTD)`` of a single counter-current match. The network
 synthesiser is required to hit the MER utility targets while keeping ``dt_min``
-on every exchanger, and the whole target stack is differentiated -- the point of
+on every exchanger, and the whole target stack is differentiated, the point of
 a gradient-based heat-integration model.
 """
 
@@ -34,7 +34,7 @@ from fugacio.sim.integration import (
 )
 
 # The classic four-stream problem (Smith, *Chemical Process Design*; Kemp, *Pinch
-# Analysis*). CP in kW/K, temperatures in degrees -- the energy targets are
+# Analysis*). CP in kW/K, temperatures in degrees: the energy targets are
 # scale-free, so the bare numbers stand in for SI throughout.
 FOUR_STREAM = [
     make_stream(20.0, 135.0, 2.0, h=1.0, name="C1"),

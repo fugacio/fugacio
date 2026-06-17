@@ -1,7 +1,7 @@
 """Model bridge: turn component *names* + a method choice into an equilibrium model.
 
-The thermo equilibrium models -- `EOSModel` and
-`GammaPhiModel` -- take *array* constants (``tc``, ``pc``,
+The thermo equilibrium models (`EOSModel` and
+`GammaPhiModel`) take *array* constants (``tc``, ``pc``,
 ``omega``) and, for gamma-phi, an activity model. A flowsheet, however, works in
 component *names*. This module resolves names to those arrays (reusing the cached
 lookup in `fugacio.sim.properties`) and assembles the activity model from the
@@ -12,7 +12,7 @@ curated binary database (NRTL / UNIQUAC) or predictive group contribution
 The returned object is what the gamma-phi-aware unit operations
 (`fugacio.sim.separations`) and the T-x-y / P-x-y / azeotrope helpers
 (`fugacio.sim.diagrams`) consume, so a flowsheet can switch from
-Peng-Robinson to NRTL by swapping one constructor call -- and stays end-to-end
+Peng-Robinson to NRTL by swapping one constructor call, and stays end-to-end
 differentiable, including with respect to the activity-model parameters.
 """
 
@@ -125,7 +125,7 @@ class UnifacModel:
     Wraps `fugacio.thermo.unifac_activity` (classic, Hansen VLE parameters)
     or `fugacio.thermo.modified_unifac_activity` (Dortmund, T-dependent) so
     that group-contribution predictions present the same ``ln_gamma(x, T)`` API as
-    the fitted activity models. Carries no fitted leaves -- it is a pure predictor
+    the fitted activity models. Carries no fitted leaves: it is a pure predictor
     keyed by the (static) component names.
     """
 

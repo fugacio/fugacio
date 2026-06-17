@@ -1,7 +1,7 @@
 # fugacio-copilot
 
 Chemical-engineering design copilot/agent for the
-[Fugacio](https://github.com/owenthcarey/fugacio) stack. It sits on top of
+[Fugacio](https://github.com/fugacio/fugacio) stack. It sits on top of
 `fugacio.sim` and turns natural-language design goals into engineering
 calculations: flowsheets, equipment sizing, and (eventually) techno-economic /
 life-cycle analysis.

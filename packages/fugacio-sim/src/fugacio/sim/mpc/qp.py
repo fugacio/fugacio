@@ -9,17 +9,17 @@ The solver follows the design that has made `OSQP
 <https://osqp.org>`_ the de-facto embedded QP method, specialised here for the
 small dense problems an MPC horizon produces:
 
-* **Forward** -- the operator-splitting (ADMM) iteration on the canonical form
+* **Forward**: the operator-splitting (ADMM) iteration on the canonical form
   ``min 0.5 z^T P z + q^T z  s.t.  l <= A z <= u``. The KKT coefficient matrix is
   constant across iterations, so it is factorised once and the fixed-length march
   is a cheap `jax.lax.scan`. A final *polish* solves the equality-constrained
   KKT system on the identified active set, recovering a solution accurate to
   linear-solve precision (and the constraint multipliers).
-* **Backward** -- a hand-written ``custom_vjp`` differentiates the *solution*, not
+* **Backward**: a hand-written ``custom_vjp`` differentiates the *solution*, not
   the iteration, by the implicit function theorem applied to the active-set KKT
   conditions (the OptNet rule). Gradients with respect to every datum ``P, q, A,
   l, u`` cost a single linear solve and are independent of the ADMM iteration
-  count -- exactly the "differentiate the converged solution" philosophy of
+  count, exactly the "differentiate the converged solution" philosophy of
   `fugacio.sim.argmin` and `fugacio.sim.tear_solve`.
 
 `solve_qp` is the ergonomic entry point (objective plus optional equality,
@@ -132,7 +132,7 @@ def _osqp(p: Array, q: Array, a: Array, low: Array, up: Array, s: QPSettings) ->
     across problem scales and the Lagrange multipliers it must build up stay O(1)
     (otherwise a large linear term would need as many iterations as its magnitude to
     enforce the constraints). This only affects the (gradient-invisible) convergence
-    path -- scaling the objective leaves the minimizer unchanged, and the polish /
+    path: scaling the objective leaves the minimizer unchanged, and the polish /
     implicit gradient use the original data.
     """
     n = p.shape[0]

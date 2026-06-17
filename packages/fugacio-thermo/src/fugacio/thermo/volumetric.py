@@ -4,22 +4,22 @@ Cubic equations of state are excellent for phase equilibrium but notoriously poo
 for saturated-liquid density (Peng-Robinson is typically 5-15% off). This module
 supplies the standard remedies:
 
-* **Rackett** (`rackett_volume`) -- the two-line corresponding-states
+* **Rackett** (`rackett_volume`): the two-line corresponding-states
   classic, sharpened by the Spencer-Danner ``Z_RA`` parameter when the curated
   tables carry one (`zra_estimate` otherwise);
-* **COSTALD** (`costald_volume`, `costald_mixture_volume`) -- the
+* **COSTALD** (`costald_volume`, `costald_mixture_volume`): the
   Hankinson-Thomson correlation with its characteristic volumes and SRK acentric
   factors, including the standard mixing rules;
-* **DIPPR-105 fits** -- per-component saturated-density correlations transcribed
+* **DIPPR-105 fits**: per-component saturated-density correlations transcribed
   from open data (the most accurate route where available);
 * **Peneloux volume translation** (`peneloux_shift`,
-  `translated_molar_volume`) -- the constant shift ``v = v_eos - sum x_i c_i``
+  `translated_molar_volume`): the constant shift ``v = v_eos - sum x_i c_i``
   that repairs cubic-EOS liquid volumes *without changing phase equilibrium*
   (fugacity ratios are invariant to a composition-linear translation).
 
 The name-based dispatchers (`liquid_molar_volumes`,
 `mixture_liquid_volume`, `liquid_density`) choose the best available
-route per component -- DIPPR fit, then COSTALD, then Rackett -- so callers get a
+route per component (DIPPR fit, then COSTALD, then Rackett) so callers get a
 sensible answer for every database component, differentiable in ``T`` and
 composition throughout.
 """
@@ -86,7 +86,7 @@ def costald_volume(t: ArrayLike, tc: ArrayLike, vchar: ArrayLike, omega_srk: Arr
 
     ``V = V* . V_R^0(Tr) . (1 - omega_SRK . V_R^delta(Tr))`` with the
     characteristic volume ``V*`` and SRK acentric factor from the curated tables
-    (Hankinson & Thomson 1979). Valid for ``0.25 < Tr < 0.95`` -- the upper
+    (Hankinson & Thomson 1979). Valid for ``0.25 < Tr < 0.95``: the upper
     clipping keeps the correlation finite as ``Tr -> 1``.
     """
     tr = jnp.clip(jnp.asarray(t) / tc, 0.0, 0.999)
@@ -133,7 +133,7 @@ _PENELOUX = {
 def peneloux_shift(eos: CubicEOS, tc: ArrayLike, pc: ArrayLike, zra: ArrayLike) -> Array:
     """Peneloux volume-translation constant ``c_i`` (m^3/mol) for SRK or PR.
 
-    ``c = k1*(k2 - Z_RA)*R*Tc/Pc`` -- positive for most fluids, so the translated
+    ``c = k1*(k2 - Z_RA)*R*Tc/Pc``, positive for most fluids, so the translated
     liquid volume ``v - c`` shrinks toward the experimental value. Raises for EOS
     families without published constants (VDW, RK).
     """
@@ -159,7 +159,7 @@ def translated_molar_volume(
     """Peneloux-translated EOS molar volume ``v_eos - sum_i x_i c_i`` (m^3/mol).
 
     The translation is linear in composition, so all fugacity-coefficient
-    *ratios* -- and therefore every phase-equilibrium result -- are unchanged;
+    *ratios* (and therefore every phase-equilibrium result) are unchanged;
     only the volumetric (and caloric-at-constant-V) properties improve.
     """
     x = jnp.asarray(x)

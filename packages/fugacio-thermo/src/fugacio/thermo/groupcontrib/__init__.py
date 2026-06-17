@@ -7,7 +7,7 @@
   a count of functional groups.
 
 These let Fugacio cover mixtures and species for which curated, fitted parameters
-are unavailable -- the role the project README assigns to group contribution.
+are unavailable, the role the project README assigns to group contribution.
 """
 
 from fugacio.thermo.groupcontrib.dortmund import (

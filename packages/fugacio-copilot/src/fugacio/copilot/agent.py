@@ -2,13 +2,13 @@
 
 Two complementary loops share one tool registry:
 
-* `run_agent` -- the original *model-agnostic* loop. A **planner** callable
+* `run_agent`: the original *model-agnostic* loop. A **planner** callable
   ``(goal, tool_schemas, transcript) -> decision`` decides the next tool call or
   the final answer, where ``decision`` is ``{"tool": name, "arguments": {...}}``
   or ``{"final_answer": text}``. This keeps the control flow fully testable with
   a scripted planner and lets any decision policy drop in.
 
-* `run_llm_agent` -- a real multi-turn function-calling loop over an
+* `run_llm_agent`: a real multi-turn function-calling loop over an
   `LLMProvider` (OpenAI, Anthropic, or the test
   `MockProvider`). It maintains the full message
   history with tool-call ids, executes every requested tool (validating

@@ -3,9 +3,9 @@
 A Helmholtz EOS is explicit in ``(rho, T)``, so going from the process-side
 specification ``(T, P)`` requires a root solve of ``P(rho, T) = P``. Below the
 critical temperature that equation has up to three roots (liquid, unstable
-middle, vapor); the solver picks the physical branch by *initialization* --
+middle, vapor); the solver picks the physical branch by *initialization*:
 the saturated-liquid ancillary seeds the liquid branch and the ideal gas seeds
-the vapor branch -- exactly the strategy reference implementations use. Above
+the vapor branch, exactly the strategy reference implementations use. Above
 the critical temperature the isotherm is monotonic and a bracketed bisection
 is unconditionally robust.
 

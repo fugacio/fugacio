@@ -1,8 +1,8 @@
 """Human-readable (Markdown) summaries of simulation and design results.
 
 The copilot returns numbers; these helpers turn them into the tables and
-summaries an engineer expects -- a stream table, an optimization summary, an
-equipment cost breakdown, and a rendered agent transcript -- so a language model
+summaries an engineer expects (a stream table, an optimization summary, an
+equipment cost breakdown, and a rendered agent transcript) so a language model
 (or a notebook) can present results cleanly. Everything here is pure Python
 string formatting over already-computed results; no JAX, no I/O.
 """

@@ -4,7 +4,7 @@ Dortmund subgroup ``R_k``/``Q_k`` and the temperature-dependent main-group
 interaction parameters ``(a_mn, b_mn, c_mn)`` (psi = exp(-(a + b T + c T^2)/T))
 are the published modified-UNIFAC values bundled in the open ``thermo`` package
 (``DOUFSG`` / ``DOUFIP2006``); assignments are the DDBST modified-UNIFAC set. Do
-not edit by hand -- regenerate instead.
+not edit by hand; regenerate instead.
 """
 
 from __future__ import annotations

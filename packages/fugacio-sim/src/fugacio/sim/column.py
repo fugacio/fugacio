@@ -2,13 +2,13 @@
 
 Two complementary, fully differentiable column models:
 
-* **Shortcut** -- the Fenske-Underwood-Gilliland (FUG) method: minimum stages at
-  total reflux (`fenske_min_stages`), minimum reflux (`underwood_min_reflux`),
+* **Shortcut**: the Fenske-Underwood-Gilliland (FUG) method, giving minimum stages
+  at total reflux (`fenske_min_stages`), minimum reflux (`underwood_min_reflux`),
   the actual stage count at a working reflux (`gilliland_stages`), and the
   feed-stage location (`kirkbride_feed_stage`), tied together by
   `shortcut_column`. Cheap, robust, and ideal for screening or as an
   initial guess for the rigorous model.
-* **Rigorous** -- a multistage equilibrium-stage column solved by the Wang-Henke
+* **Rigorous**: a multistage equilibrium-stage column solved by the Wang-Henke
   bubble-point method under constant molar overflow, with EOS K-values on every
   stage (`solve_column`). The converged profile is differentiable through
   the fixed-point iteration by implicit differentiation.

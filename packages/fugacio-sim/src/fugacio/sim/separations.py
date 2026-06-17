@@ -3,17 +3,17 @@
 These complement the equation-of-state blocks in `fugacio.sim.units` with the
 non-ideal phase behaviour the gamma-phi property system unlocks:
 
-* `flash_vle` -- a two-phase V-L flash driven by *any*
+* `flash_vle`: a two-phase V-L flash driven by *any*
   `EquilibriumModel` (EOS or gamma-phi), so the same drum
   works on Peng-Robinson or NRTL/UNIQUAC/UNIFAC;
-* `decanter` -- a liquid-liquid separator (settling tank) that splits one
+* `decanter`: a liquid-liquid separator (settling tank) that splits one
   feed into two conjugate liquid products via the isoactivity LLE flash; and
-* `three_phase_flash` -- a vapour + two-liquid (V-L-L) separator for
+* `three_phase_flash`: a vapour + two-liquid (V-L-L) separator for
   heterogeneous systems (water/organic decantation, heteroazeotropic columns).
 
 Every product is a differentiable `Stream`; flows carry
-gradients with respect to the operating ``T``, ``P``, the feed, and -- through the
-model object -- the thermodynamic parameters themselves.
+gradients with respect to the operating ``T``, ``P``, the feed, and (through the
+model object) the thermodynamic parameters themselves.
 """
 
 from __future__ import annotations
@@ -38,9 +38,9 @@ class _VLEModel(Protocol):
 def flash_vle(feed: Stream, t: ArrayLike, p: ArrayLike, model: _VLEModel) -> tuple[Stream, Stream]:
     """Two-phase vapour-liquid flash of ``feed`` at ``(T, P)`` using ``model``.
 
-    Works with any `EquilibriumModel` -- an
+    Works with any `EquilibriumModel` (an
     `EOSModel` for the phi-phi route or a
-    `GammaPhiModel` for the activity-coefficient route --
+    `GammaPhiModel` for the activity-coefficient route)
     so the drum's thermodynamics are chosen by the model passed in.
 
     Returns:
@@ -71,7 +71,7 @@ def decanter(
     model's activity description at temperature ``t`` (default: the feed
     temperature) and the feed pressure. For a feed outside any miscibility gap the
     LLE flash collapses to the trivial split and one product carries essentially
-    the whole feed -- check with `fugacio.thermo.liquid_stability` upstream
+    the whole feed; check with `fugacio.thermo.liquid_stability` upstream
     if that matters.
 
     Returns:
@@ -109,7 +109,7 @@ def three_phase_flash(
 
     Drives the three-phase flash (`fugacio.thermo.flash_vlle`) with the
     model's activity liquid and its EOS/ideal vapour. Use for heterogeneous
-    systems -- water/organic decantation and heteroazeotropic distillation -- where
+    systems (water/organic decantation and heteroazeotropic distillation) where
     a vapour coexists with two liquids.
 
     Returns:

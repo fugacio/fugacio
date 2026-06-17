@@ -1,14 +1,14 @@
 """Linearize a nonlinear dynamic model about an operating point, by autodiff.
 
-A great deal of control analysis -- poles, stability margins, Bode plots,
-controllability -- is *linear* analysis around a steady state. Fugacio gets the
+A great deal of control analysis (poles, stability margins, Bode plots,
+controllability) is *linear* analysis around a steady state. Fugacio gets the
 linear model for free: the plant's right-hand side is already differentiable, so
 the state-space matrices are simply its Jacobians,
 
     ``A = df/dy``, ``B = df/du``, ``C = dg/dy``, ``D = dg/du``,
 
 evaluated at the operating point with `jax.jacobian`. No finite differences,
-no hand-derived models -- the same source of truth that runs the nonlinear
+no hand-derived models: the same source of truth that runs the nonlinear
 simulation produces its exact local linearization. From there everything is
 standard dense linear algebra on ``(A, B, C, D)``.
 """

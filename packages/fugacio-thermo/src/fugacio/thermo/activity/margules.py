@@ -10,7 +10,7 @@ which yields the activity coefficients::
     ln(gamma_2) = x1**2 * (A21 + 2 * (A12 - A21) * x2)
 
 Because both activity coefficients come from a single ``g^E`` surface, the model
-is thermodynamically consistent (it satisfies the Gibbs-Duhem relation) -- a
+is thermodynamically consistent (it satisfies the Gibbs-Duhem relation), a
 property the test-suite verifies directly via automatic differentiation.
 
 All functions are written in ``jax.numpy`` and are differentiable with respect to

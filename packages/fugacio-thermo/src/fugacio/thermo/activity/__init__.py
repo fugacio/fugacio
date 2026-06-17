@@ -4,12 +4,12 @@ The package collects excess-Gibbs / activity-coefficient models that share a
 common, differentiable ``jax.numpy`` implementation:
 
 * `margules` and
-  `vanlaar` -- two-parameter binary models;
+  `vanlaar`: two-parameter binary models;
 * `wilson`,
   `nrtl` and
-  `uniquac` -- multicomponent local-composition
+  `uniquac`: multicomponent local-composition
   models;
-* `regular_solution` -- Scatchard-Hildebrand
+* `regular_solution`: Scatchard-Hildebrand
   regular-solution and Flory-Huggins models from pure-component descriptors.
 
 Each model exposes ``*_ln_gamma`` and ``*_gamma`` functions; the local-

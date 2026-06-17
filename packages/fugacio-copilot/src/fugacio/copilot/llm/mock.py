@@ -3,8 +3,8 @@
 `MockProvider` plays back either a fixed list of `ChatResponse`
 objects (one per ``chat`` call) or a callable that decides the reply from the
 running message list. It records every call it receives, so tests can assert on
-how the agent drove the conversation. This keeps the whole tool-calling loop --
-plan, call tool, feed the result back, answer -- fully exercisable in the fast,
+how the agent drove the conversation. This keeps the whole tool-calling loop
+(plan, call tool, feed the result back, answer) fully exercisable in the fast,
 hermetic unit suite.
 """
 

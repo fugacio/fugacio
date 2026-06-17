@@ -2,23 +2,23 @@
 
 Everything in `fugacio.sim` up to here is *steady state*: a flash, a column,
 a recycle loop is the solution of an algebraic system. Dynamics adds the missing
-dimension -- time -- and with it the question every real plant asks: not just
+dimension (time) and with it the question every real plant asks: not just
 *where* does the process settle, but *how* does it get there, how fast, and is
 the path stable. This module is the engine for that: a small, self-contained,
 end-to-end-differentiable ODE integrator written against `jax.numpy`.
 
 Two complementary drivers are provided, and the split is deliberate:
 
-* `odeint` -- a **fixed output grid** integrator built on
+* `odeint`: a **fixed output grid** integrator built on
   `jax.lax.scan`. Because the step pattern is static, it is differentiable
   in *both* directions out of the box (forward- and reverse-mode), returns the
   whole trajectory at the requested times, and is the workhorse for simulating
   dynamic flowsheets where a uniform sampling grid is wanted anyway. Several
-  steppers are available -- explicit Euler, classical RK4, the Dormand-Prince
+  steppers are available: explicit Euler, classical RK4, the Dormand-Prince
   5(4) stages used as a fixed step, and the A-stable implicit Euler / trapezoidal
   methods (each implicit step solved by a fixed-count Newton iteration so the
   whole march stays reverse-differentiable) for stiff systems.
-* `integrate` -- an **adaptive-step** Dormand-Prince 5(4) integrator with a
+* `integrate`: an **adaptive-step** Dormand-Prince 5(4) integrator with a
   PI step controller, for when only the final state matters and efficiency or
   stiffness control does. Its data-dependent step count rules out naive
   reverse-mode (you cannot back-propagate through a `jax.lax.while_loop`),
@@ -233,7 +233,7 @@ def odeint(
     inner steps of the chosen ``method`` between successive output points, and the
     state is recorded at every entry of ``ts``. Because the step pattern is static
     the whole integration is an ordinary `jax.lax.scan`, hence differentiable
-    in forward *and* reverse mode with respect to ``y0`` and ``theta`` -- no custom
+    in forward *and* reverse mode with respect to ``y0`` and ``theta``, no custom
     rule needed.
 
     Args:
@@ -242,7 +242,7 @@ def odeint(
         y0: Initial state pytree at ``ts[0]``.
         ts: 1-D array of strictly increasing output times (length >= 2).
         theta: Optional differentiable parameter pytree forwarded to ``func``.
-        method: One of `FIXED_METHODS` -- ``"euler"``, ``"rk4"`` (default),
+        method: One of `FIXED_METHODS`: ``"euler"``, ``"rk4"`` (default),
             ``"dopri5"``, or the stiff ``"implicit_euler"`` / ``"trapezoidal"``.
         substeps: Number of inner integration steps per output interval (>= 1);
             raise it to cut discretisation error without densifying ``ts``.

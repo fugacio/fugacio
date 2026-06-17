@@ -5,7 +5,7 @@ suite and skipped unless Cantera is importable. The Cantera ideal-gas phase is
 built from Fugacio's *own* standard formation data and ideal-gas ``Cp``
 coefficients (see :func:`fugacio.thermo.oracles._cantera_ideal_gas`), so the
 comparison isolates the temperature-integration kernel and the equilibrium
-*solver* rather than a difference in reference data -- agreement is therefore
+*solver* rather than a difference in reference data. Agreement is therefore
 expected to (near) machine precision, not merely in the ballpark.
 """
 

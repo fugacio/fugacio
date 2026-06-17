@@ -4,7 +4,7 @@ Targeting says *how much* heat to recover and *how much* area it needs; this
 module proposes an actual network of exchangers that meets the minimum-utility
 (MER) target. It follows Linnhoff & Hindmarsh's **pinch design method**:
 
-1. Divide the problem at the pinch -- no heat crosses it, so the above- and
+1. Divide the problem at the pinch: no heat crosses it, so the above- and
    below-pinch regions are designed independently.
 2. Start matches *at* the pinch, where driving forces are tightest, honouring the
    CP-feasibility criterion (``CP_hot <= CP_cold`` above the pinch,
@@ -168,7 +168,7 @@ def _region_design(
             area=_exchanger_area(q, h.h, c.h, dt_pinch_end, dt_far_end),
         )
 
-    # Phase 1: pinch matches -- match streams still at the pinch, CP-feasible,
+    # Phase 1: pinch matches: match streams still at the pinch, CP-feasible,
     # processing the larger-CP hot streams first (the binding ones).
     if enforce_cp:
         for h in sorted(hots, key=lambda s: -s.cp):
@@ -303,9 +303,9 @@ def _design_pinched(
 def _design_threshold(streams: list[HeatStream], dt: float) -> list[Exchanger]:
     """Threshold problem (no pinch): one region anchored at the closed end.
 
-    With no pinch the design starts from the end that needs no utility -- the hot
-    end when only cold utility is required, the cold end when only hot utility is
-    -- so driving forces only open up away from it. The CP rule (a pinch concept)
+    With no pinch the design starts from the end that needs no utility (the hot
+    end when only cold utility is required, the cold end when only hot utility is),
+    so driving forces only open up away from it. The CP rule (a pinch concept)
     does not apply; feasibility is confirmed afterwards by `verify_network`.
     """
     casc = heat_cascade(streams, dt)

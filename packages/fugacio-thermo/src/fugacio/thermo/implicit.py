@@ -175,7 +175,7 @@ def newton_system(
     Jacobian ``J = dF/dx`` (a dense solve, intended for the small systems that
     multi-reaction equilibrium and multi-phase flashes produce). The converged
     root is differentiated with respect to the parameter pytree ``theta`` by the
-    implicit function theorem -- ``dx*/dtheta = -J^{-1} dF/dtheta`` -- so gradients
+    implicit function theorem (``dx*/dtheta = -J^{-1} dF/dtheta``), so gradients
     are exact and independent of the iteration count.
 
     Args:

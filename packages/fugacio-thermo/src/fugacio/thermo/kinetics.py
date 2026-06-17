@@ -1,7 +1,7 @@
 """Differentiable reaction-rate laws.
 
-A *rate law* maps the local state of a reacting mixture -- temperature ``T`` and
-the concentration vector ``c`` (mol/m^3, aligned with a component list) -- to the
+A *rate law* maps the local state of a reacting mixture, temperature ``T`` and
+the concentration vector ``c`` (mol/m^3, aligned with a component list), to the
 intensive rate of one reaction ``r`` (mol/m^3/s). The reactor models in
 `fugacio.sim.reactors` multiply that rate by the stoichiometry of a
 `Reaction` to get species production rates.
@@ -15,11 +15,11 @@ with respect to the kinetics.
 
 Provided laws:
 
-* `arrhenius` / `Arrhenius` -- the rate constant ``k(T) = A exp(-Ea/RT)``;
-* `PowerLaw` -- an irreversible power-law rate ``k(T) * prod_i c_i^{m_i}``;
-* `MassActionReversible` -- an elementary reversible rate
+* `arrhenius` / `Arrhenius`: the rate constant ``k(T) = A exp(-Ea/RT)``;
+* `PowerLaw`: an irreversible power-law rate ``k(T) * prod_i c_i^{m_i}``;
+* `MassActionReversible`: an elementary reversible rate
   ``k_f prod_{reactants} c^{|nu|} - k_r prod_{products} c^{nu}``;
-* `LHHW` -- a Langmuir-Hinshelwood / Hougen-Watson rate with an adsorption
+* `LHHW`: a Langmuir-Hinshelwood / Hougen-Watson rate with an adsorption
   inhibition term in the denominator.
 
 Concentrations are clipped at zero before being raised to (possibly fractional)
@@ -62,7 +62,7 @@ def arrhenius_ref(t: ArrayLike, k_ref: ArrayLike, ea: ArrayLike, t_ref: float = 
 
 
 def _pow(c: Array, orders: Array) -> Array:
-    """``prod_i max(c_i, 0)^{orders_i}`` -- product of non-negative powers.
+    """``prod_i max(c_i, 0)^{orders_i}``: product of non-negative powers.
 
     Uses the "double where" trick so the result is differentiable even where a
     concentration is exactly zero: the power is evaluated on a base that is never

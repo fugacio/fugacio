@@ -3,7 +3,7 @@
 Unit operations close *material and energy* balances, so they need a stream's
 enthalpy and entropy, not just its composition. This module resolves a stream's
 (static) component names to the array constants the `fugacio.thermo` kernels
-expect -- caching that lookup, since names never change during a solve -- and
+expect (caching that lookup, since names never change during a solve) and
 exposes the resulting molar and total-flow properties.
 
 Enthalpy and entropy are two-phase aware: they run the equilibrium flash at the
@@ -11,7 +11,7 @@ stream's ``(T, P)`` and blend the phase properties, so a subcooled liquid, a
 superheated vapour, and a flashing two-phase stream are all handled by the same
 call. Everything stays differentiable with respect to the stream's flows,
 temperature, and pressure (the component constants are not differentiated, which
-is exactly right -- they are reference data, not decision variables).
+is exactly right: they are reference data, not decision variables).
 
 Sizing-grade physical properties are surfaced too: phase densities and
 volumetric flows (`liquid_density`, `vapor_volumetric_flow`),
@@ -171,7 +171,7 @@ def column_diameter_for(
 
     The vapour density, molar mass, and flow come from ``vapor``; the liquid
     density from ``liquid`` (defaulting to the vapour stream's composition at
-    its own temperature -- the saturated-liquid view of the same material, a
+    its own temperature, the saturated-liquid view of the same material, a
     sensible drum approximation).
     """
     rho_v = vapor_density(vapor)

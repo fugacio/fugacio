@@ -2,9 +2,9 @@
 
 Both are the standard engineering estimators (Poling et al., 5th ed., ch. 11):
 
-* `fuller_diffusivity` -- gas-phase ``D_AB`` from atomic diffusion volumes
+* `fuller_diffusivity`: gas-phase ``D_AB`` from atomic diffusion volumes
   (``D ~ T^1.75 / P``), good to ~5-10%;
-* `wilke_chang_diffusivity` -- infinite-dilution liquid ``D_AB`` from the
+* `wilke_chang_diffusivity`: infinite-dilution liquid ``D_AB`` from the
   solvent viscosity and the solute molar volume at its normal boiling point,
   good to ~10-20%.
 

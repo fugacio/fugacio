@@ -1,8 +1,8 @@
 """Differentiable optimization core.
 
 Covers each solver against problems with a known optimum (quadratics, Rosenbrock,
-box- and equality-constrained programs, and a least-squares fit) and -- the
-distinguishing feature -- checks that :func:`argmin` carries exact gradients of
+box- and equality-constrained programs, and a least-squares fit) and (the
+distinguishing feature) checks that :func:`argmin` carries exact gradients of
 the *solution* with respect to the parameters, against both closed form and a
 finite difference, including the active-set case where a bound switches the
 sensitivity off.

@@ -3,7 +3,7 @@
 The integrators are checked the way a numerical-methods text would: against the
 closed-form solution of linear test problems, by measuring the empirical order of
 convergence under step refinement, by confirming a conserved quantity stays
-conserved, and -- the point of the whole exercise -- by checking that gradients
+conserved, and (the point of the whole exercise) by checking that gradients
 through the solve (both the scan-based :func:`odeint` and the continuous-adjoint
 :func:`integrate`) match the analytic sensitivity and finite differences.
 """

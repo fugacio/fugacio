@@ -1,20 +1,20 @@
 """Nonlinear and economic model predictive control.
 
-Real process units -- a reactor's Arrhenius kinetics, a column's equilibrium
-stages, a tank's nonlinear level/flow relation -- are nonlinear, so a linear MPC
+Real process units (a reactor's Arrhenius kinetics, a column's equilibrium
+stages, a tank's nonlinear level/flow relation) are nonlinear, so a linear MPC
 about one operating point is only locally valid. Nonlinear MPC (NMPC) optimizes
 over the *true* nonlinear model each step. Fugacio's differentiable integrator and
 optimizer make this almost free: the prediction is a roll-out of the (discrete)
 dynamics, the cost is a sum over that roll-out, and the open-loop optimal control
 problem is handed to `fugacio.sim.argmin`, which differentiates *through the
-optimum* -- so the receding-horizon law has exact sensitivities and the solve is
+optimum*, so the receding-horizon law has exact sensitivities and the solve is
 warm-started from the previous step.
 
 Two objective styles are supported through one machinery:
 
-* **Tracking NMPC** -- the usual quadratic penalty on tracking error and input
+* **Tracking NMPC**: the usual quadratic penalty on tracking error and input
   effort/move (build the cost with `quadratic_tracking`).
-* **Economic NMPC** -- an arbitrary stage cost (e.g. minimize energy or maximize
+* **Economic NMPC**: an arbitrary stage cost (e.g. minimize energy or maximize
   product value directly), the form that closes the gap between control and
   real-time optimization.
 

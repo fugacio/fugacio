@@ -2,8 +2,8 @@
 
 These are *oracle* tests (marker: ``oracle``), excluded from the default suite;
 run them with ``just oracles``. CoolProp evaluates reference multiparameter
-Helmholtz equations of state and dedicated transport correlations -- functional
-forms and fits entirely independent of Fugacio's DIPPR-style correlations -- so
+Helmholtz equations of state and dedicated transport correlations (functional
+forms and fits entirely independent of Fugacio's DIPPR-style correlations), so
 agreement here is evidence of *accuracy*, not just faithful transcription.
 
 Tolerances are set per property family to the expected accuracy of the

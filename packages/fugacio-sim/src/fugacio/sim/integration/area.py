@@ -4,16 +4,16 @@ Energy targets (`fugacio.sim.integration.targeting`) fix the *operating*
 cost floor; to trade it against *capital* you need the network's area and unit
 count before designing it. This module supplies the classic targets:
 
-* `area_target` -- the **Bath formula** minimum heat-transfer area from the
+* `area_target`: the **Bath formula** minimum heat-transfer area from the
   balanced composite curves (vertical heat exchange), accounting for individual
   stream film coefficients;
-* `units_target` -- the minimum number of heat-exchange units from Euler's
+* `units_target`: the minimum number of heat-exchange units from Euler's
   graph relation, respecting the pinch division (the MER unit count);
-* `capital_cost_target` -- an installed-capital estimate from the area and
+* `capital_cost_target`: an installed-capital estimate from the area and
   unit targets via a smooth exchanger cost law;
-* `supertarget` and `total_annual_cost_target` -- the total annual
+* `supertarget` and `total_annual_cost_target`: the total annual
   cost (annualised capital plus utilities) at a given ``dt_min``;
-* `optimal_dt_min` -- the ``dt_min`` that minimises total annual cost,
+* `optimal_dt_min`: the ``dt_min`` that minimises total annual cost,
   found by gradient-based optimisation straight through the differentiable
   targets (the "supertargeting" curve), the showcase of an end-to-end
   differentiable heat-integration model.
@@ -321,7 +321,7 @@ def supertarget(
     """Vectorised `total_annual_cost_target` over a grid of ``dt_min`` values.
 
     Returns a `SuperTargetResult` whose fields are arrays aligned with
-    ``dt_min_grid`` -- the data behind the supertargeting (cost-vs-``dt_min``)
+    ``dt_min_grid``, the data behind the supertargeting (cost-vs-``dt_min``)
     plot.
     """
     grid = jnp.asarray(dt_min_grid, dtype=float)
@@ -365,8 +365,8 @@ def optimal_dt_min(
 ) -> OptimalDtMin:
     """Find the ``dt_min`` that minimises total annual cost (supertargeting).
 
-    The capital-energy trade-off curve is broadly U-shaped -- the area target
-    diverges as ``dt_min`` -> 0 while utilities rise with ``dt_min`` -- but it is
+    The capital-energy trade-off curve is broadly U-shaped (the area target
+    diverges as ``dt_min`` -> 0 while utilities rise with ``dt_min``), but it is
     only piecewise-smooth: the integer unit-count target steps at the
     threshold/pinch transitions, so the curve has genuine kinks and small jumps.
     A smooth gradient step would stall on those, so the optimum is found by a

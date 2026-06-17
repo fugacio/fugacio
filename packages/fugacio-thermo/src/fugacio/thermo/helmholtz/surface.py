@@ -5,7 +5,7 @@ Every vendored fluid carries the recommended surface-tension correlation
     sigma(T) = sum_i a_i * (1 - T/Tc)**e_i        (N/m)
 
 from the Mulero, Cachadina & Parra compilation (J. Phys. Chem. Ref. Data,
-2012) -- for water this is identical to the IAPWS R1-76 release. The
+2012). For water this is identical to the IAPWS R1-76 release. The
 correlation is differentiable in ``T`` (guarded at the critical point, where
 ``sigma -> 0`` with an infinite slope for exponents below one).
 """

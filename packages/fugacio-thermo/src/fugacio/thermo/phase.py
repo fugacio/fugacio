@@ -1,14 +1,14 @@
 """A uniform phase-equilibrium model: one interface over EOS and gamma-phi.
 
-The two routes to vapour-liquid equilibrium -- a cubic equation of state for both
+The two routes to vapour-liquid equilibrium, a cubic equation of state for both
 phases (`fugacio.thermo.equilibrium`) and an activity model for the liquid
-with an EOS/ideal vapour (`fugacio.thermo.gammaphi`) -- have, until now,
+with an EOS/ideal vapour (`fugacio.thermo.gammaphi`), have, until now,
 different call signatures. That made the rest of the stack (flashes inside unit
 operations, column K-values, the copilot tools) hard-wire the EOS. This module
 unifies them behind a single `EquilibriumModel` interface so a flowsheet
 can be switched from Peng-Robinson to NRTL by swapping one object.
 
-Both concrete models -- `EOSModel` and `GammaPhiModel` -- bundle the
+Both concrete models (`EOSModel` and `GammaPhiModel`) bundle the
 component constants they need and expose the same five calls: ``flash_pt``,
 ``bubble_pressure``/``bubble_temperature`` and ``dew_pressure``/``dew_temperature``.
 They are registered JAX pytrees whose parameters (critical constants, ``kij``, and,

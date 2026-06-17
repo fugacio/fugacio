@@ -6,7 +6,7 @@ gamma-phi bubble-point solver, then serialized in the NIST/IUPAC ThermoML
 schema. The parameter values are chosen to reproduce the qualitative behaviour
 of well-studied systems (infinite-dilution activity coefficients in the right
 range, azeotropes where the real pair has one), and the generating parameters
-are recorded in the file's citation block -- so the data are *synthetic but
+are recorded in the file's citation block, so the data are *synthetic but
 honest*: regression tests can recover the exact parameters, and the reader is
 exercised on schema-faithful files.
 

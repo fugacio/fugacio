@@ -2,13 +2,13 @@
 
 Two layers of ground truth, neither requiring optional dependencies:
 
-* published check tables -- the IAPWS-95 release prints the reduced Helmholtz
+* published check tables: the IAPWS-95 release prints the reduced Helmholtz
   derivatives at (500 K, 838.025 kg/m^3) and the IAPWS transport releases
   print viscosity/conductivity values to ~9 significant figures. Matching
   them is a transcription-correctness proof for the vendored coefficients
   *and* an accuracy proof for the autodiff derivative pipeline (the published
   numbers were produced from hand-derived analytic derivatives);
-* internal round trips -- saturation/density/state solves inverted against
+* internal round trips: saturation/density/state solves inverted against
   each other, equifugacity at coexistence, dome bookkeeping for quality
   states.
 

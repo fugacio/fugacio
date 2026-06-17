@@ -30,7 +30,7 @@ K_B = 1.380649e-23
 #: Reference temperature for thermochemistry (K), i.e. 25 degrees Celsius.
 T_REF = 298.15
 
-#: Standard-state pressure (Pa), 1 bar -- the IUPAC standard since 1982.
+#: Standard-state pressure (Pa), 1 bar, the IUPAC standard since 1982.
 P_REF = 1.0e5
 
 #: Zero of the Celsius scale, expressed in kelvin.

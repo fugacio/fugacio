@@ -12,7 +12,7 @@ fluid library, which transcribes the peer-reviewed source formulations; the
 source paper of each EOS is recorded in ``bibtex_eos`` (e.g. IAPWS-95 for
 water is ``Wagner-JPCRD-2002``). The per-fluid ``gas_constant`` is the value
 the EOS was fitted with and must be used in place of the CODATA constant when
-evaluating it. Do not edit by hand -- regenerate instead.
+evaluating it. Do not edit by hand; regenerate instead.
 """
 
 from __future__ import annotations

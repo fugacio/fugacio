@@ -6,17 +6,17 @@ exchangers achieves it. This subpackage supplies the whole pinch-technology
 workflow, kept end-to-end differentiable so the targets compose with the rest of
 the engine and can be optimised by gradients:
 
-* `streams` -- the `HeatStream` model and
+* `streams`: the `HeatStream` model and
   extraction of hot/cold streams (and their ``CP``) from process
   `Stream` objects via the real, two-phase-aware
   enthalpy;
-* `targeting` -- the problem table algorithm for
+* `targeting`: the problem table algorithm for
   the minimum hot/cold utilities and the pinch, plus the composite and grand
   composite curves;
-* `area` -- the Bath-formula area target, the
+* `area`: the Bath-formula area target, the
   minimum-units target, capital and total-annual-cost targets, and the
   capital-energy trade-off (`optimal_dt_min`, "supertargeting");
-* `network` -- heat-exchanger-network synthesis by
+* `network`: heat-exchanger-network synthesis by
   the pinch design method, with rigorous feasibility/MER verification.
 """
 

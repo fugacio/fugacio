@@ -1,8 +1,8 @@
 """Design specifications and set-point controllers.
 
 Covers (1) a single spec solved on an analytic model with a known answer and its
-gradient checked against closed form, (2) a real EOS flash-drum spec -- find the
-drum temperature that gives a target vapour fraction -- with the manipulated
+gradient checked against closed form, (2) a real EOS flash-drum spec (find the
+drum temperature that gives a target vapour fraction) with the manipulated
 variable's gradient checked against a finite difference, and (3) two coupled
 specs solved simultaneously.
 """

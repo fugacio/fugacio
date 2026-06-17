@@ -3,16 +3,16 @@
 `DynamicFlowsheet` is the dynamic counterpart of
 `fugacio.sim.Flowsheet`: register time-varying feeds, connect dynamic units
 port-to-port, and close control loops, then `DynamicFlowsheet.simulate` over
-a time horizon. Internally the whole plant -- every unit holdup *and* every
-controller's integral/derivative state -- is concatenated into a single state
+a time horizon. Internally the whole plant (every unit holdup *and* every
+controller's integral/derivative state) is concatenated into a single state
 pytree with one global right-hand side, which is handed to the differentiable
 `fugacio.sim.dynamics.odeint`. The result is end-to-end differentiable: you
 can take a gradient of any trajectory feature (a settling time proxy, an off-spec
 integral, a peak temperature) with respect to controller gains, setpoints, feed
 schedules, equipment parameters carried in ``theta``, or the initial state.
 
-Holdups break algebraic recycle loops -- a recycled stream is an *output of a unit
-state*, not the solution of a tear -- so a dynamic flowsheet needs no tear solver;
+Holdups break algebraic recycle loops (a recycled stream is an *output of a unit
+state*, not the solution of a tear), so a dynamic flowsheet needs no tear solver;
 units are simply evaluated in registration order each instant. Controlled
 measurements (level, temperature, pressure, composition) are functions of unit
 state alone, so the controller outputs for the instant are computed first, then the

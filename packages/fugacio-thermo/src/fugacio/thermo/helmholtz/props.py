@@ -2,7 +2,7 @@
 
 Every function here is an algebraic combination of the autodiff partials of
 ``alpha(delta, tau)`` (`fugacio.thermo.helmholtz.terms`), evaluated at a
-molar density ``rho`` (mol/m^3) and temperature ``t`` (K) -- the natural
+molar density ``rho`` (mol/m^3) and temperature ``t`` (K), the natural
 variables of a Helmholtz EOS. The standard property relations are (Span,
 *Multiparameter Equations of State*, 2000):
 

@@ -2,9 +2,9 @@
 
 The same two-route dispatch as `fugacio.thermo.transport.viscosity`:
 
-* **curated fits** -- DIPPR-102 (dilute gas) and DIPPR-100 (liquid) coefficients
+* **curated fits**: DIPPR-102 (dilute gas) and DIPPR-100 (liquid) coefficients
   from `fugacio.thermo._property_data`;
-* **corresponding states** -- the Chung et al. dilute-gas method
+* **corresponding states**: the Chung et al. dilute-gas method
   (`chung_thermal_conductivity_gas`, built on the Chung viscosity and the
   ideal-gas heat capacity) and Sato-Riedel for liquids
   (`sato_riedel_thermal_conductivity`).
@@ -111,7 +111,7 @@ def wassiljewa_mixture(y: Array, k: Array, mu: Array, mw: Array) -> Array:
 def dippr9h_mixture(w: Array, k: Array) -> Array:
     """DIPPR9H (Li-style) liquid-mixture conductivity power law (W/m/K).
 
-    ``k_m = (sum_i w_i * k_i^-2)^(-1/2)`` with *mass* fractions ``w`` -- the
+    ``k_m = (sum_i w_i * k_i^-2)^(-1/2)`` with *mass* fractions ``w``: the
     standard recommendation for nonaqueous liquid mixtures (Poling et al., 5th
     ed., eq. 10-12.4).
     """
