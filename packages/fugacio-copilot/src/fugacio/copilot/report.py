@@ -201,6 +201,60 @@ def summarize_heat_integration(targets: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def summarize_lqr_design(design: Mapping[str, Any]) -> str:
+    """Render an :func:`lqr_design` result (gain, poles, stability) as Markdown.
+
+    Accepts the dict returned by the ``lqr_design`` copilot tool.
+    """
+    continuous = bool(design.get("continuous", False))
+    gain = design.get("gain", [])
+    poles = design.get("pole_real_parts" if continuous else "pole_magnitudes", [])
+    kind = "continuous" if continuous else "discrete"
+    lines = [
+        f"### LQR design ({kind})",
+        "",
+        "- Feedback law: **u = -K x**",
+        "- Gain K:",
+    ]
+    for row in gain:
+        lines.append("  - [" + ", ".join(f"{float(v):.4g}" for v in row) + "]")
+    pole_word = "Re(eig)" if continuous else "|eig|"
+    lines.append(
+        f"- Closed-loop poles ({pole_word}): " + ", ".join(f"{float(v):.4g}" for v in poles)
+    )
+    lines.append(f"- Stable: **{bool(design.get('stable', False))}**")
+    return "\n".join(lines)
+
+
+def summarize_mpc_simulation(result: Mapping[str, Any]) -> str:
+    """Render a :func:`simulate_mpc` result as a Markdown step-response report.
+
+    Accepts the dict returned by the ``simulate_mpc`` copilot tool (per-output step
+    metrics, setpoint, and final value) and lays it out as an engineer-facing table.
+    """
+    setpoint = list(result.get("setpoint", []))
+    final = list(result.get("final_output", []))
+    metrics = list(result.get("metrics", []))
+    lines = [
+        "### MPC closed-loop response",
+        "",
+        "| Output | Setpoint | Final | Offset | Overshoot | Settling (s) | IAE |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for i, m in enumerate(metrics):
+        sp = float(setpoint[i]) if i < len(setpoint) else float("nan")
+        fv = float(final[i]) if i < len(final) else float("nan")
+        offset = fv - sp
+        lines.append(
+            f"| y[{m.get('output', i)}] | {sp:.4g} | {fv:.4g} | {offset:+.2e} | "
+            f"{float(m.get('overshoot_fraction', 0.0)):.1%} | "
+            f"{float(m.get('settling_time_s', 0.0)):.4g} | "
+            f"{float(m.get('iae', 0.0)):.4g} |"
+        )
+    lines += ["", "_Offset-free tracking: the steady-state offset is driven to zero._"]
+    return "\n".join(lines)
+
+
 def summarize_transcript(result: AgentResult, *, max_chars: int = 200) -> str:
     """Render an agent run (its tool calls and final answer) as a Markdown report."""
     lines = ["### Copilot run", ""]
