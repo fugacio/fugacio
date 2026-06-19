@@ -407,6 +407,8 @@
       
         
       
+        
+      
     
     
     
@@ -469,6 +471,34 @@
     
   
     Non-ideal phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../molecular-saft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Molecular SAFT (PC-SAFT)
   
 
     
@@ -798,6 +828,8 @@
       
         
       
+        
+      
     
     
     
@@ -898,6 +930,34 @@
     
   
     Equations of state
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="saft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PC-SAFT (molecular SAFT)
   
 
     
@@ -1908,7 +1968,11 @@ through the rest of the Fugacio stack (<code>fugacio.sim</code>, <code>fugacio.c
   <code>bubble_pressure_gamma</code>, ...) routes, plus liquid-liquid
   (<code>flash_lle</code>) and vapour-liquid-liquid (<code>flash_vlle</code>,
   <code>heterogeneous_azeotrope</code>) equilibria and tangent-plane stability;</li>
-<li><strong>models</strong>: the unified <code>EOSModel</code> / <code>GammaPhiModel</code> interface;</li>
+<li><strong>PC-SAFT</strong>: <code>fugacio.thermo.saft</code>, a molecular-based (perturbed-chain
+  SAFT) equation of state with Wertheim association (<code>SAFTModel</code>,
+  <code>saft_parameters_for</code>, <code>flash_pt_saft</code>, ...), the third class of
+  thermodynamic method alongside the cubic EOS and gamma-phi routes;</li>
+<li><strong>models</strong>: the unified <code>EOSModel</code> / <code>GammaPhiModel</code> / <code>SAFTModel</code> interface;</li>
 <li><strong>regression</strong>: differentiable parameter estimation
   (<code>levenberg_marquardt</code>, <code>fit_nrtl_binary</code>, ...),
   UNIFAC-to-binary prediction (<code>predict_nrtl_from_unifac</code>), and the
