@@ -33,7 +33,7 @@ workspace:
 
 | Package | Import | Responsibility |
 | --- | --- | --- |
-| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: EOS & γ–φ activity models, reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
+| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: cubic EOS & γ–φ activity models, molecular **PC-SAFT** (associating fluids and chains, with Wertheim association and differentiable parameter regression), reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
 | `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), **advanced control** (differentiable QP, offset-free linear MPC, Kalman/EKF/UKF/moving-horizon estimation, nonlinear & economic MPC, gradient-based tuning), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
@@ -129,6 +129,27 @@ jax.grad(lambda p: saturation_state(steam, p=p).t)(10e5)
 
 steam_heating(2.5e6, pressure=11e5).mass_flow        # kg/s of MP steam for a reboiler
 steam_turbine(10.0, p_in=40e5, t_in=723.15, p_out=1e5).power  # Rankine shaft power
+```
+
+For associating fluids (water, alcohols, amines) and chain molecules, where cubic
+EOS and γ–φ both strain, Fugacio carries molecular **PC-SAFT** with Wertheim
+association, behind the *same* model interface as everything else (see [the
+molecular-SAFT guide](docs/molecular-saft.md)). It is one scalar residual
+Helmholtz energy, so every property and solver, including the association
+site-fraction solve, is an exact `jax.grad` derivative, differentiable in the
+molecular parameters themselves:
+
+```python
+import jax
+import jax.numpy as jnp
+from fugacio.sim import saft_model_for
+
+model = saft_model_for(["ethanol", "water"])               # both associating (2B)
+res = model.flash_pt(350.0, 0.9e5, jnp.array([0.5, 0.5]))  # rigorous PC-SAFT VLE
+res.beta, res.x, res.y
+
+# Bubble pressure differentiable w.r.t. temperature (and the PC-SAFT parameters):
+jax.grad(lambda t: model.bubble_pressure(t, jnp.array([0.4, 0.6]))[0])(330.0)
 ```
 
 Steady state is only half of a plant. The `fugacio.sim.dynamics` and
@@ -251,8 +272,8 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 and the reference Helmholtz EOS / IAPWS transport implementations,
 [`thermo`](https://github.com/CalebBell/thermo) /
 [Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) for activity
-coefficients, and [Cantera](https://github.com/Cantera/cantera) for reaction
-equilibrium) are marked `oracle` and excluded from the default run; install those
+coefficients and PC-SAFT, and [Cantera](https://github.com/Cantera/cantera) for
+reaction equilibrium) are marked `oracle` and excluded from the default run; install those
 optional packages and run them explicitly with `just oracles`. CI runs the same
 oracle suite on every pull request, on pushes to `main`, and on a weekly
 schedule (`.github/workflows/oracles.yml`).

@@ -66,6 +66,7 @@ nav:
   - Home: index.md
   - Guides:
     - Non-ideal phase equilibrium: phase-equilibrium.md
+    - Molecular SAFT (PC-SAFT): molecular-saft.md
     - Reference fluids & steam tables: reference-fluids.md
     - Physical & transport properties: physical-properties.md
     - Reactions & reactors: reactions.md
@@ -79,6 +80,7 @@ nav:
       - Package: api/thermo/index.md
       - Components & data: api/thermo/data.md
       - Equations of state: api/thermo/eos.md
+      - PC-SAFT (molecular SAFT): api/thermo/saft.md
       - Phase equilibrium: api/thermo/equilibrium.md
       - Liquid-liquid & VLLE: api/thermo/lle.md
       - Activity & group contribution: api/thermo/activity.md

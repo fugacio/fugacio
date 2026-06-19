@@ -180,6 +180,58 @@ def clapeyron_gamma(
     return [float(g) for g in gammas]
 
 
+def clapeyron_pcsaft(
+    components: Sequence[str],
+    x: Sequence[float],
+    t: float,
+    rho: float,
+) -> dict[str, float]:
+    """Reference PC-SAFT pressure and Z at ``(T, rho, x)`` from Clapeyron.jl.
+
+    Builds Clapeyron's stock ``PCSAFT`` model for ``components`` (keyed by name in
+    its database) and evaluates the pressure of one mole of the mixture at molar
+    density ``rho`` (mol/m^3), i.e. total volume ``V = 1 / rho``. Returns the
+    pressure (Pa) and compressibility factor.
+
+    This is the strongest external oracle for `fugacio.thermo.saft`: Clapeyron is
+    an independent Julia implementation of the same Gross-Sadowski equation of
+    state. Agreement is bounded by *parameter provenance* (Clapeyron's tabulated
+    ``m``, ``sigma``, ``epsilon`` may differ slightly from the values vendored
+    here), not by the residual-Helmholtz math, so the companion tests compare
+    non-associating species (whose Gross-Sadowski 2001 parameters are standard)
+    and keep a modest tolerance.
+
+    Requires a working Julia with ``Clapeyron.jl`` and the optional ``juliacall``
+    package (``HAVE_CLAPEYRON``); the companion test skips unless importable.
+    """
+    _require("juliacall (with Clapeyron.jl)", HAVE_CLAPEYRON)
+    from juliacall import Main as jl
+
+    jl.seval("using Clapeyron")
+    names = jl.convert(jl.seval("Vector{String}"), [str(c) for c in components])
+    model = jl.PCSAFT(names)
+    z = jl.convert(jl.seval("Vector{Float64}"), [float(v) for v in x])
+    volume = 1.0 / float(rho)  # m^3 holding one mole of mixture
+    p = float(jl.pressure(model, volume, float(t), z))
+    return {"pressure": p, "z": p * volume / (R * float(t))}
+
+
+def clapeyron_pcsaft_saturation_pressure(component: str, t: float) -> float:
+    """Pure-component PC-SAFT saturation pressure (Pa) from Clapeyron.jl.
+
+    Uses Clapeyron's ``saturation_pressure`` (its own Maxwell construction on the
+    stock ``PCSAFT`` model), an oracle for `fugacio.thermo.saft.psat_saft`.
+    """
+    _require("juliacall (with Clapeyron.jl)", HAVE_CLAPEYRON)
+    from juliacall import Main as jl
+
+    jl.seval("using Clapeyron")
+    names = jl.convert(jl.seval("Vector{String}"), [str(component)])
+    model = jl.PCSAFT(names)
+    psat = jl.saturation_pressure(model, float(t))
+    return float(psat[0])
+
+
 def modified_raoult_bubble_pressure(
     components: Sequence[str],
     x: Sequence[float],
@@ -515,6 +567,8 @@ __all__ = [
     "chemicals_wilke_viscosity",
     "chemicals_winterfeld_scriven_davis",
     "clapeyron_gamma",
+    "clapeyron_pcsaft",
+    "clapeyron_pcsaft_saturation_pressure",
     "coolprop_fluid",
     "coolprop_gas_state",
     "coolprop_saturation",

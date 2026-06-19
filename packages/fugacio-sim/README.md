@@ -48,8 +48,9 @@ count. `Flowsheet` is a small declarative builder on top of it.
 
 ## Non-ideal separations & diagrams
 
-Built on the `fugacio.thermo` γ–φ property system (via the `eos_model_for`,
-`nrtl_model_for`, `uniquac_model_for`, `unifac_model_for` bridges):
+Built on the `fugacio.thermo` property system (via the `eos_model_for`,
+`nrtl_model_for`, `uniquac_model_for`, `unifac_model_for`, and `saft_model_for`
+bridges, the last building a molecular PC-SAFT model from component names):
 
 - `flash_vle`, `decanter`, `three_phase_flash`: activity-based VLE / LLE / VLLE
   drums for real, non-ideal mixtures.

@@ -33,6 +33,13 @@ than through unrolled iterations.
   parameters are themselves gradient leaves.
 - **Group contribution**: predictive `unifac_activity` and `joback_estimate`
   (pure-component constants from a structure).
+- **Molecular PC-SAFT**: the perturbed-chain SAFT equation of state
+  (`SaftParameters`, `saft_parameters_for`, `alpha_residual`, `SAFTModel`) with a
+  curated Gross-Sadowski parameter bank, Wertheim TPT1 association for
+  hydrogen-bonding fluids, fugacity / density / residual properties by autodiff,
+  the equilibrium routines `flash_pt_saft`, `bubble_pressure_saft`,
+  `dew_pressure_saft`, `psat_saft`, and `stability_saft`, and differentiable
+  parameter regression (`fit_saft_pure`, `fit_saft_kij`).
 - **Reference state**: pure-liquid reference fugacity (`liquid_reference_fugacity`),
   the `poynting_factor`, saturation fugacity coefficient, and `henry_constant`.
 - **EOS phase equilibrium**: `rachford_rice`, `flash_pt`, `psat_eos`,
@@ -44,9 +51,10 @@ than through unrolled iterations.
   `tie_line` / `binodal_curve`, three-phase `flash_vlle`, the binary
   `heterogeneous_azeotrope` solver, and a general tangent-plane stability test
   (`stability_analysis_general`, `liquid_stability`).
-- **Unified model interface**: `EOSModel` and `GammaPhiModel` expose the same
-  `flash_pt` / bubble / dew calls, so the rest of the stack switches
-  thermodynamic method by swapping one (differentiable) object.
+- **Unified model interface**: `EOSModel`, `GammaPhiModel`, and `SAFTModel` expose
+  the same `flash_pt` / bubble / dew calls, so the rest of the stack switches
+  thermodynamic method (cubic, γ–φ, or molecular PC-SAFT) by swapping one
+  (differentiable) object.
 - **Parameter regression & prediction**: a self-contained `levenberg_marquardt`
   over arbitrary parameter pytrees with residual builders
   (`bubble_pressure_residuals`, `activity_residuals`, `lle_residuals`), ready
@@ -61,8 +69,8 @@ than through unrolled iterations.
 - **Validation harness**: first-principles consistency checks (Gibbs-Duhem,
   equifugacity, the `(d ln phi / dP)_T` identity), an AD-vs-finite-difference
   checker, and optional differential-testing oracles: CoolProp / `chemicals`
-  (pure-fluid properties), `thermo` / Clapeyron.jl (activity coefficients), and
-  Cantera (reaction equilibrium and standard-state thermochemistry).
+  (pure-fluid properties), `thermo` / Clapeyron.jl (activity coefficients and
+  PC-SAFT), and Cantera (reaction equilibrium and standard-state thermochemistry).
 
 ## Example: a differentiable flash
 
