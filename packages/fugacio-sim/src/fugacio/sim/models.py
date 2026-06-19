@@ -30,11 +30,14 @@ from fugacio.thermo import (
     CubicEOS,
     EOSModel,
     GammaPhiModel,
+    SAFTModel,
     eos_model,
     gamma_phi_model,
     kij_from_database,
     modified_unifac_activity,
     nrtl_from_database,
+    saft_model,
+    saft_parameters_for,
     unifac_activity,
     uniquac_from_database,
 )
@@ -145,6 +148,39 @@ jax.tree_util.register_dataclass(
 )
 
 
+def saft_model_for(
+    components: Sequence[str],
+    *,
+    kij: Array | None = None,
+    use_database_kij: bool = True,
+) -> SAFTModel:
+    """Build a PC-SAFT `fugacio.thermo.SAFTModel` for named components.
+
+    Resolves the component names to PC-SAFT parameters from the curated bank
+    (`fugacio.thermo.saft_parameters_for`) and to the critical constants used to
+    seed the flash K-values, returning a ready, differentiable
+    `fugacio.thermo.EquilibriumModel`. Switching a flowsheet to PC-SAFT, the
+    molecular-based route that handles associating fluids (water, alcohols), is
+    then a single constructor swap from `eos_model_for` / `nrtl_model_for`.
+
+    Args:
+        components: Component names present in the PC-SAFT parameter bank.
+        kij: Explicit ``(n, n)`` binary-correction matrix; takes precedence over
+            the curated bank.
+        use_database_kij: Fill binary corrections from the curated PC-SAFT
+            ``k_ij`` set when ``kij`` is not given.
+
+    Returns:
+        A `fugacio.thermo.SAFTModel` over the named components.
+
+    Raises:
+        KeyError: If any component lacks curated PC-SAFT parameters.
+    """
+    tc, pc, omega, _, _ = _resolve(tuple(components))
+    params = saft_parameters_for(list(components), kij=kij, use_database_kij=use_database_kij)
+    return saft_model(params, tc, pc, omega)
+
+
 def unifac_model_for(
     components: Sequence[str],
     *,
@@ -179,6 +215,7 @@ __all__ = [
     "UnifacModel",
     "eos_model_for",
     "nrtl_model_for",
+    "saft_model_for",
     "unifac_model_for",
     "uniquac_model_for",
 ]

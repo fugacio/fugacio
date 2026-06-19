@@ -33,7 +33,11 @@ The public surface is grouped as:
   `bubble_pressure_gamma`, ...) routes, plus liquid-liquid
   (`flash_lle`) and vapour-liquid-liquid (`flash_vlle`,
   `heterogeneous_azeotrope`) equilibria and tangent-plane stability;
-* **models**: the unified `EOSModel` / `GammaPhiModel` interface;
+* **PC-SAFT**: `fugacio.thermo.saft`, a molecular-based (perturbed-chain
+  SAFT) equation of state with Wertheim association (`SAFTModel`,
+  `saft_parameters_for`, `flash_pt_saft`, ...), the third class of
+  thermodynamic method alongside the cubic EOS and gamma-phi routes;
+* **models**: the unified `EOSModel` / `GammaPhiModel` / `SAFTModel` interface;
 * **regression**: differentiable parameter estimation
   (`levenberg_marquardt`, `fit_nrtl_binary`, ...),
   UNIFAC-to-binary prediction (`predict_nrtl_from_unifac`), and the
@@ -273,6 +277,24 @@ from fugacio.thermo.regression import (
     predict_uniquac_from_unifac,
     unifac_ln_gamma_grid,
 )
+from fugacio.thermo.saft import (
+    SAFTModel,
+    SaftParameters,
+    bubble_pressure_saft,
+    dew_pressure_saft,
+    fit_saft_kij,
+    fit_saft_pure,
+    flash_pt_saft,
+    psat_saft,
+    saft_model,
+    saft_parameters,
+    saft_parameters_for,
+    site_fractions,
+    stability_saft,
+)
+from fugacio.thermo.saft import (
+    residual_properties as saft_residual_properties,
+)
 from fugacio.thermo.stability import (
     TangentPlaneResult,
     liquid_stability,
@@ -378,6 +400,8 @@ __all__ = [
     "ReactionProperties",
     "RegularSolution",
     "ResidualProperties",
+    "SAFTModel",
+    "SaftParameters",
     "SaturationState",
     "StabilityResult",
     "TangentPlaneResult",
@@ -395,6 +419,7 @@ __all__ = [
     "bubble_pressure_eos",
     "bubble_pressure_gamma",
     "bubble_pressure_residuals",
+    "bubble_pressure_saft",
     "bubble_temperature_gamma",
     "chung_thermal_conductivity_gas",
     "chung_viscosity_gas",
@@ -408,6 +433,7 @@ __all__ = [
     "delta_s_rxn",
     "dew_pressure_eos",
     "dew_pressure_gamma",
+    "dew_pressure_saft",
     "dew_temperature_gamma",
     "diffusion_volume",
     "dippr9h_mixture",
@@ -426,6 +452,8 @@ __all__ = [
     "excess_gibbs",
     "fit_bundled_samples",
     "fit_nrtl_binary",
+    "fit_saft_kij",
+    "fit_saft_pure",
     "fit_uniquac_binary",
     "fit_vle_dataset",
     "flash_lle",
@@ -433,6 +461,7 @@ __all__ = [
     "flash_ps",
     "flash_pt",
     "flash_pt_gamma",
+    "flash_pt_saft",
     "flash_vlle",
     "flory_huggins_gamma",
     "flory_huggins_ln_gamma",
@@ -509,6 +538,7 @@ __all__ = [
     "predict_uniquac_from_unifac",
     "pressure",
     "psat_eos",
+    "psat_saft",
     "pure_liquid_volumes",
     "rachford_rice",
     "rackett_volume",
@@ -526,14 +556,20 @@ __all__ = [
     "residual_gibbs",
     "residual_properties",
     "rowlinson_bondi_cp",
+    "saft_model",
+    "saft_parameters",
+    "saft_parameters_for",
+    "saft_residual_properties",
     "sample_path",
     "sato_riedel_thermal_conductivity",
     "saturation_fugacity_coefficient",
     "saturation_pressures",
     "saturation_state",
+    "site_fractions",
     "speed_of_sound_ideal",
     "stability_analysis",
     "stability_analysis_general",
+    "stability_saft",
     "stable_phase",
     "state_ph",
     "state_pq",

@@ -11,8 +11,8 @@ The layer provides:
   `compressor`, `turbine`, `mix`, `splitter`,
   `component_separator`);
 * a thermodynamic-model bridge (`eos_model_for`, `nrtl_model_for`,
-  `uniquac_model_for`, `unifac_model_for`) that turns component names
-  into a ready EOS or gamma-phi `EquilibriumModel`;
+  `uniquac_model_for`, `unifac_model_for`, `saft_model_for`) that turns
+  component names into a ready EOS, gamma-phi, or PC-SAFT `EquilibriumModel`;
 * non-ideal separation units (`flash_vle`, `decanter`,
   `three_phase_flash`) and binary diagram / azeotrope / residue-curve helpers
   (`pxy_diagram`, `txy_diagram`, `azeotrope_pressure`,
@@ -192,6 +192,7 @@ from fugacio.sim.models import (
     UnifacModel,
     eos_model_for,
     nrtl_model_for,
+    saft_model_for,
     unifac_model_for,
     uniquac_model_for,
 )
@@ -480,6 +481,7 @@ __all__ = [
     "residue_curve",
     "residue_curve_map",
     "rise_time",
+    "saft_model_for",
     "saturated_steam_temperature",
     "second_order_step",
     "settling_time",

@@ -12,6 +12,9 @@ function-calling schemas OpenAI/Anthropic expect:
 
 - **Properties & equilibrium**: `list_components`, `component_properties`,
   `saturation_pressure`, `bubble_pressure`, `flash_drum`.
+- **Molecular PC-SAFT**: `saft_flash`, `saft_density`, `saft_saturation_pressure`,
+  `saft_bubble_pressure`, and `saft_residual_enthalpy`, the molecular EOS preferred
+  for associating fluids (water, alcohols).
 - **Unit operations**: `heat_exchanger`, `compressor` (and turbine), `pump`,
   `valve`, each closing a rigorous energy balance.
 - **Distillation**: `shortcut_distillation` (Fenske-Underwood-Gilliland) and
