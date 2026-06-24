@@ -48,7 +48,7 @@ jobs:
       # per-package PyPI build/publish runs in the deploy job below.
       - name: Python Semantic Release
         id: release
-        uses: python-semantic-release/python-semantic-release@v9
+        uses: python-semantic-release/python-semantic-release@v10
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
