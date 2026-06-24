@@ -37,6 +37,7 @@ members = [
     "fugacio-copilot",
     "fugacio-sim",
     "fugacio-thermo",
+    "fugacio-workspace",
 ]
 
 [[package]]
@@ -623,54 +624,18 @@ wheels = [
 [[package]]
 name = "fugacio"
 version = "0.0.1"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
-    { name = "import-linter" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-docs = [
-    { name = "mkdocs" },
-    { name = "mkdocs-autorefs" },
-    { name = "mkdocs-material", extra = ["imaging"] },
-    { name = "mkdocstrings", extra = ["python"] },
-    { name = "pymdown-extensions" },
-]
-oracles = [
-    { name = "cantera", marker = "sys_platform == 'linux'" },
-    { name = "chemicals" },
-    { name = "coolprop" },
-    { name = "thermo" },
+source = { editable = "packages/fugacio" }
+dependencies = [
+    { name = "fugacio-copilot" },
+    { name = "fugacio-sim" },
+    { name = "fugacio-thermo" },
 ]
 
 [package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "import-linter", specifier = ">=2.1" },
-    { name = "mypy", specifier = ">=1.13" },
-    { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "pytest-cov", specifier = ">=6.0" },
-    { name = "ruff", specifier = ">=0.8" },
-]
-docs = [
-    { name = "mkdocs", specifier = ">=1.6" },
-    { name = "mkdocs-autorefs", specifier = ">=1.2" },
-    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.26" },
-    { name = "pymdown-extensions", specifier = ">=10.7" },
-]
-oracles = [
-    { name = "cantera", marker = "sys_platform == 'linux'", specifier = ">=3.0" },
-    { name = "chemicals", specifier = ">=1.1" },
-    { name = "coolprop", specifier = ">=6.6" },
-    { name = "thermo", specifier = ">=0.2" },
+requires-dist = [
+    { name = "fugacio-copilot", editable = "packages/fugacio-copilot" },
+    { name = "fugacio-sim", editable = "packages/fugacio-sim" },
+    { name = "fugacio-thermo", editable = "packages/fugacio-thermo" },
 ]
 
 [[package]]
@@ -730,6 +695,59 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "jax", specifier = ">=0.4.34" }]
+
+[[package]]
+name = "fugacio-workspace"
+version = "0.0.1"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "import-linter" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-autorefs" },
+    { name = "mkdocs-material", extra = ["imaging"] },
+    { name = "mkdocstrings", extra = ["python"] },
+    { name = "pymdown-extensions" },
+]
+oracles = [
+    { name = "cantera", marker = "sys_platform == 'linux'" },
+    { name = "chemicals" },
+    { name = "coolprop" },
+    { name = "thermo" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "import-linter", specifier = ">=2.1" },
+    { name = "mypy", specifier = ">=1.13" },
+    { name = "pre-commit", specifier = ">=4.0" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-cov", specifier = ">=6.0" },
+    { name = "ruff", specifier = ">=0.8" },
+]
+docs = [
+    { name = "mkdocs", specifier = ">=1.6" },
+    { name = "mkdocs-autorefs", specifier = ">=1.2" },
+    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.26" },
+    { name = "pymdown-extensions", specifier = ">=10.7" },
+]
+oracles = [
+    { name = "cantera", marker = "sys_platform == 'linux'", specifier = ">=3.0" },
+    { name = "chemicals", specifier = ">=1.1" },
+    { name = "coolprop", specifier = ">=6.6" },
+    { name = "thermo", specifier = ">=0.2" },
+]
 
 [[package]]
 name = "ghp-import"
