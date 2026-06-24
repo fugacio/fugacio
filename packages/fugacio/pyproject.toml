@@ -1,0 +1,48 @@
+[project]
+name = "fugacio"
+version = "0.0.1"
+description = "Fugacio: differentiable thermodynamics, process simulation, and an AI design copilot (umbrella install)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+    { name = "Owen Carey", email = "37121709+owenthcarey@users.noreply.github.com" },
+]
+keywords = [
+    "thermodynamics",
+    "process-simulation",
+    "chemical-engineering",
+    "jax",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+# Umbrella meta-package: it ships no code of its own, it just pulls in the three
+# Fugacio distributions so `pip install fugacio` installs the whole stack. The
+# release pipeline pins these to the shared lockstep version (scripts/
+# pin_workspace_deps.py); they stay unpinned until the first release, matching
+# the other packages' committed state.
+dependencies = [
+    "fugacio-thermo",
+    "fugacio-sim",
+    "fugacio-copilot",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Dependencies-only package: there are no modules to ship, so tell hatchling to
+# build an empty wheel instead of erroring on an empty file selection. The
+# `fugacio` import namespace is provided by fugacio-thermo/-sim/-copilot, so the
+# umbrella must not ship a competing `fugacio/` package of its own.
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+[tool.uv.sources]
+fugacio-thermo = { workspace = true }
+fugacio-sim = { workspace = true }
+fugacio-copilot = { workspace = true }

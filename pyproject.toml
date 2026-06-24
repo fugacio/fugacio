@@ -1,5 +1,9 @@
 [project]
-name = "fugacio"
+# Workspace root only, renamed off the bare `fugacio` dist name so the
+# publishable umbrella meta-package (packages/fugacio) can own it. The root is
+# never built or published (see `package = false` below), so this dist name is
+# internal-only; the `fugacio` import namespace is unaffected.
+name = "fugacio-workspace"
 version = "0.0.1"
 description = "Open, differentiable thermodynamics + process simulation, with an AI design copilot."
 readme = "README.md"
@@ -159,9 +163,10 @@ source = ["fugacio"]
 # One version, one tag, one changelog for the whole workspace: every
 # package is bumped together (lockstep), the same single-version model the
 # Hydrateless and WeaveFFI monorepos use. python-semantic-release stamps the
-# shared next version into all four pyproject.toml files and all three package
-# __init__.py files; .github/workflows/release.yml then builds and publishes
-# the three packages to PyPI. Conventional-commit messages drive the bump.
+# shared next version into all five pyproject.toml files and the three
+# component packages' __init__.py files; .github/workflows/release.yml then
+# builds and publishes the four packages to PyPI. Conventional-commit messages
+# drive the bump.
 
 [tool.semantic_release]
 # Stay in the 0.x series while the API is pre-alpha: the first feature release
@@ -178,6 +183,7 @@ version_toml = [
     "packages/fugacio-thermo/pyproject.toml:project.version",
     "packages/fugacio-sim/pyproject.toml:project.version",
     "packages/fugacio-copilot/pyproject.toml:project.version",
+    "packages/fugacio/pyproject.toml:project.version",
 ]
 # ... and into each package's __version__ so `fugacio.<pkg>.__version__`
 # matches the published distribution.

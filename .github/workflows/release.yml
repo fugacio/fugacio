@@ -2,14 +2,15 @@ name: Release
 
 # Lockstep release for the whole workspace. On a push to main, Python Semantic
 # Release reads the conventional-commit history, computes one shared next
-# version, stamps it into all three packages (see [tool.semantic_release] in
+# version, stamps it into all four packages (see [tool.semantic_release] in
 # pyproject.toml), writes CHANGELOG.md, commits, tags `vX.Y.Z`, and creates the
 # GitHub Release. If (and only if) a release was made, the deploy job builds and
 # publishes each package to PyPI via Trusted Publishing (OIDC, no API tokens).
 #
 # PyPI setup: configure a Trusted Publisher for each of fugacio-thermo,
-# fugacio-sim, and fugacio-copilot pointing at this repo, workflow
-# `release.yml`, environment `pypi`. See https://docs.pypi.org/trusted-publishers/
+# fugacio-sim, fugacio-copilot, and the fugacio umbrella pointing at this repo,
+# workflow `release.yml`, environment `pypi`. See
+# https://docs.pypi.org/trusted-publishers/
 
 on:
   push:
@@ -58,9 +59,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       # Each package has its own PyPI project and Trusted Publisher, so build
-      # and publish them independently (order doesn't matter for PyPI).
+      # and publish them independently. Order doesn't matter for PyPI: it
+      # doesn't verify dependencies at upload, so the fugacio umbrella (which
+      # pins the other three) can publish in any order alongside them.
       matrix:
-        package: [fugacio-thermo, fugacio-sim, fugacio-copilot]
+        package: [fugacio-thermo, fugacio-sim, fugacio-copilot, fugacio]
     environment: pypi
     permissions:
       contents: read
