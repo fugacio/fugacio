@@ -4,7 +4,7 @@
 # never built or published (see `package = false` below), so this dist name is
 # internal-only; the `fugacio` import namespace is unaffected.
 name = "fugacio-workspace"
-version = "0.0.1"
+version = "0.1.0"
 description = "Open, differentiable thermodynamics + process simulation, with an AI design copilot."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,6 +15,7 @@ authors = [
 dependencies = []
 
 # The root is the workspace/aggregator only; it is never built or published.
+
 [tool.uv]
 package = false
 # Supply-chain cooldown: ignore distributions published in the last 7 days so a
@@ -33,35 +34,6 @@ required-environments = [
 [tool.uv.workspace]
 members = ["packages/*"]
 
-[dependency-groups]
-dev = [
-    "ruff>=0.8",
-    "mypy>=1.13",
-    "pytest>=8.3",
-    "pytest-cov>=6.0",
-    "import-linter>=2.1",
-    "pre-commit>=4.0",
-]
-# Documentation site (MkDocs + Material). mkdocstrings renders the API reference
-# straight from the package docstrings, so a docs build imports the workspace
-# packages: build with `uv sync --all-packages --group docs` (see .github/workflows/docs.yml).
-docs = [
-    "mkdocs>=1.6",
-    "mkdocs-material[imaging]>=9.5",
-    "mkdocstrings[python]>=0.26",
-    "mkdocs-autorefs>=1.2",
-    "pymdown-extensions>=10.7",
-]
-# Optional reference packages for the differential-testing oracles and the data
-# generation scripts. Not runtime dependencies of any Fugacio package; install
-# with `uv sync --group oracles` (CI does this only for the opt-in oracle run).
-oracles = [
-    "thermo>=0.2",
-    "chemicals>=1.1",
-    "coolprop>=6.6",
-    # No Intel-macOS wheels for current Cantera, so restrict it to Linux (CI).
-    "cantera>=3.0; sys_platform == 'linux'",
-]
 
 [tool.ruff]
 line-length = 100
@@ -105,6 +77,7 @@ convention = "google"
 # per-override docstring would only duplicate the base class.
 "packages/fugacio-sim/src/fugacio/sim/dynamics/units.py" = ["D102"]
 
+
 [tool.mypy]
 python_version = "3.11"
 namespace_packages = true
@@ -140,6 +113,7 @@ ignore_missing_imports = true
 module = ["openai.*", "anthropic.*"]
 ignore_missing_imports = true
 
+
 [tool.pytest.ini_options]
 # Oracle (differential-testing) tests are opt-in: they require heavy optional
 # packages (CoolProp / chemicals) and are excluded from the default run so the
@@ -155,6 +129,7 @@ testpaths = [
     "packages/fugacio-copilot/tests",
 ]
 
+
 [tool.coverage.run]
 branch = true
 source = ["fugacio"]
@@ -167,6 +142,7 @@ source = ["fugacio"]
 # component packages' __init__.py files; .github/workflows/release.yml then
 # builds and publishes the four packages to PyPI. Conventional-commit messages
 # drive the bump.
+
 
 [tool.semantic_release]
 # Stay in the 0.x series while the API is pre-alpha: the first feature release
@@ -226,3 +202,34 @@ allowed_tags = [
 ]
 minor_tags = ["feat"]
 patch_tags = ["fix", "perf"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "import-linter>=2.1",
+    "pre-commit>=4.0",
+]
+# Documentation site (MkDocs + Material). mkdocstrings renders the API reference
+# straight from the package docstrings, so a docs build imports the workspace
+# packages: build with `uv sync --all-packages --group docs` (see .github/workflows/docs.yml).
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material[imaging]>=9.5",
+    "mkdocstrings[python]>=0.26",
+    "mkdocs-autorefs>=1.2",
+    "pymdown-extensions>=10.7",
+]
+# Optional reference packages for the differential-testing oracles and the data
+# generation scripts. Not runtime dependencies of any Fugacio package; install
+# with `uv sync --group oracles` (CI does this only for the opt-in oracle run).
+oracles = [
+    "thermo>=0.2",
+    "chemicals>=1.1",
+    "coolprop>=6.6",
+    # No Intel-macOS wheels for current Cantera, so restrict it to Linux (CI).
+    "cantera>=3.0; sys_platform == 'linux'",
+]
+

@@ -1,6 +1,6 @@
 [project]
 name = "fugacio"
-version = "0.0.1"
+version = "0.1.0"
 description = "Fugacio: differentiable thermodynamics, process simulation, and an AI design copilot (umbrella install)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,9 +26,9 @@ classifiers = [
 # pin_workspace_deps.py); they stay unpinned until the first release, matching
 # the other packages' committed state.
 dependencies = [
-    "fugacio-thermo",
-    "fugacio-sim",
-    "fugacio-copilot",
+    "fugacio-thermo==0.1.0",
+    "fugacio-sim==0.1.0",
+    "fugacio-copilot==0.1.0",
 ]
 
 [build-system]
@@ -39,6 +39,7 @@ build-backend = "hatchling.build"
 # build an empty wheel instead of erroring on an empty file selection. The
 # `fugacio` import namespace is provided by fugacio-thermo/-sim/-copilot, so the
 # umbrella must not ship a competing `fugacio/` package of its own.
+
 [tool.hatch.build.targets.wheel]
 bypass-selection = true
 

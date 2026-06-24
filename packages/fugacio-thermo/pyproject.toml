@@ -1,6 +1,6 @@
 [project]
 name = "fugacio-thermo"
-version = "0.0.1"
+version = "0.1.0"
 description = "Differentiable thermodynamics and physical-property engine for the Fugacio stack."
 readme = "README.md"
 requires-python = ">=3.11"

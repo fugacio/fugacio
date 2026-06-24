@@ -1,6 +1,6 @@
 [project]
 name = "fugacio-copilot"
-version = "0.0.1"
+version = "0.1.0"
 description = "Chemical-engineering design copilot/agent for the Fugacio stack."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 dependencies = [
-    "fugacio-sim",
+    "fugacio-sim==0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +31,7 @@ dependencies = [
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.34"]
 llm = ["openai>=1.40", "anthropic>=0.34"]
+
 
 [build-system]
 requires = ["hatchling"]

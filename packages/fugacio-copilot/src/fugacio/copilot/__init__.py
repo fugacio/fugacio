@@ -83,4 +83,4 @@ __all__ = [
     "tool_schemas",
 ]
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
