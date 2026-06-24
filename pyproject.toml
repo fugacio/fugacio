@@ -154,3 +154,69 @@ testpaths = [
 [tool.coverage.run]
 branch = true
 source = ["fugacio"]
+
+# ── Semantic Release ────────────────────────────────────────────────
+# One version, one tag, one changelog for the whole workspace: every
+# package is bumped together (lockstep), the same single-version model the
+# Hydrateless and WeaveFFI monorepos use. python-semantic-release stamps the
+# shared next version into all four pyproject.toml files and all three package
+# __init__.py files; .github/workflows/release.yml then builds and publishes
+# the three packages to PyPI. Conventional-commit messages drive the bump.
+
+[tool.semantic_release]
+# Stay in the 0.x series while the API is pre-alpha: the first feature release
+# becomes 0.1.0 (not 1.0.0), and a breaking change bumps the minor (0.1.0 ->
+# 0.2.0) rather than jumping to 1.0.0.
+allow_zero_version = true
+major_on_zero = false
+commit_message = "chore(release): v{version}"
+tag_format = "v{version}"
+# The lockstep bump: the same version is written into the workspace root and
+# each package's project.version.
+version_toml = [
+    "pyproject.toml:project.version",
+    "packages/fugacio-thermo/pyproject.toml:project.version",
+    "packages/fugacio-sim/pyproject.toml:project.version",
+    "packages/fugacio-copilot/pyproject.toml:project.version",
+]
+# ... and into each package's __version__ so `fugacio.<pkg>.__version__`
+# matches the published distribution.
+version_variables = [
+    "packages/fugacio-thermo/src/fugacio/thermo/__init__.py:__version__",
+    "packages/fugacio-sim/src/fugacio/sim/__init__.py:__version__",
+    "packages/fugacio-copilot/src/fugacio/copilot/__init__.py:__version__",
+]
+# After stamping the version, pin each package's intra-workspace dependencies to
+# it (so a published fugacio-sim requires fugacio-thermo==<version>, and so on),
+# then refresh the lockfile so the bumped versions stay consistent with
+# `uv sync --locked`. Semantic Release commits uv.lock alongside the bump via
+# `assets`. uv isn't in the semantic-release container, so install it first.
+# This is the lockstep analog of Hydrateless's "npm install --package-lock-only"
+# and WeaveFFI's "cargo generate-lockfile" release steps.
+build_command = "python scripts/pin_workspace_deps.py && python -m pip install --quiet uv && uv lock"
+assets = ["uv.lock"]
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+# Keep Semantic Release's own release commits out of the generated changelog.
+exclude_commit_patterns = [
+    "^chore\\(release\\):",
+]
+
+[tool.semantic_release.publish]
+# build_command refreshes the lockfile rather than producing distributions, and
+# the packages go to PyPI (not attached to the GitHub Release), so there are no
+# artifacts to upload to the release.
+upload_to_vcs_release = false
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "build", "chore", "ci", "docs", "feat", "fix",
+    "perf", "refactor", "revert", "style", "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
