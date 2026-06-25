@@ -88,6 +88,32 @@ guess = Stream.from_fractions(feed.components, jnp.array([0.1, 0.3, 0.6]), 30.0,
 recycle = tear_solve(one_pass, guess, {"T": 320.0, "P": 20e5, "r": 0.5})
 ```
 
+The same plant can be solved the other way. The `fugacio.sim.eo` engine is an
+**equation-oriented** flowsheeter: it assembles every unit's equations, the
+stream connectivity, the recycles, and any design specs into one residual system
+and solves it simultaneously by Newton's method, with the Jacobian supplied
+exactly by JAX autodiff. There's no tear stream and no unit ordering (a recycle
+is just a stream two blocks share), the converged plant is differentiable by the
+implicit function theorem, and `optimize_flowsheet_eo` adds full-space
+simultaneous optimization (the flowsheet equations as equality constraints) next
+to the nested form (see [the equation-oriented guide](docs/equation-oriented.md)):
+
+```python
+from fugacio.sim.eo import EOFlowsheet, Mixer, Flash, Splitter
+
+fs = (
+    EOFlowsheet()
+    .feed("fresh", feed)
+    .add(Mixer(inlets=("fresh", "recycle"), outlets=("mixed",), t=320.0))
+    .add(Flash(inlets=("mixed",), outlets=("vapor", "liquid"), t="T", p="P"))
+    .add(Splitter(inlets=("liquid",), outlets=("recycle", "purge"), fractions="r"))
+)
+
+# One Newton system closes the recycle: no tear stream, no fixed-point iteration.
+sol = fs.solve({"T": 320.0, "P": 20e5, "r": jnp.array([0.5, 0.5])})
+sol["vapor"].total                   # vapour product, recycle closed simultaneously
+```
+
 Because the converged flowsheet is differentiable, optimization, design specs, and
 process economics are just more differentiable layers. `argmin` returns the
 *solution* of a constrained problem and differentiates it through the optimality
