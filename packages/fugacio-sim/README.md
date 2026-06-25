@@ -37,6 +37,40 @@ differentiates the *converged* flowsheet by the implicit function theorem: a
 gradient through the recycle costs one adjoint solve regardless of iteration
 count. `Flowsheet` is a small declarative builder on top of it.
 
+## Equation-oriented flowsheeting
+
+`fugacio.sim.eo` solves a whole flowsheet as one system of equations instead of
+unit by unit. `EOFlowsheet` assembles every block's residual equations, the
+stream connectivity, the recycles, and any design specs into a single residual
+system and solves it simultaneously by Newton's method, with the Jacobian
+supplied exactly by JAX autodiff. A recycle needs no tear stream and no ordering,
+the converged plant is differentiable by the implicit function theorem,
+`degrees_of_freedom` checks the unknown/equation balance, and
+`optimize_flowsheet_eo` runs nested or full-space simultaneous optimization. The
+blocks mirror the sequential-modular units (`Mixer`, `Splitter`, `Heater`,
+`Valve`, `Pump`, `Compressor`, `Turbine`, `Flash`, `ComponentSeparator`), so the
+two engines agree on any flowsheet both can express.
+
+```python
+import jax.numpy as jnp
+from fugacio.sim import Stream
+from fugacio.sim.eo import EOFlowsheet, Mixer, Flash, Splitter
+
+fresh = Stream.from_fractions(
+    ("methane", "propane", "n-pentane"), jnp.array([0.5, 0.3, 0.2]), 100.0, 320.0, 20e5
+)
+
+fs = (
+    EOFlowsheet()
+    .feed("fresh", fresh)
+    .add(Mixer(inlets=("fresh", "recycle"), outlets=("mixed",), t=320.0))
+    .add(Flash(inlets=("mixed",), outlets=("vapor", "liquid"), t="T", p="P"))
+    .add(Splitter(inlets=("liquid",), outlets=("recycle", "purge"), fractions="r"))
+)
+sol = fs.solve({"T": 320.0, "P": 20e5, "r": jnp.array([0.5, 0.5])})  # recycle closed, no tear
+sol["vapor"].total
+```
+
 ## Distillation
 
 - **Shortcut** (Fenske-Underwood-Gilliland): `fenske_min_stages`,

@@ -71,6 +71,7 @@ nav:
     - Physical & transport properties: physical-properties.md
     - Reactions & reactors: reactions.md
     - Optimization, design & economics: optimization.md
+    - Equation-oriented flowsheeting: equation-oriented.md
     - Dynamics & process control: dynamics.md
     - Advanced control (MPC & estimation): advanced-control.md
     - Heat integration & pinch analysis: heat-integration.md
@@ -94,6 +95,7 @@ nav:
       - Streams & properties: api/sim/streams.md
       - Unit operations: api/sim/units.md
       - Flowsheet & recycle: api/sim/flowsheet.md
+      - Equation-oriented flowsheeting: api/sim/eo.md
       - Thermodynamic models: api/sim/models.md
       - Distillation & diagrams: api/sim/columns.md
       - Reactors & reactive separations: api/sim/reactors.md

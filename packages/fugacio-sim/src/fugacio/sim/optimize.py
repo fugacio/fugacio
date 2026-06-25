@@ -278,12 +278,21 @@ def _spg(
     ) -> tuple[Array, Array, Array, Array, Array]:
         x, g, bb, i, fhist = carry
         d = project(x - bb * g) - x
+        # A non-finite gradient component would make ``x + alpha d`` non-finite
+        # for *every* ``alpha``, defeating the line search; freeze those entries.
+        d = jnp.where(jnp.isfinite(d), d, 0.0)
         f_ref = jnp.max(fhist)
         slope = jnp.vdot(g, d)
 
         def ls_cond(c: tuple[Array, Array]) -> Array:
             alpha, fa = c
-            return (fa > f_ref + 1e-4 * alpha * slope) & (alpha > 1e-10)
+            # Accept only a *finite* point that meets the non-monotone Armijo
+            # rule; a NaN/Inf objective (the EOS enthalpy integral evaluated in a
+            # non-physical region the step overshot into) must be rejected, not
+            # silently accepted because ``NaN > x`` is ``False``. Keep shrinking
+            # toward ``x`` (which is finite) until the step is admissible.
+            accept = (fa <= f_ref + 1e-4 * alpha * slope) & jnp.isfinite(fa)
+            return (~accept) & (alpha > 1e-10)
 
         def ls_body(c: tuple[Array, Array]) -> tuple[Array, Array]:
             alpha, _ = c

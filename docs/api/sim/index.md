@@ -22,6 +22,7 @@ from fugacio.sim import Stream, flash_drum, tear_solve, linear_mpc, pinch_analys
 | Streams & properties | [Streams & properties](streams.md) | `Stream`, `enthalpy_flow`, `molar_enthalpy`, `liquid_density` |
 | Unit operations | [Unit operations](units.md) | `flash_drum`, `heater`, `pump`, `compressor`, `mix`, `splitter`, `flash_vle` |
 | Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `tear_solve` |
+| Equation-oriented flowsheeting | [Equation-oriented flowsheeting](eo.md) | `EOFlowsheet`, `Flash`, `Heater`, `optimize_flowsheet_eo` |
 | Thermodynamic models | [Thermodynamic models](models.md) | `eos_model_for`, `nrtl_model_for`, `uniquac_model_for`, `unifac_model_for` |
 | Distillation & diagrams | [Distillation & diagrams](columns.md) | `shortcut_column`, `solve_column`, `pxy_diagram`, `residue_curve_map` |
 | Reactors | [Reactors & reactive separations](reactors.md) | `equilibrium_reactor`, `cstr`, `pfr`, `reactive_flash`, `reactive_distillation` |
@@ -33,6 +34,7 @@ from fugacio.sim import Stream, flash_drum, tear_solve, linear_mpc, pinch_analys
 | Steam & cooling utilities | [Steam & cooling utilities](utilities.md) | `steam_heating`, `cooling_water`, `steam_turbine` |
 
 See the [optimization & economics guide](../../optimization.md), the
+[equation-oriented flowsheeting guide](../../equation-oriented.md), the
 [dynamics & control guide](../../dynamics.md), the
 [advanced-control guide](../../advanced-control.md), and the
 [heat-integration guide](../../heat-integration.md) for worked examples.
