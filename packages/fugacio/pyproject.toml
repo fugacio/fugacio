@@ -1,6 +1,6 @@
 [project]
 name = "fugacio"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fugacio: differentiable thermodynamics, process simulation, and an AI design copilot (umbrella install)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,9 +26,9 @@ classifiers = [
 # pin_workspace_deps.py); they stay unpinned until the first release, matching
 # the other packages' committed state.
 dependencies = [
-    "fugacio-thermo==0.1.0",
-    "fugacio-sim==0.1.0",
-    "fugacio-copilot==0.1.0",
+    "fugacio-thermo==0.2.0",
+    "fugacio-sim==0.2.0",
+    "fugacio-copilot==0.2.0",
 ]
 
 [build-system]

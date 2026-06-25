@@ -1,6 +1,6 @@
 [project]
 name = "fugacio-sim"
-version = "0.1.0"
+version = "0.2.0"
 description = "Differentiable steady-state and dynamic process flowsheet simulator (Fugacio)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 dependencies = [
-    "fugacio-thermo==0.1.0",
+    "fugacio-thermo==0.2.0",
     "jax>=0.4.34",
 ]
 

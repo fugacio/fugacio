@@ -4,7 +4,7 @@
 # never built or published (see `package = false` below), so this dist name is
 # internal-only; the `fugacio` import namespace is unaffected.
 name = "fugacio-workspace"
-version = "0.1.0"
+version = "0.2.0"
 description = "Open, differentiable thermodynamics + process simulation, with an AI design copilot."
 readme = "README.md"
 requires-python = ">=3.11"

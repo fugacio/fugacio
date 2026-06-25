@@ -1,6 +1,6 @@
 [project]
 name = "fugacio-copilot"
-version = "0.1.0"
+version = "0.2.0"
 description = "Chemical-engineering design copilot/agent for the Fugacio stack."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 dependencies = [
-    "fugacio-sim==0.1.0",
+    "fugacio-sim==0.2.0",
 ]
 
 [project.optional-dependencies]

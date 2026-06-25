@@ -623,7 +623,7 @@ wheels = [
 
 [[package]]
 name = "fugacio"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/fugacio" }
 dependencies = [
     { name = "fugacio-copilot" },
@@ -640,7 +640,7 @@ requires-dist = [
 
 [[package]]
 name = "fugacio-copilot"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/fugacio-copilot" }
 dependencies = [
     { name = "fugacio-sim" },
@@ -670,7 +670,7 @@ provides-extras = ["openai", "anthropic", "llm"]
 
 [[package]]
 name = "fugacio-sim"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/fugacio-sim" }
 dependencies = [
     { name = "fugacio-thermo" },
@@ -686,7 +686,7 @@ requires-dist = [
 
 [[package]]
 name = "fugacio-thermo"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/fugacio-thermo" }
 dependencies = [
     { name = "jax", version = "0.4.38", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
@@ -698,7 +698,7 @@ requires-dist = [{ name = "jax", specifier = ">=0.4.34" }]
 
 [[package]]
 name = "fugacio-workspace"
-version = "0.1.0"
+version = "0.2.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

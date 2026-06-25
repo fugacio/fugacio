@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.2.0 (2026-06-25)
+
+### Continuous Integration
+
+- Upgrade python-semantic-release to v10 ([#16](https://github.com/fugacio/fugacio/pull/16),
+  [`dbb943d`](https://github.com/fugacio/fugacio/commit/dbb943d198396d906249ef36608721e1af94d1e5))
+
+### Features
+
+- Add equation-oriented flowsheeting with simultaneous optimization
+  ([#17](https://github.com/fugacio/fugacio/pull/17),
+  [`295d461`](https://github.com/fugacio/fugacio/commit/295d46132071d3d80dc518133772dfd16351f327))
+
+
 ## v0.1.0 (2026-06-24)
 
 ### Continuous Integration
