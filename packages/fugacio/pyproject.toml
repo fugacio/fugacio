@@ -39,7 +39,6 @@ build-backend = "hatchling.build"
 # build an empty wheel instead of erroring on an empty file selection. The
 # `fugacio` import namespace is provided by fugacio-thermo/-sim/-copilot, so the
 # umbrella must not ship a competing `fugacio/` package of its own.
-
 [tool.hatch.build.targets.wheel]
 bypass-selection = true
 
