@@ -33,8 +33,8 @@ workspace:
 
 | Package | Import | Responsibility |
 | --- | --- | --- |
-| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium: cubic EOS & γ–φ activity models, molecular **PC-SAFT** (associating fluids and chains, with Wertheim association and differentiable parameter regression), reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
-| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops, a differentiable recycle/tear solver, distillation columns, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), **advanced control** (differentiable QP, offset-free linear MPC, Kalman/EKF/UKF/moving-horizon estimation, nonlinear & economic MPC, gradient-based tuning), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
+| `fugacio-thermo` | `fugacio.thermo` | Differentiable properties + phase equilibrium behind one **property-package** interface (phase split *and* enthalpy/entropy/volume, energy flashes, for every method class): cubic EOS & γ–φ activity models (heat of mixing by autodiff of gᴱ), molecular **PC-SAFT** (associating fluids and chains, with Wertheim association and differentiable parameter regression), reference multiparameter Helmholtz EOS (IAPWS-95 water/steam, Span–Wagner CO₂, 26 fluids) with steam-table state functions and IAPWS transport, energy/PT-PH-PS flashes, liquid & transport properties (density, viscosity, conductivity, surface tension, diffusivity), rigorous LLE/VLLE, parameter regression with a bundled ThermoML parameter bank, and reaction thermochemistry, equilibrium & kinetics (the foundation). |
+| `fugacio-sim` | `fugacio.sim` | Flowsheet engine: energy-balanced unit ops on any property package, a `Flowsheet` with **automatic partitioning and tear selection** (Tarjan) and Wegstein/Broyden/Newton recycle convergence, a **rigorous MESH distillation column** (Naphtali–Sandholm simultaneous correction, multi-feed, side draws, design specs, absorbers/strippers), a **two-sided countercurrent heat exchanger**, binary/residue-curve diagrams, reactors, reactive separations, optimization/design/economics, time-domain **dynamics & process control** (differentiable ODE integrators, PID, dynamic units, `DynamicFlowsheet`), **advanced control** (differentiable QP, offset-free linear MPC, Kalman/EKF/UKF/moving-horizon estimation, nonlinear & economic MPC, gradient-based tuning), and **heat integration & pinch analysis** (minimum-utility/pinch targets, composite curves, area/cost supertargeting, network synthesis) (depends on `thermo`). |
 | `fugacio-copilot` | `fugacio.copilot` | LLM design agent: a JSON tool registry over the engine plus gradient-based optimizers (depends on `sim`). |
 
 The dependency direction is strict, **`thermo` < `sim` < `copilot`**, and is
@@ -86,6 +86,36 @@ def one_pass(recycle, theta):                      # mixer -> flash -> recycle s
 
 guess = Stream.from_fractions(feed.components, jnp.array([0.1, 0.3, 0.6]), 30.0, 320.0, 20e5)
 recycle = tear_solve(one_pass, guess, {"T": 320.0, "P": 20e5, "r": 0.5})
+```
+
+At plant scale you declare units and let the `Flowsheet` find the loops, pick the
+tears, and order the calculation itself. Any energy-balanced unit runs on any
+**property package** (`package_for`: cubic, NRTL/UNIFAC gamma-phi with autodiff
+heat of mixing, PC-SAFT, or a reference fluid), the rigorous MESH column takes
+design specs as equations, and a two-sided exchanger closes heat-integration
+loops around it (see the [flowsheeting](docs/flowsheeting.md),
+[distillation](docs/distillation.md), and
+[property-packages](docs/property-packages.md) guides):
+
+```python
+from fugacio.sim import ColumnFeed, Flowsheet, heat_exchanger, package_for, reflux_ratio, rigorous_column, distillate_rate
+
+pkg = package_for(("ethanol", "water"), "nrtl")
+aq = Stream.from_fractions(("ethanol", "water"), jnp.array([0.1, 0.9]), 100.0, 300.0, 1.5e5)
+
+def economiser(cold, hot, th):                     # feed preheat against the bottoms
+    hx = heat_exchanger(hot, cold, min_approach=th["dt"], model=pkg)
+    return hx.cold_out, hx.hot_out
+
+def column(s, th):                                 # full MESH, stage energy balances, NRTL
+    res = rigorous_column([ColumnFeed(s, 6)], 12, p=1.013e5, model=pkg,
+                          specs=[reflux_ratio(th["R"]), distillate_rate(11.5)])
+    return res.distillate, res.bottoms
+
+fs = Flowsheet().feed("feed", aq)
+fs.unit("economiser", economiser, inputs=("feed", "bottoms"), outputs=("preheated", "bottoms_cooled"))
+fs.unit("column", column, inputs=("preheated",), outputs=("distillate", "bottoms"))
+streams = fs.solve({"R": 3.0, "dt": 10.0}, method="broyden")   # loop found, torn, converged
 ```
 
 The same plant can be solved the other way. The `fugacio.sim.eo` engine is an

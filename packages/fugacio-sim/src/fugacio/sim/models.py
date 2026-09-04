@@ -14,28 +14,44 @@ The returned object is what the gamma-phi-aware unit operations
 (`fugacio.sim.diagrams`) consume, so a flowsheet can switch from
 Peng-Robinson to NRTL by swapping one constructor call, and stays end-to-end
 differentiable, including with respect to the activity-model parameters.
+
+`package_for` is the one-stop constructor for a full
+`fugacio.thermo.PropertyPackage` (equilibrium *and* energy) by method name:
+``"pr"``, ``"srk"``, ``"nrtl"``, ``"unifac"``, ``"pcsaft"``, ``"iapws"``, and so
+on. Its result is what every energy-balanced unit operation, the rigorous
+column, and the equation-oriented engine accept through their ``model``
+argument; `as_package` upgrades any of the bare equilibrium models above to the
+same interface.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import jax
 from jax import Array
 
-from fugacio.sim.properties import _resolve
+from fugacio.sim.properties import _resolve, as_package, default_package, resolve_package
 from fugacio.thermo import (
     PR,
+    RK,
+    SRK,
+    VDW,
     CubicEOS,
     EOSModel,
     GammaPhiModel,
+    HelmholtzPackage,
+    PropertyPackage,
     SAFTModel,
     eos_model,
     gamma_phi_model,
+    helmholtz_package,
     kij_from_database,
     modified_unifac_activity,
     nrtl_from_database,
+    reference_fluid,
     saft_model,
     saft_parameters_for,
     unifac_activity,
@@ -43,6 +59,22 @@ from fugacio.thermo import (
 )
 
 ArrayLike = Array | float
+
+_CUBICS: dict[str, CubicEOS] = {"pr": PR, "srk": SRK, "rk": RK, "vdw": VDW}
+
+#: Method names accepted by `package_for`.
+METHODS: tuple[str, ...] = (
+    "pr",
+    "srk",
+    "rk",
+    "vdw",
+    "nrtl",
+    "uniquac",
+    "unifac",
+    "dortmund",
+    "pcsaft",
+    "iapws",
+)
 
 
 def eos_model_for(
@@ -211,10 +243,80 @@ def unifac_model_for(
     )
 
 
+def helmholtz_package_for(component: str) -> HelmholtzPackage:
+    """One-component reference-fluid package for a named pure fluid (water, CO2, ...).
+
+    The name is resolved through `fugacio.thermo.reference_fluid`, so any of the
+    26 vendored multiparameter formulations is accepted.
+    """
+    return helmholtz_package(reference_fluid(component))
+
+
+def package_for(
+    components: Sequence[str],
+    method: str = "pr",
+    **options: Any,
+) -> PropertyPackage:
+    """Build the property package for named ``components`` by ``method``.
+
+    This is the constructor a flowsheet author reaches for. Every energy-balanced
+    unit (`fugacio.sim.units`), the rigorous column
+    (`fugacio.sim.distillation`), the two-sided heat exchanger, and the
+    equation-oriented engine take its result through their ``model`` argument.
+
+    Args:
+        components: Component names (from the curated database).
+        method: One of `METHODS`:
+
+            * ``"pr"`` / ``"srk"`` / ``"rk"`` / ``"vdw"``: phi-phi cubic package
+              (options: ``kij``, ``use_database_kij``);
+            * ``"nrtl"`` / ``"uniquac"``: gamma-phi package with the curated
+              binary parameters (options: ``vapor``, ``poynting``,
+              ``phi_saturation``, ``strict``, ``eos``, ``kij``, and
+              ``alpha_default`` for NRTL);
+            * ``"unifac"`` / ``"dortmund"``: gamma-phi package with predictive
+              (modified) UNIFAC (same options);
+            * ``"pcsaft"``: PC-SAFT package (options: ``kij``, ``use_database_kij``);
+            * ``"iapws"``: a single reference fluid (one component only).
+        **options: Forwarded to the underlying model factory as listed above.
+
+    Returns:
+        A `fugacio.thermo.PropertyPackage` over ``components``.
+
+    Raises:
+        ValueError: for an unknown ``method`` or a multi-component ``"iapws"``.
+    """
+    key = method.lower()
+    comps = list(components)
+    if key in _CUBICS:
+        kij = options.get("kij")
+        if kij is None and options.get("use_database_kij", False):
+            kij = kij_from_database(comps)
+        return default_package(comps, eos=_CUBICS[key], kij=kij)
+    if key == "nrtl":
+        return as_package(nrtl_model_for(comps, **options), comps)
+    if key == "uniquac":
+        return as_package(uniquac_model_for(comps, **options), comps)
+    if key in ("unifac", "dortmund"):
+        return as_package(unifac_model_for(comps, dortmund=key == "dortmund", **options), comps)
+    if key == "pcsaft":
+        return as_package(saft_model_for(comps, **options), comps)
+    if key in ("iapws", "helmholtz", "reference"):
+        if len(comps) != 1:
+            raise ValueError("the reference-fluid package describes exactly one pure component")
+        return helmholtz_package_for(comps[0])
+    raise ValueError(f"unknown thermodynamic method {method!r}; choose one of {METHODS}")
+
+
 __all__ = [
+    "METHODS",
     "UnifacModel",
+    "as_package",
     "eos_model_for",
+    "helmholtz_package_for",
     "nrtl_model_for",
+    "package_for",
+    "resolve_package",
     "saft_model_for",
     "unifac_model_for",
     "uniquac_model_for",

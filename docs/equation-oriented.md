@@ -154,6 +154,42 @@ sol["out"].t          # 360.0
 sol.specs["Q"]        # the duty that achieves it
 ```
 
+## Property packages and the plant-scale blocks
+
+`EOFlowsheet(model=...)` accepts any [property package](property-packages.md),
+and every block draws its enthalpies, volumes, and fugacities from it, so the
+whole simultaneous solve can run on NRTL, PC-SAFT, or a reference fluid as well
+as on a cubic. Three blocks cover the units that turn a chain of exchangers
+into a plant:
+
+* `HeatExchanger(inlets=(hot_in, cold_in), outlets=(hot_out, cold_out), ...)`
+  couples two streams through one duty unknown and one closing spec (`duty`,
+  `t_hot_out`, `t_cold_out`, or `ua` with the `q = UA * LMTD` rating relation).
+* `StoichiometricReactor(nu=..., key=..., conversion=..., t_out=... | duty=...)`
+  applies fixed conversions with an energy balance on absolute ideal-gas
+  enthalpies, so the heat of reaction is carried automatically.
+* `Column(inlets=(feed,), outlets=(distillate, bottoms), feed_stages=(6,),
+  n_stages=12, p=..., specs=(("reflux_ratio", "R"), ("distillate_rate", 50.0)))`
+  embeds a converged [rigorous MESH column](distillation.md) as one block, so a
+  column can sit inside a recycle loop that the global Newton closes.
+
+```python
+from fugacio.sim import package_for
+from fugacio.sim.eo import Column, EOFlowsheet, HeatExchanger
+
+fs = EOFlowsheet(model=package_for(("benzene", "toluene"), "srk"))
+fs.feed("cold", cold_feed)
+fs.feed("hot", hot_utility)
+fs.add(HeatExchanger(inlets=("hot", "cold"), outlets=("hot_out", "warm"), t_cold_out=360.0))
+fs.add(Column(inlets=("warm",), outlets=("d", "b"), feed_stages=(6,), n_stages=12,
+              p=1.013e5, specs=(("reflux_ratio", "R"), ("distillate_rate", 50.0))))
+sol = fs.solve({"R": 2.5})
+```
+
+The same blocks reproduce their sequential-modular counterparts
+(`heat_exchanger`, `stoichiometric_reactor`, `rigorous_column`) to solver
+tolerance, which the test suite checks.
+
 ## Flowsheet optimization
 
 `optimize_flowsheet_eo` minimizes an objective read off the solved streams over

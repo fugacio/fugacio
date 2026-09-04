@@ -18,6 +18,15 @@ Any `Stream` has a two-phase-aware enthalpy and entropy (via the
 just material balances: `molar_enthalpy`, `molar_entropy`, `enthalpy_flow`,
 `entropy_flow`, `mass_flow`, `molar_mass`.
 
+## Property packages
+
+Every energy-balanced unit, the rigorous column, the two-sided heat exchanger,
+and the equation-oriented engine take a `model=` argument: a
+`fugacio.thermo.PropertyPackage` built with `package_for(components, method)`
+for any method in `METHODS` (`"pr"`, `"srk"`, `"rk"`, `"vdw"`, `"nrtl"`,
+`"uniquac"`, `"unifac"`, `"dortmund"`, `"pcsaft"`, `"iapws"`). Omitting it keeps
+the Peng-Robinson default.
+
 ## Unit operations (rigorous material + energy balances)
 
 - `flash_drum`: isothermal-isobaric vapour/liquid separator.
@@ -27,15 +36,22 @@ just material balances: `molar_enthalpy`, `molar_entropy`, `enthalpy_flow`,
 - `compressor` / `turbine`: isentropic machines with an efficiency.
 - `mix`: adiabatic, energy-balanced mixer (exact material balance).
 - `splitter` / `component_separator`: flow split and idealised component split.
+- `heat_exchanger`: two-sided countercurrent (or parallel) exchanger with
+  rigorous T-Q curves on both sides, zone-wise LMTD, and one closing spec
+  (`duty`, `t_hot_out`, `t_cold_out`, `min_approach`, or `ua`); each side may
+  use its own property package.
 - `bubble_pressure` / `antoine_psat`: lightweight modified-Raoult helpers.
 
 ## Flowsheets with recycle
 
 `tear_solve` closes a recycle by solving the tear fixed point
-`tear = g(tear, theta)` with a Wegstein-accelerated iteration, and
-differentiates the *converged* flowsheet by the implicit function theorem: a
-gradient through the recycle costs one adjoint solve regardless of iteration
-count. `Flowsheet` is a small declarative builder on top of it.
+`tear = g(tear, theta)` by Wegstein acceleration, Broyden, or full Newton
+(`method=`), and differentiates the *converged* flowsheet by the implicit
+function theorem: a gradient through the recycle costs one adjoint solve
+regardless of iteration count. `Flowsheet` is the declarative builder on top of
+it: register feeds and units in any order and `partition` finds the strongly
+connected blocks (Tarjan), orders them, and selects the tear streams; `solve`
+converges every loop and returns all named streams, differentiable in `theta`.
 
 ## Equation-oriented flowsheeting
 
@@ -48,8 +64,9 @@ the converged plant is differentiable by the implicit function theorem,
 `degrees_of_freedom` checks the unknown/equation balance, and
 `optimize_flowsheet_eo` runs nested or full-space simultaneous optimization. The
 blocks mirror the sequential-modular units (`Mixer`, `Splitter`, `Heater`,
-`Valve`, `Pump`, `Compressor`, `Turbine`, `Flash`, `ComponentSeparator`), so the
-two engines agree on any flowsheet both can express.
+`Valve`, `Pump`, `Compressor`, `Turbine`, `Flash`, `ComponentSeparator`), plus
+`HeatExchanger`, `StoichiometricReactor`, and `Column` (an embedded rigorous
+MESH column), so the two engines agree on any flowsheet both can express.
 
 ```python
 import jax.numpy as jnp
@@ -76,9 +93,15 @@ sol["vapor"].total
 - **Shortcut** (Fenske-Underwood-Gilliland): `fenske_min_stages`,
   `underwood_min_reflux`, `gilliland_stages`, `kirkbride_feed_stage`, and the
   `shortcut_column` wrapper.
-- **Rigorous** `solve_column`: a multistage equilibrium-stage column (Wang-Henke
-  bubble-point, constant molar overflow) with EOS K-values on every stage,
-  differentiable through the fixed-point iteration.
+- **Rigorous MESH** `rigorous_column`: simultaneous-correction
+  (Naphtali-Sandholm) column with full stage energy balances on any property
+  package; multiple feeds (`ColumnFeed`), side draws, stage duties, a pressure
+  profile, Murphree efficiency, total/partial/no condenser, kettle/no reboiler,
+  and design specs as equations (`reflux_ratio`, `distillate_rate`,
+  `bottoms_rate`, `boilup_ratio`, `condenser_duty`, `purity`, `recovery`,
+  `component_flow`, `stage_temperature`). `absorber` and `stripper` wrap it.
+- **Constant molar overflow** `solve_column`: the lighter Wang-Henke
+  bubble-point column, kept for quick estimates.
 
 ## Non-ideal separations & diagrams
 
@@ -152,16 +175,21 @@ recycle = tear_solve(one_pass, guess, {"T": 320.0, "P": 20e5, "r": 0.5})
 ```python
 import jax
 import jax.numpy as jnp
-from fugacio.sim import Stream, solve_column
+from fugacio.sim import ColumnFeed, Stream, distillate_rate, purity, reflux_ratio, rigorous_column
 
 feed = Stream.from_fractions(("propane", "n-butane"), jnp.array([0.5, 0.5]), 100.0, 320.0, 10e5)
-col = solve_column(feed, n_stages=12, feed_stage=6, reflux=2.0, distillate_rate=50.0)
-col.distillate.z  # ~[0.97, 0.03] propane overhead
+col = rigorous_column([ColumnFeed(feed, 6)], 12, p=10e5,
+                      specs=[reflux_ratio(2.0), distillate_rate(50.0)])
+col.distillate.z                     # propane overhead
+col.reboiler_duty, col.t             # duty from the stage energy balances; T profile
 
-# Exact gradient of distillate purity w.r.t. reflux ratio:
-jax.grad(
-    lambda r: solve_column(feed, 12, 6, r, 50.0).distillate.z[0]
-)(2.0)
+# Impose the purity instead and ask for the reflux it takes, and its energy cost:
+def reboiler_duty(x_target):
+    res = rigorous_column([ColumnFeed(feed, 6)], 12, p=10e5,
+                          specs=[distillate_rate(50.0), purity("distillate", 0, x_target)])
+    return res.reboiler_duty
+
+jax.grad(reboiler_duty)(0.97)        # W per unit mole fraction, exact
 ```
 
 Part of the `fugacio` namespace; installs independently:

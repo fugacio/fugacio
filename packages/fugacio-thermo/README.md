@@ -27,6 +27,14 @@ than through unrolled iterations.
   and energy-specified flashes `flash_ph` (isenthalpic) and `flash_ps`
   (isentropic), the backbone of adiabatic units, valves, compressors, and
   turbines.
+- **Property packages** (`PropertyPackage`, `cubic_package`, `gamma_phi_package`,
+  `saft_package`, `helmholtz_package`): one object that owns phase equilibrium
+  *and* energy for a component set, implemented for every method class. The
+  gamma-phi package gets its heat of mixing from autodiff of the excess Gibbs
+  energy (`excess_enthalpy`, `excess_entropy`), so enthalpy stays consistent
+  with the activity coefficients. Generic two-phase properties and PH/PS/TV
+  flashes are built once on top of the protocol. Importing `fugacio.thermo`
+  enables 64-bit JAX arithmetic (set `FUGACIO_X64=0` to opt out).
 - **Activity-coefficient models**: Margules, van Laar, Wilson, NRTL, UNIQUAC, and
   predictive regular-solution / Flory-Huggins, available both as functions and
   as differentiable `ActivityModel` objects (`nrtl`, `uniquac`, ...) whose

@@ -1,11 +1,13 @@
 """Differentiable unit operations with rigorous material *and* energy balances.
 
-Every block here is built on the equation-of-state phase equilibrium and the
-energy core in `fugacio.thermo`, so each one is differentiable end-to-end
-with respect to its operating conditions and feed. That is the headline Fugacio
-claim made concrete: you can take a gradient of a product purity, a duty, or a
-shaft power with respect to a drum temperature, an outlet pressure, a split
-fraction, or a feed flow: the basis for gradient-based flowsheet optimisation.
+Every block here is built on a `fugacio.thermo.PropertyPackage`, the object that
+owns both the phase equilibrium and the energy properties of the mixture, so
+each unit is differentiable end-to-end with respect to its operating conditions,
+its feed, and the thermodynamic parameters. That is the headline Fugacio claim
+made concrete: you can take a gradient of a product purity, a duty, or a shaft
+power with respect to a drum temperature, an outlet pressure, a split fraction, a
+feed flow, or an NRTL parameter: the basis for gradient-based flowsheet
+optimisation and parameter regression through a whole plant.
 
 The library covers the staples of a process flowsheet:
 
@@ -18,9 +20,12 @@ The library covers the staples of a process flowsheet:
 * `splitter`: flow splitter;
 * `component_separator`: idealised component split.
 
-Outlet temperatures of the energy-specified blocks are found with the
-differentiable `flash_ph` / `flash_ps`
-solves, whose temperatures carry implicit-function gradients.
+Every energy-balanced unit takes a ``model`` argument selecting the property
+package (see `fugacio.sim.models.package_for`); leaving it unset falls back to
+Peng-Robinson on the stream's components, tunable through the legacy ``eos`` /
+``kij`` arguments. Outlet temperatures of the energy-specified blocks are found
+with the package's differentiable ``flash_ph`` / ``flash_ps`` solves, whose
+temperatures carry implicit-function gradients.
 """
 
 from __future__ import annotations
@@ -30,18 +35,9 @@ from typing import NamedTuple
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.sim.properties import _resolve, enthalpy_flow, molar_enthalpy, molar_entropy
+from fugacio.sim.properties import Model, resolve_package
 from fugacio.sim.stream import Stream
-from fugacio.thermo import (
-    PR,
-    CubicEOS,
-    component_arrays,
-    flash_ph,
-    flash_ps,
-    flash_pt,
-    mixture_enthalpy,
-    molar_volume,
-)
+from fugacio.thermo import PR, CubicEOS
 
 ArrayLike = Array | float
 
@@ -90,6 +86,7 @@ def flash_drum(
     t: ArrayLike,
     p: ArrayLike,
     *,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
 ) -> tuple[Stream, Stream]:
@@ -99,18 +96,20 @@ def flash_drum(
         feed: Inlet `Stream`.
         t: Drum temperature (K).
         p: Drum pressure (Pa).
-        eos: Cubic equation of state to use (defaults to Peng-Robinson).
-        kij: Optional binary interaction matrix.
+        model: Property package (or equilibrium model) to flash with; defaults
+            to a cubic EOS built from ``eos`` / ``kij``.
+        eos: Cubic equation of state for the default package (Peng-Robinson).
+        kij: Optional binary interaction matrix for the default package.
 
     Returns:
         ``(vapor, liquid)`` product streams. Their flows are differentiable with
-        respect to ``t``, ``p`` and the feed.
+        respect to ``t``, ``p``, the feed, and the package parameters.
     """
-    arr = component_arrays(list(feed.components))
-    result = flash_pt(eos, t, p, feed.z, arr["tc"], arr["pc"], arr["omega"], kij=kij)
+    pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
+    result = pkg.flash_pt(t, p, feed.z)
     total = feed.total
-    t_arr = jnp.asarray(t)
-    p_arr = jnp.asarray(p)
+    t_arr = jnp.asarray(t, dtype=float)
+    p_arr = jnp.asarray(p, dtype=float)
     vapor = Stream(
         n=result.y * result.beta * total,
         t=t_arr,
@@ -132,6 +131,7 @@ def heater(
     t_out: ArrayLike | None = None,
     duty: ArrayLike | None = None,
     dp: ArrayLike = 0.0,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
@@ -149,15 +149,17 @@ def heater(
     """
     if (t_out is None) == (duty is None):
         raise ValueError("heater requires exactly one of t_out or duty")
+    pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
     p_out = feed.p - jnp.asarray(dp)
-    h_in = enthalpy_flow(feed, eos=eos, kij=kij)
+    h_in = pkg.mixture_enthalpy(feed.t, feed.p, feed.z)
     if t_out is not None:
-        outlet = Stream(n=feed.n, t=jnp.asarray(t_out), p=p_out, components=feed.components)
-        duty_w = enthalpy_flow(outlet, eos=eos, kij=kij) - h_in
+        outlet = Stream(
+            n=feed.n, t=jnp.asarray(t_out, dtype=float), p=p_out, components=feed.components
+        )
+        duty_w = feed.total * (pkg.mixture_enthalpy(outlet.t, outlet.p, outlet.z) - h_in)
         return HeaterResult(outlet=outlet, duty=duty_w)
-    tc, pc, omega, _, cp = _resolve(feed.components)
-    h_spec = (h_in + jnp.asarray(duty)) / feed.total
-    r = flash_ph(eos, p_out, h_spec, feed.z, tc, pc, omega, cp, kij=kij, t_init=t_init)
+    h_spec = h_in + jnp.asarray(duty) / feed.total
+    r = pkg.flash_ph(p_out, h_spec, feed.z, t_init=t_init)
     outlet = Stream(n=feed.n, t=r.t, p=p_out, components=feed.components)
     return HeaterResult(outlet=outlet, duty=jnp.asarray(duty, dtype=float))
 
@@ -166,6 +168,7 @@ def valve(
     feed: Stream,
     p_out: ArrayLike,
     *,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
@@ -177,10 +180,10 @@ def valve(
     outlet may be two-phase; it is returned as a single bulk stream at the solved
     temperature.
     """
-    tc, pc, omega, _, cp = _resolve(feed.components)
-    h_spec = molar_enthalpy(feed, eos=eos, kij=kij)
-    r = flash_ph(eos, p_out, h_spec, feed.z, tc, pc, omega, cp, kij=kij, t_init=t_init)
-    return Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out), components=feed.components)
+    pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
+    h_spec = pkg.mixture_enthalpy(feed.t, feed.p, feed.z)
+    r = pkg.flash_ph(p_out, h_spec, feed.z, t_init=t_init)
+    return Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out, dtype=float), components=feed.components)
 
 
 def pump(
@@ -188,6 +191,7 @@ def pump(
     p_out: ArrayLike,
     *,
     efficiency: ArrayLike = 0.75,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
@@ -199,13 +203,13 @@ def pump(
     deposited as heat, so the outlet temperature is found from an isenthalpic
     balance on ``H_out = H_in + W_actual``.
     """
-    tc, pc, omega, _, cp = _resolve(feed.components)
-    v_l = molar_volume(eos, feed.t, feed.p, feed.z, tc, pc, omega, phase="liquid", kij=kij)
+    pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
+    v_l = pkg.volume(feed.t, feed.p, feed.z, phase="liquid")
     w_ideal = v_l * (jnp.asarray(p_out) - feed.p)
     w_actual = w_ideal / jnp.asarray(efficiency)
-    h_out = molar_enthalpy(feed, eos=eos, kij=kij) + w_actual
-    r = flash_ph(eos, p_out, h_out, feed.z, tc, pc, omega, cp, kij=kij, t_init=t_init)
-    outlet = Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out), components=feed.components)
+    h_out = pkg.mixture_enthalpy(feed.t, feed.p, feed.z) + w_actual
+    r = pkg.flash_ph(p_out, h_out, feed.z, t_init=t_init)
+    outlet = Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out, dtype=float), components=feed.components)
     return PumpResult(outlet=outlet, work=w_actual * feed.total)
 
 
@@ -213,6 +217,7 @@ def _compress(
     feed: Stream,
     p_out: ArrayLike,
     efficiency: ArrayLike,
+    model: Model,
     eos: CubicEOS,
     kij: Array | None,
     t_init: float,
@@ -220,18 +225,18 @@ def _compress(
     is_turbine: bool,
 ) -> WorkResult:
     """Shared isentropic-machine model for `compressor` and `turbine`."""
-    tc, pc, omega, _, cp = _resolve(feed.components)
+    pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
     z = feed.z
-    h_in = molar_enthalpy(feed, eos=eos, kij=kij)
-    s_in = molar_entropy(feed, eos=eos, kij=kij)
-    iso = flash_ps(eos, p_out, s_in, z, tc, pc, omega, cp, kij=kij, t_init=t_init)
-    h_out_ideal = mixture_enthalpy(eos, iso.t, p_out, z, tc, pc, omega, cp, kij=kij)
+    h_in = pkg.mixture_enthalpy(feed.t, feed.p, z)
+    s_in = pkg.mixture_entropy(feed.t, feed.p, z)
+    iso = pkg.flash_ps(p_out, s_in, z, t_init=t_init)
+    h_out_ideal = pkg.mixture_enthalpy(iso.t, p_out, z)
     w_ideal = h_out_ideal - h_in
     eff = jnp.asarray(efficiency)
     w_actual = eff * w_ideal if is_turbine else w_ideal / eff
     h_out = h_in + w_actual
-    r = flash_ph(eos, p_out, h_out, z, tc, pc, omega, cp, kij=kij, t_init=t_init)
-    outlet = Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out), components=feed.components)
+    r = pkg.flash_ph(p_out, h_out, z, t_init=t_init)
+    outlet = Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out, dtype=float), components=feed.components)
     return WorkResult(outlet=outlet, work=w_actual * feed.total, ideal_work=w_ideal * feed.total)
 
 
@@ -240,6 +245,7 @@ def compressor(
     p_out: ArrayLike,
     *,
     efficiency: ArrayLike = 0.75,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
@@ -250,7 +256,7 @@ def compressor(
     ``W_ideal / efficiency`` and the extra enthalpy sets the (higher) real outlet
     temperature via an isenthalpic solve.
     """
-    return _compress(feed, p_out, efficiency, eos, kij, t_init, is_turbine=False)
+    return _compress(feed, p_out, efficiency, model, eos, kij, t_init, is_turbine=False)
 
 
 def turbine(
@@ -258,6 +264,7 @@ def turbine(
     p_out: ArrayLike,
     *,
     efficiency: ArrayLike = 0.85,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
@@ -268,7 +275,7 @@ def turbine(
     ``work`` is negative (power delivered to the shaft) and the real outlet is
     warmer than the isentropic outlet because of the lost work.
     """
-    return _compress(feed, p_out, efficiency, eos, kij, t_init, is_turbine=True)
+    return _compress(feed, p_out, efficiency, model, eos, kij, t_init, is_turbine=True)
 
 
 def splitter(feed: Stream, fractions: ArrayLike) -> tuple[Stream, ...]:
@@ -323,6 +330,7 @@ def mix(
     *,
     t: ArrayLike | None = None,
     p: ArrayLike | None = None,
+    model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
@@ -345,12 +353,22 @@ def mix(
         if s.components != components:
             raise ValueError("all streams must share the same component list to mix")
     n_total = jnp.sum(jnp.stack([s.n for s in streams]), axis=0)
-    p_out = jnp.min(jnp.stack([s.p for s in streams])) if p is None else jnp.asarray(p)
+    p_out = jnp.min(jnp.stack([s.p for s in streams])) if p is None else jnp.asarray(p, dtype=float)
     if t is not None:
-        return Stream(n=n_total, t=jnp.asarray(t), p=p_out, components=components)
+        return Stream(n=n_total, t=jnp.asarray(t, dtype=float), p=p_out, components=components)
+    pkg = resolve_package(components, model, eos=eos, kij=kij)
     total = jnp.sum(n_total)
     z = n_total / total
-    h_in = jnp.sum(jnp.stack([enthalpy_flow(s, eos=eos, kij=kij) for s in streams]))
-    tc, pc, omega, _, cp = _resolve(components)
-    r = flash_ph(eos, p_out, h_in / total, z, tc, pc, omega, cp, kij=kij, t_init=t_init)
+    # An empty inlet (a zero-flow recycle guess on the first tear iteration)
+    # contributes no enthalpy; guard it so its undefined composition cannot
+    # poison the balance.
+    h_in = jnp.sum(
+        jnp.stack(
+            [
+                jnp.where(s.total > 0.0, s.total * pkg.mixture_enthalpy(s.t, s.p, s.z), 0.0)
+                for s in streams
+            ]
+        )
+    )
+    r = pkg.flash_ph(p_out, h_in / total, z, t_init=t_init)
     return Stream(n=n_total, t=r.t, p=p_out, components=components)

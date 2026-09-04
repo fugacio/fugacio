@@ -21,10 +21,17 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.thermo.equilibrium import FlashResult, StabilityResult, rachford_rice, wilson_k
+from fugacio.thermo.constants import R
+from fugacio.thermo.equilibrium import (
+    FlashResult,
+    StabilityResult,
+    classify_trivial,
+    rachford_rice,
+    wilson_k,
+)
 from fugacio.thermo.implicit import fixed_point
 from fugacio.thermo.saft.parameters import SaftParameters
-from fugacio.thermo.saft.properties import ln_fugacity_coefficients
+from fugacio.thermo.saft.properties import ln_fugacity_coefficients, molar_density
 
 ArrayLike = Array | float
 
@@ -74,6 +81,9 @@ def flash_pt_saft(
     ln_k_star = fixed_point(g, jnp.log(k0), theta, tol, max_iter)
     k = jnp.exp(ln_k_star)
     beta = rachford_rice(z, k)
+    t_arr, p_arr = theta[1], theta[2]
+    z_single = p_arr / (molar_density(params, t_arr, p_arr, z, phase="vapor") * R * t_arr)
+    beta = classify_trivial(z, k, beta, k0, z_single)
     denom = 1.0 + beta * (k - 1.0)
     x = z / denom
     y = k * x

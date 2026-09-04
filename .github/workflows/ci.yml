@@ -13,12 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  static:
     runs-on: ubuntu-latest
-    # Cold-cache Helmholtz compilation is the long pole; a warm cache finishes
-    # in minutes. Cap the job so a pathological run fails cleanly (and still
-    # saves whatever it compiled) instead of hanging for the 6h default.
-    timeout-minutes: 60
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -40,19 +37,6 @@ jobs:
       - name: Sync workspace
         run: uv sync --locked --all-packages
 
-      # The reference Helmholtz EOS tests jit-compile solver loops whose XLA
-      # compilation takes minutes cold; the persistent JAX cache (conftest.py)
-      # makes warm runs cheap. Restore and save are split so the cache is
-      # written even when a later step fails (see the matching save step): the
-      # first run to survive long enough to compile the solvers warms the cache
-      # for every run after it, which is what keeps this job inside its budget.
-      - name: Restore JAX compilation cache
-        uses: actions/cache/restore@v4
-        with:
-          path: .jax_cache
-          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-
-
       - name: Lint (ruff)
         run: |
           uv run --no-sync ruff check .
@@ -64,31 +48,107 @@ jobs:
       - name: Import boundaries (import-linter)
         run: uv run --no-sync lint-imports
 
-      # The reference-Helmholtz suites jit-compile dozens of float64 solver
-      # graphs (density, Maxwell saturation, state flashes). JAX keeps every
-      # compiled XLA executable alive for the life of the process, so running
-      # the whole suite at once climbs to many GB of resident memory on a cold
-      # cache -- enough to get the runner killed ("lost communication") before
-      # the cache is saved, so it never warms. Running the heavy modules in
-      # their own processes releases that memory between groups; the shared
-      # on-disk .jax_cache de-duplicates compilation across the groups.
+  test:
+    runs-on: ubuntu-latest
+    # Cold-cache XLA compilation is the long pole (the reference Helmholtz
+    # solvers, the MESH column, the two-sided exchanger, and the EO Newton
+    # systems each take minutes to compile); a warm cache finishes in minutes.
+    # The suite is sharded into groups so every job fits comfortably in this
+    # budget even cold, and the cap makes a pathological run fail cleanly (and
+    # still save whatever it compiled) instead of hanging for the 6h default.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+        # thermo:        fugacio-thermo (reference Helmholtz modules in their
+        #                own processes, see below)
+        # sim:           fugacio-sim unit operations, reactors, dynamics, control,
+        #                economics, heat integration
+        # flowsheeting:  the MESH column, the two-sided exchanger, the recycle
+        #                partitioner, and the equation-oriented engine
+        # plants:        the whole-plant case studies and fugacio-copilot
+        group: [thermo, sim, flowsheeting, plants]
+    env:
+      # Pin every uv invocation (sync + run) to the matrix interpreter. Otherwise
+      # `.python-version` (3.12) wins on the `uv run` steps, which rebuilds .venv
+      # on 3.12 and drops the workspace packages (jax) the sync step installed --
+      # so 3.11/3.13 silently retest 3.12 and mypy fails on the missing jax types.
+      UV_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --locked --all-packages
+
+      # The persistent JAX cache (conftest.py) makes warm runs cheap. Restore
+      # and save are split so the cache is written even when a later step fails
+      # (see the matching save step): the first run to survive long enough to
+      # compile the solvers warms the cache for every run after it. The key
+      # carries the group because each group compiles a different set of graphs
+      # and a cache key can only be saved once per run.
+      - name: Restore JAX compilation cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .jax_cache
+          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}
+          restore-keys: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-
+
+      # JAX keeps every compiled XLA executable alive for the life of the
+      # process, so a group that jit-compiles dozens of float64 solver graphs
+      # climbs to many GB of resident memory on a cold cache -- enough to get the
+      # runner killed ("lost communication") before the cache is saved, so it
+      # never warms. The heaviest modules therefore run in their own processes,
+      # which releases that memory between them; the shared on-disk .jax_cache
+      # de-duplicates compilation across the processes.
       - name: Tests (pytest)
         run: |
           set -euo pipefail
-          heavy=(
-            packages/fugacio-thermo/tests/test_helmholtz.py
-            packages/fugacio-thermo/tests/test_helmholtz_consistency.py
-            packages/fugacio-sim/tests/test_utilities.py
-            packages/fugacio-copilot/tests/test_steam_tools.py
-          )
-          for module in "${heavy[@]}"; do
-            uv run --no-sync pytest "$module"
-          done
-          uv run --no-sync pytest "${heavy[@]/#/--ignore=}"
+          run() { uv run --no-sync pytest "$@"; }
+          case "${{ matrix.group }}" in
+            thermo)
+              heavy=(
+                packages/fugacio-thermo/tests/test_helmholtz.py
+                packages/fugacio-thermo/tests/test_helmholtz_consistency.py
+              )
+              for module in "${heavy[@]}"; do run "$module"; done
+              run packages/fugacio-thermo/tests "${heavy[@]/#/--ignore=}"
+              ;;
+            sim)
+              flowsheeting=(
+                packages/fugacio-sim/tests/test_distillation.py
+                packages/fugacio-sim/tests/test_eo.py
+                packages/fugacio-sim/tests/test_flowsheet.py
+                packages/fugacio-sim/tests/test_heat_exchanger.py
+                packages/fugacio-sim/tests/test_plants.py
+              )
+              run packages/fugacio-sim/tests/test_utilities.py
+              run packages/fugacio-sim/tests \
+                --ignore=packages/fugacio-sim/tests/test_utilities.py \
+                "${flowsheeting[@]/#/--ignore=}"
+              ;;
+            flowsheeting)
+              run packages/fugacio-sim/tests/test_eo.py
+              run packages/fugacio-sim/tests/test_distillation.py
+              run packages/fugacio-sim/tests/test_heat_exchanger.py \
+                  packages/fugacio-sim/tests/test_flowsheet.py
+              ;;
+            plants)
+              run packages/fugacio-sim/tests/test_plants.py
+              run packages/fugacio-copilot/tests/test_steam_tools.py
+              run packages/fugacio-copilot/tests \
+                --ignore=packages/fugacio-copilot/tests/test_steam_tools.py
+              ;;
+          esac
 
       - name: Save JAX compilation cache
         if: always()
         uses: actions/cache/save@v4
         with:
           path: .jax_cache
-          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}
