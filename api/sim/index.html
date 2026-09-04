@@ -411,6 +411,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -473,6 +479,34 @@
     
   
     Non-ideal phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../property-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
   
 
     
@@ -613,6 +647,62 @@
     
   
     Optimization, design & economics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../flowsheeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flowsheeting, tears & exchangers
   
 
     
@@ -834,6 +924,8 @@
       
         
           
+        
+      
         
       
         
@@ -1120,6 +1212,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../thermo/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../thermo/helmholtz/" class="md-nav__link">
         
   
@@ -1246,6 +1366,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1422,6 +1546,34 @@
   
   
     <li class="md-nav__item">
+      <a href="heat_exchanger/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two-sided heat exchanger
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="eo/" class="md-nav__link">
         
   
@@ -1458,6 +1610,34 @@
     
   
     Thermodynamic models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
   
 
     
@@ -2101,17 +2281,27 @@ heat-integration toolkits. Import the public surface from the package root:</p>
 <tr>
 <td>Flowsheet &amp; recycle</td>
 <td><a href="flowsheet/">Flowsheet &amp; recycle</a></td>
-<td><code>Flowsheet</code>, <code>tear_solve</code></td>
+<td><code>Flowsheet</code>, <code>Partition</code>, <code>tear_solve</code>, <code>TEAR_METHODS</code></td>
+</tr>
+<tr>
+<td>Two-sided heat exchanger</td>
+<td><a href="heat_exchanger/">Two-sided heat exchanger</a></td>
+<td><code>heat_exchanger</code>, <code>HeatExchangerResult</code></td>
 </tr>
 <tr>
 <td>Equation-oriented flowsheeting</td>
 <td><a href="eo/">Equation-oriented flowsheeting</a></td>
-<td><code>EOFlowsheet</code>, <code>Flash</code>, <code>Heater</code>, <code>optimize_flowsheet_eo</code></td>
+<td><code>EOFlowsheet</code>, <code>Flash</code>, <code>HeatExchanger</code>, <code>Column</code>, <code>optimize_flowsheet_eo</code></td>
 </tr>
 <tr>
 <td>Thermodynamic models</td>
 <td><a href="models/">Thermodynamic models</a></td>
-<td><code>eos_model_for</code>, <code>nrtl_model_for</code>, <code>uniquac_model_for</code>, <code>unifac_model_for</code></td>
+<td><code>package_for</code>, <code>METHODS</code>, <code>eos_model_for</code>, <code>nrtl_model_for</code>, <code>unifac_model_for</code></td>
+</tr>
+<tr>
+<td>Rigorous distillation</td>
+<td><a href="distillation/">Rigorous distillation</a></td>
+<td><code>rigorous_column</code>, <code>ColumnFeed</code>, <code>reflux_ratio</code>, <code>purity</code>, <code>absorber</code>, <code>stripper</code></td>
 </tr>
 <tr>
 <td>Distillation &amp; diagrams</td>
@@ -2155,7 +2345,9 @@ heat-integration toolkits. Import the public surface from the package root:</p>
 </tr>
 </tbody>
 </table>
-<p>See the <a href="../../optimization/">optimization &amp; economics guide</a>, the
+<p>See the <a href="../../flowsheeting/">flowsheeting guide</a>, the
+<a href="../../distillation/">rigorous distillation guide</a>, the
+<a href="../../optimization/">optimization &amp; economics guide</a>, the
 <a href="../../equation-oriented/">equation-oriented flowsheeting guide</a>, the
 <a href="../../dynamics/">dynamics &amp; control guide</a>, the
 <a href="../../advanced-control/">advanced-control guide</a>, and the

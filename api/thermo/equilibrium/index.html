@@ -411,6 +411,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -473,6 +479,34 @@
     
   
     Non-ideal phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../property-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
   
 
     
@@ -613,6 +647,62 @@
     
   
     Optimization, design & economics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../flowsheeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flowsheeting, tears & exchangers
   
 
     
@@ -836,6 +926,8 @@
       
         
           
+        
+      
         
       
         
@@ -1128,6 +1220,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;rachford_rice
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.equilibrium.classify_trivial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;classify_trivial
       
     </span>
   </a>
@@ -1737,6 +1840,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../helmholtz/" class="md-nav__link">
         
   
@@ -1861,6 +1992,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -2039,6 +2174,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../sim/heat_exchanger/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two-sided heat exchanger
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../sim/eo/" class="md-nav__link">
         
   
@@ -2075,6 +2238,34 @@
     
   
     Thermodynamic models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sim/distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
   
 
     
@@ -2614,6 +2805,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;rachford_rice
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.equilibrium.classify_trivial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;classify_trivial
       
     </span>
   </a>
@@ -3262,6 +3464,14 @@ differentiable core rather than just another flash package.</p>
               </td>
             </tr>
             <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;classify_trivial&lt;/span&gt; (&lt;code&gt;fugacio.thermo.equilibrium.classify_trivial&lt;/code&gt;)" href="#fugacio.thermo.equilibrium.classify_trivial">classify_trivial</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Vapour fraction of a single-phase feed when the K-iteration went trivial.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
               <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_pt&lt;/span&gt; (&lt;code&gt;fugacio.thermo.equilibrium.flash_pt&lt;/code&gt;)" href="#fugacio.thermo.equilibrium.flash_pt">flash_pt</a></code></td>
               <td>
                 <div class="doc-md-description">
@@ -3564,6 +3774,43 @@ differentiable core rather than just another flash package.</p>
 for a superheated vapour, and the interior root otherwise. The residual
 <code>sum_i z_i (K_i - 1) / (1 + beta (K_i - 1))</code> is monotonically decreasing in
 <code>beta</code> on <code>(0, 1)</code>, so a bisection is used for the interior root.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.thermo.equilibrium.classify_trivial" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">classify_trivial</span>
+
+
+<a href="#fugacio.thermo.equilibrium.classify_trivial" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">classify_trivial</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">z</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">k</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">beta</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">k_wilson</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">z_factor</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Vapour fraction of a single-phase feed when the K-iteration went trivial.</p>
+<p>Successive substitution on a feed that is single phase collapses to the
+trivial solution <code>K = 1</code> (identical trial phases), and the Rachford-Rice
+residual at <code>K = 1</code> is zero on both ends, so <code>beta</code> alone cannot tell a
+superheated vapour from a subcooled liquid. When <code>max |ln K|</code> is below
+<code>_TRIVIAL_LN_K</code>, the phase is decided from the Wilson K-values instead: the
+feed is a vapour if it lies below its Wilson dew pressure
+(<code>sum z_i (K_i - 1) / K_i &gt;= 0</code>) and a liquid if above its Wilson bubble
+pressure (<code>sum z_i (K_i - 1) &lt;= 0</code>). If Wilson claims two phases where
+the rigorous iteration found one, the compressibility factor of the single
+root decides (<code>Z &gt; 0.5</code> is vapour-like). Away from the trivial solution
+<code>beta</code> is returned unchanged.</p>
 
 
     </div>

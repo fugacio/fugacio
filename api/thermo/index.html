@@ -411,6 +411,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -473,6 +479,34 @@
     
   
     Non-ideal phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../property-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
   
 
     
@@ -613,6 +647,62 @@
     
   
     Optimization, design & economics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../flowsheeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flowsheeting, tears & exchangers
   
 
     
@@ -836,6 +926,8 @@
       
         
           
+        
+      
         
       
         
@@ -1120,6 +1212,34 @@
   
   
     <li class="md-nav__item">
+      <a href="packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="helmholtz/" class="md-nav__link">
         
   
@@ -1244,6 +1364,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1422,6 +1546,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../sim/heat_exchanger/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two-sided heat exchanger
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sim/eo/" class="md-nav__link">
         
   
@@ -1458,6 +1610,34 @@
     
   
     Thermodynamic models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sim/distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
   
 
     
@@ -2033,6 +2213,11 @@ through the rest of the Fugacio stack (<code>fugacio.sim</code>, <code>fugacio.c
   <code>saft_parameters_for</code>, <code>flash_pt_saft</code>, ...), the third class of
   thermodynamic method alongside the cubic EOS and gamma-phi routes;</li>
 <li><strong>models</strong>: the unified <code>EOSModel</code> / <code>GammaPhiModel</code> / <code>SAFTModel</code> interface;</li>
+<li><strong>property packages</strong>: <code>fugacio.thermo.package</code>, the one object that owns
+  phase equilibrium <em>and</em> energy (<code>ln_phi</code>, enthalpy, entropy, volume,
+  PT/PH/PS/TV flashes) for every method class (<code>CubicPackage</code>,
+  <code>GammaPhiPackage</code> with autodiff excess enthalpy, <code>SAFTPackage</code>,
+  <code>HelmholtzPackage</code>), so a whole flowsheet runs on any of them;</li>
 <li><strong>regression</strong>: differentiable parameter estimation
   (<code>levenberg_marquardt</code>, <code>fit_nrtl_binary</code>, ...),
   UNIFAC-to-binary prediction (<code>predict_nrtl_from_unifac</code>), and the
@@ -2048,6 +2233,10 @@ through the rest of the Fugacio stack (<code>fugacio.sim</code>, <code>fugacio.c
   <code>thermo</code> / <code>chemicals</code> / Clapeyron.jl (activity) and Cantera (reaction)
   reference libraries.</li>
 </ul>
+<p>Fugacio's solvers (cubic roots, Newton steps to <code>1e-10</code> residuals, implicit
+differentiation) are written for double precision. Importing <code>fugacio.thermo</code>
+therefore enables JAX's 64-bit mode (<code>jax_enable_x64</code>) unless the environment
+variable <code>FUGACIO_X64</code> is set to <code>"0"</code>.</p>
 
 
 
@@ -2122,6 +2311,11 @@ through the rest of the Fugacio stack (<code>fugacio.sim</code>, <code>fugacio.c
 <td><code>flash_ph</code>, <code>flash_ps</code>, <code>residual_properties</code>, <code>cp_ig</code>, <code>heat_of_vaporization</code></td>
 </tr>
 <tr>
+<td>Property packages</td>
+<td><a href="packages/">Property packages</a></td>
+<td><code>PropertyPackage</code>, <code>CubicPackage</code>, <code>GammaPhiPackage</code>, <code>SAFTPackage</code>, <code>HelmholtzPackage</code>, <code>excess_enthalpy</code></td>
+</tr>
+<tr>
 <td>Reference fluids</td>
 <td><a href="helmholtz/">Reference fluids (Helmholtz)</a></td>
 <td><code>reference_fluid</code>, <code>saturation_state</code>, <code>state_ph</code>, <code>water_viscosity</code></td>
@@ -2143,7 +2337,8 @@ through the rest of the Fugacio stack (<code>fugacio.sim</code>, <code>fugacio.c
 </tr>
 </tbody>
 </table>
-<p>See the <a href="../../phase-equilibrium/">non-ideal phase equilibrium guide</a> and the
+<p>See the <a href="../../phase-equilibrium/">non-ideal phase equilibrium guide</a>, the
+<a href="../../property-packages/">property-packages guide</a>, and the
 <a href="../../reference-fluids/">reference-fluids guide</a> for worked examples.</p>
 
 

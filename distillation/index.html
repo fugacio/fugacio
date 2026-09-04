@@ -12,29 +12,31 @@
         <meta name="author" content="Owen Carey">
       
       
-        <link rel="canonical" href="https://fugacio.com/">
+        <link rel="canonical" href="https://fugacio.com/distillation/">
       
       
+        <link rel="prev" href="../optimization/">
       
-        <link rel="next" href="phase-equilibrium/">
+      
+        <link rel="next" href="../flowsheeting/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Fugacio</title>
+        <title>Rigorous distillation - Fugacio</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,11 +55,11 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="styles/brand.css">
+      <link rel="stylesheet" href="../styles/brand.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -65,17 +67,17 @@
     
   
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Fugacio" />
+<meta property="og:title" content="Rigorous distillation - Fugacio" />
 <meta property="og:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
-<meta property="og:image" content="https://fugacio.com/assets/images/social/index.png" />
+<meta property="og:image" content="https://fugacio.com/assets/images/social/distillation.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://fugacio.com/" />
+<meta property="og:url" content="https://fugacio.com/distillation/" />
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:title" content="Fugacio" />
+<meta property="twitter:title" content="Rigorous distillation - Fugacio" />
 <meta property="twitter:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
-<meta property="twitter:image" content="https://fugacio.com/assets/images/social/index.png" />
+<meta property="twitter:image" content="https://fugacio.com/assets/images/social/distillation.png" />
 </head>
   
   
@@ -95,7 +97,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#fugacio" class="md-skip">
+        <a href="#rigorous-distillation" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +113,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Fugacio" class="md-header__button md-logo" aria-label="Fugacio" data-md-component="logo">
+    <a href=".." title="Fugacio" class="md-header__button md-logo" aria-label="Fugacio" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -131,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Rigorous distillation
             
           </span>
         </div>
@@ -241,11 +243,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="." class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
         
   
   
@@ -262,11 +262,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="phase-equilibrium/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../phase-equilibrium/" class="md-tabs__link">
           
   
   
@@ -288,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="api/" class="md-tabs__link">
+        <a href="../api/" class="md-tabs__link">
           
   
   
@@ -330,7 +332,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Fugacio" class="md-nav__button md-logo" aria-label="Fugacio" data-md-component="logo">
+    <a href=".." title="Fugacio" class="md-nav__button md-logo" aria-label="Fugacio" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -357,37 +359,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -403,37 +378,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#correctness-as-an-executable-harness" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Correctness as an executable harness
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -442,8 +386,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -477,21 +423,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -509,7 +456,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -527,7 +474,7 @@
   
   
     <li class="md-nav__item">
-      <a href="phase-equilibrium/" class="md-nav__link">
+      <a href="../phase-equilibrium/" class="md-nav__link">
         
   
   
@@ -555,7 +502,7 @@
   
   
     <li class="md-nav__item">
-      <a href="property-packages/" class="md-nav__link">
+      <a href="../property-packages/" class="md-nav__link">
         
   
   
@@ -583,7 +530,7 @@
   
   
     <li class="md-nav__item">
-      <a href="molecular-saft/" class="md-nav__link">
+      <a href="../molecular-saft/" class="md-nav__link">
         
   
   
@@ -611,7 +558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference-fluids/" class="md-nav__link">
+      <a href="../reference-fluids/" class="md-nav__link">
         
   
   
@@ -639,7 +586,7 @@
   
   
     <li class="md-nav__item">
-      <a href="physical-properties/" class="md-nav__link">
+      <a href="../physical-properties/" class="md-nav__link">
         
   
   
@@ -667,7 +614,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reactions/" class="md-nav__link">
+      <a href="../reactions/" class="md-nav__link">
         
   
   
@@ -695,7 +642,7 @@
   
   
     <li class="md-nav__item">
-      <a href="optimization/" class="md-nav__link">
+      <a href="../optimization/" class="md-nav__link">
         
   
   
@@ -720,10 +667,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="distillation/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -739,6 +713,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a-benzenetoluene-column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A benzene/toluene column
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#specifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Specifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feeds-side-draws-stage-duties-efficiency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feeds, side draws, stage duties, efficiency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#absorbers-and-strippers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Absorbers and strippers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-its-solved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it's solved
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -751,7 +800,7 @@
   
   
     <li class="md-nav__item">
-      <a href="flowsheeting/" class="md-nav__link">
+      <a href="../flowsheeting/" class="md-nav__link">
         
   
   
@@ -779,7 +828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="equation-oriented/" class="md-nav__link">
+      <a href="../equation-oriented/" class="md-nav__link">
         
   
   
@@ -807,7 +856,7 @@
   
   
     <li class="md-nav__item">
-      <a href="dynamics/" class="md-nav__link">
+      <a href="../dynamics/" class="md-nav__link">
         
   
   
@@ -835,7 +884,7 @@
   
   
     <li class="md-nav__item">
-      <a href="advanced-control/" class="md-nav__link">
+      <a href="../advanced-control/" class="md-nav__link">
         
   
   
@@ -863,7 +912,7 @@
   
   
     <li class="md-nav__item">
-      <a href="heat-integration/" class="md-nav__link">
+      <a href="../heat-integration/" class="md-nav__link">
         
   
   
@@ -929,7 +978,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="api/" class="md-nav__link ">
+            <a href="../api/" class="md-nav__link ">
               
   
   
@@ -1022,7 +1071,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="api/thermo/" class="md-nav__link ">
+            <a href="../api/thermo/" class="md-nav__link ">
               
   
   
@@ -1066,7 +1115,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/data/" class="md-nav__link">
+      <a href="../api/thermo/data/" class="md-nav__link">
         
   
   
@@ -1094,7 +1143,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/eos/" class="md-nav__link">
+      <a href="../api/thermo/eos/" class="md-nav__link">
         
   
   
@@ -1122,7 +1171,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/saft/" class="md-nav__link">
+      <a href="../api/thermo/saft/" class="md-nav__link">
         
   
   
@@ -1150,7 +1199,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/equilibrium/" class="md-nav__link">
+      <a href="../api/thermo/equilibrium/" class="md-nav__link">
         
   
   
@@ -1178,7 +1227,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/lle/" class="md-nav__link">
+      <a href="../api/thermo/lle/" class="md-nav__link">
         
   
   
@@ -1206,7 +1255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/activity/" class="md-nav__link">
+      <a href="../api/thermo/activity/" class="md-nav__link">
         
   
   
@@ -1234,7 +1283,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/energy/" class="md-nav__link">
+      <a href="../api/thermo/energy/" class="md-nav__link">
         
   
   
@@ -1262,7 +1311,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/packages/" class="md-nav__link">
+      <a href="../api/thermo/packages/" class="md-nav__link">
         
   
   
@@ -1290,7 +1339,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/helmholtz/" class="md-nav__link">
+      <a href="../api/thermo/helmholtz/" class="md-nav__link">
         
   
   
@@ -1318,7 +1367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/transport/" class="md-nav__link">
+      <a href="../api/thermo/transport/" class="md-nav__link">
         
   
   
@@ -1346,7 +1395,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/reactions/" class="md-nav__link">
+      <a href="../api/thermo/reactions/" class="md-nav__link">
         
   
   
@@ -1374,7 +1423,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/thermo/regression/" class="md-nav__link">
+      <a href="../api/thermo/regression/" class="md-nav__link">
         
   
   
@@ -1465,7 +1514,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="api/sim/" class="md-nav__link ">
+            <a href="../api/sim/" class="md-nav__link ">
               
   
   
@@ -1509,7 +1558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/streams/" class="md-nav__link">
+      <a href="../api/sim/streams/" class="md-nav__link">
         
   
   
@@ -1537,7 +1586,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/units/" class="md-nav__link">
+      <a href="../api/sim/units/" class="md-nav__link">
         
   
   
@@ -1565,7 +1614,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/flowsheet/" class="md-nav__link">
+      <a href="../api/sim/flowsheet/" class="md-nav__link">
         
   
   
@@ -1593,7 +1642,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/heat_exchanger/" class="md-nav__link">
+      <a href="../api/sim/heat_exchanger/" class="md-nav__link">
         
   
   
@@ -1621,7 +1670,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/eo/" class="md-nav__link">
+      <a href="../api/sim/eo/" class="md-nav__link">
         
   
   
@@ -1649,7 +1698,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/models/" class="md-nav__link">
+      <a href="../api/sim/models/" class="md-nav__link">
         
   
   
@@ -1677,7 +1726,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/distillation/" class="md-nav__link">
+      <a href="../api/sim/distillation/" class="md-nav__link">
         
   
   
@@ -1705,7 +1754,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/columns/" class="md-nav__link">
+      <a href="../api/sim/columns/" class="md-nav__link">
         
   
   
@@ -1733,7 +1782,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/reactors/" class="md-nav__link">
+      <a href="../api/sim/reactors/" class="md-nav__link">
         
   
   
@@ -1761,7 +1810,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/optimization/" class="md-nav__link">
+      <a href="../api/sim/optimization/" class="md-nav__link">
         
   
   
@@ -1789,7 +1838,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/economics/" class="md-nav__link">
+      <a href="../api/sim/economics/" class="md-nav__link">
         
   
   
@@ -1817,7 +1866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/dynamics/" class="md-nav__link">
+      <a href="../api/sim/dynamics/" class="md-nav__link">
         
   
   
@@ -1845,7 +1894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/mpc/" class="md-nav__link">
+      <a href="../api/sim/mpc/" class="md-nav__link">
         
   
   
@@ -1873,7 +1922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/integration/" class="md-nav__link">
+      <a href="../api/sim/integration/" class="md-nav__link">
         
   
   
@@ -1901,7 +1950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/sim/utilities/" class="md-nav__link">
+      <a href="../api/sim/utilities/" class="md-nav__link">
         
   
   
@@ -1970,7 +2019,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="api/copilot/" class="md-nav__link ">
+            <a href="../api/copilot/" class="md-nav__link ">
               
   
   
@@ -2014,7 +2063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/copilot/tools/" class="md-nav__link">
+      <a href="../api/copilot/tools/" class="md-nav__link">
         
   
   
@@ -2042,7 +2091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/copilot/agent/" class="md-nav__link">
+      <a href="../api/copilot/agent/" class="md-nav__link">
         
   
   
@@ -2070,7 +2119,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/copilot/providers/" class="md-nav__link">
+      <a href="../api/copilot/providers/" class="md-nav__link">
         
   
   
@@ -2098,7 +2147,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/copilot/report/" class="md-nav__link">
+      <a href="../api/copilot/report/" class="md-nav__link">
         
   
   
@@ -2161,10 +2210,54 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#correctness-as-an-executable-harness" class="md-nav__link">
+  <a href="#a-benzenetoluene-column" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Correctness as an executable harness
+        A benzene/toluene column
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#specifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Specifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feeds-side-draws-stage-duties-efficiency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feeds, side draws, stage duties, efficiency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#absorbers-and-strippers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Absorbers and strippers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-its-solved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it's solved
       
     </span>
   </a>
@@ -2188,7 +2281,7 @@
 
 
   
-    <a href="https://github.com/fugacio/fugacio/edit/main/docs/index.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/fugacio/fugacio/edit/main/docs/distillation.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
     </a>
@@ -2197,96 +2290,177 @@
     
       
     
-    <a href="https://github.com/fugacio/fugacio/raw/main/docs/index.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/fugacio/fugacio/raw/main/docs/distillation.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5"/></svg>
     </a>
   
 
 
-<h1 id="fugacio">Fugacio<a class="headerlink" href="#fugacio" title="Permanent link">&para;</a></h1>
-<p>Open, differentiable thermodynamics and process simulation, with an AI design
-copilot. See the <a href="https://github.com/fugacio/fugacio">project README</a> for the
-full overview.</p>
-<p>Fugacio is built as three layered packages (strict direction
-<strong><code>thermo</code> &lt; <code>sim</code> &lt; <code>copilot</code></strong>, enforced in CI):</p>
+<h1 id="rigorous-distillation">Rigorous distillation<a class="headerlink" href="#rigorous-distillation" title="Permanent link">&para;</a></h1>
+<p><code>fugacio.sim.rigorous_column</code> is a simultaneous-correction (Naphtali-Sandholm)
+equilibrium-stage column. It solves the full MESH equations of every stage
+(component <strong>M</strong>aterial balances, phase <strong>E</strong>quilibrium, mole-fraction
+<strong>S</strong>ummation, stage entha<strong>H</strong>py balance) together with the condenser and
+reboiler and any design specifications as one Newton system, with the Jacobian
+from JAX autodiff and the converged column differentiable in every input by the
+implicit function theorem.</p>
+<p>That replaces the earlier constant-molar-overflow column (<code>solve_column</code>, which
+stays available) with the model a process simulator actually needs:</p>
 <ul>
-<li><strong><code>fugacio.thermo</code></strong>, differentiable properties + phase equilibrium: a curated
-  open component database, ideal-gas correlations, cubic equations of state
-  (vdW / RK / SRK / PR) with fugacity coefficients,
-  <a href="reference-fluids/">reference multiparameter Helmholtz EOS</a> (IAPWS-95
-  water/steam, Span–Wagner CO₂, 26 fluids, with steam-table state functions and
-  IAPWS transport), real-fluid energy properties
-  (residual/departure functions, enthalpy/entropy, isenthalpic &amp; isentropic
-  flashes), <a href="physical-properties/">liquid &amp; transport properties</a> (density,
-  viscosity, thermal conductivity, surface tension, diffusivity, both pure and
-  mixture), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
-  UNIQUAC), group contribution (UNIFAC + Dortmund, Joback), EOS <em>and</em> γ–φ
-  equilibrium solvers (Rachford-Rice, PT flash, saturation, bubble/dew), rigorous
-  <a href="phase-equilibrium/">LLE / VLLE and tangent-plane stability</a>, parameter
-  regression with a bundled <a href="physical-properties/#the-thermoml-parameter-bank">ThermoML parameter
-  bank</a>, and <a href="reactions/">reaction
-  thermochemistry, equilibrium, and kinetics</a>.</li>
-<li><strong><code>fugacio.sim</code></strong>, flowsheet / unit-operation engine (depends on <code>thermo</code>):
-  a differentiable <code>Stream</code> pytree, energy-balanced unit operations (<code>flash_drum</code>,
-  <code>heater</code>, <code>valve</code>, <code>pump</code>, <code>compressor</code>, <code>turbine</code>, <code>mix</code>, <code>splitter</code>), a
-  recycle/tear solver with implicit-diff gradients (<code>tear_solve</code>, <code>Flowsheet</code>),
-  distillation columns (shortcut FUG and a rigorous equilibrium-stage model),
-  binary diagrams / azeotropes / residue-curve maps,
-  <a href="reactions/">reactors</a> (equilibrium, stoichiometric, CSTR, PFR, batch),
-  reactive separations (reactive flash &amp; distillation),
-  <a href="reference-fluids/#steam-cooling-water-utilities-fugaciosim">steam &amp; cooling-water utilities</a>
-  on IAPWS-95,
-  <a href="optimization/">differentiable optimization, design specs &amp; process economics</a>
-  (constrained NLP with implicit-diff <code>argmin</code>, controllers, Turton costing, TAC/NPV),
-  <a href="dynamics/">time-domain dynamics &amp; process control</a> (differentiable ODE
-  integrators with a continuous adjoint, a filtered anti-windup PID, dynamic unit
-  operations, <code>DynamicFlowsheet</code>, and gradient-based controller tuning),
-  <a href="advanced-control/">advanced control</a> (a differentiable OSQP-style QP,
-  condensed offset-free linear MPC, Kalman / extended / unscented / moving-horizon
-  estimation, nonlinear &amp; economic MPC, and gradient-based weight tuning), and
-  <a href="heat-integration/">heat integration &amp; pinch analysis</a> (differentiable
-  minimum-utility/pinch targets, composite &amp; grand composite curves, area/cost
-  supertargeting for the optimal <code>dt_min</code>, and heat-exchanger-network synthesis).</li>
-<li><strong><code>fugacio.copilot</code></strong>, LLM design agent (depends on <code>sim</code>): a JSON tool
-  registry over the engine (properties, <a href="reference-fluids/">steam tables &amp;
-  reference fluids</a>, unit operations, distillation, reactors,
-  reaction equilibrium, <a href="optimization/">optimization, sizing &amp; costing</a>,
-  <a href="dynamics/#the-ai-copilot-dynamically">FOPDT identification &amp; PID tuning</a>,
-  <a href="advanced-control/#the-ai-copilot-for-advanced-control">LQR &amp; Kalman design, MPC simulation &amp; tuning</a>,
-  <a href="heat-integration/#the-ai-copilot-integrated">heat-integration targets &amp; network synthesis</a>),
-  plus a vendor-neutral provider layer (OpenAI / Anthropic / mock) and a
-  multi-turn, tool-calling <a href="optimization/#the-ai-design-copilot">agent loop</a>.</li>
+<li>full stage energy balances, so vapor and liquid traffic vary down the column
+  and the reboiler and condenser duties are consistent with the property
+  package rather than with an assumed latent heat;</li>
+<li>any <a href="../property-packages/">property package</a>: a cubic EOS for hydrocarbons,
+  NRTL or UNIFAC for azeotropic systems, PC-SAFT for associating mixtures;</li>
+<li>multiple feeds and side draws at arbitrary stages, intermediate heaters and
+  coolers, a pressure profile, and a Murphree efficiency;</li>
+<li>total or partial condensers, a kettle reboiler, or neither (absorbers and
+  strippers);</li>
+<li>design specifications imposed <em>directly</em> as equations: reflux ratio,
+  distillate or bottoms rate, a product purity or recovery, a component flow, a
+  stage temperature, or a duty, in any combination of two (one per free degree
+  of freedom).</li>
 </ul>
-<p>Everything is written in <a href="https://github.com/jax-ml/jax">JAX</a> and the iterative
-solvers carry implicit-function-theorem gradient rules, so an entire flowsheet is
-end-to-end differentiable, including through phase equilibrium.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">flash_drum</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="p">(</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-pentane&quot;</span><span class="p">),</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]),</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">flow</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="mf">320.0</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">20e5</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">vapor</span><span class="p">,</span> <span class="n">liquid</span> <span class="o">=</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Exact sensitivity of vapour product flow to drum temperature:</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="k">lambda</span> <span class="n">T</span><span class="p">:</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">total</span><span class="p">)(</span><span class="mf">320.0</span><span class="p">)</span>
+<h2 id="a-benzenetoluene-column">A benzene/toluene column<a class="headerlink" href="#a-benzenetoluene-column" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnFeed</span><span class="p">,</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">reflux_ratio</span><span class="p">,</span> <span class="n">rigorous_column</span><span class="p">,</span> <span class="n">recovery</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="p">(</span><span class="s2">&quot;benzene&quot;</span><span class="p">,</span> <span class="s2">&quot;toluene&quot;</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]),</span> <span class="n">flow</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="mf">365.0</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">1.013e5</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">col</span> <span class="o">=</span> <span class="n">rigorous_column</span><span class="p">(</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="p">[</span><span class="n">ColumnFeed</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="mi">6</span><span class="p">)],</span>   <span class="c1"># stages count from the top; stage 1 is the condenser</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">n_stages</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">p</span><span class="o">=</span><span class="mf">1.013e5</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">specs</span><span class="o">=</span><span class="p">[</span><span class="n">reflux_ratio</span><span class="p">(</span><span class="mf">2.5</span><span class="p">),</span> <span class="n">recovery</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">)],</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">col</span><span class="o">.</span><span class="n">distillate</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">bottoms</span><span class="o">.</span><span class="n">z</span>     <span class="c1"># product compositions</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">col</span><span class="o">.</span><span class="n">t</span>                               <span class="c1"># stage temperature profile (K)</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">col</span><span class="o">.</span><span class="n">liquid_flow</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">vapor_flow</span>     <span class="c1"># internal traffic (mol/s)</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="n">col</span><span class="o">.</span><span class="n">condenser_duty</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">reboiler_duty</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="n">col</span><span class="o">.</span><span class="n">residual_norm</span>                   <span class="c1"># scaled max residual at the solution (~1e-10)</span>
 </span></code></pre></div>
-<h2 id="correctness-as-an-executable-harness">Correctness as an executable harness<a class="headerlink" href="#correctness-as-an-executable-harness" title="Permanent link">&para;</a></h2>
-<p>Physical correctness is continuously machine-checked: first-principles
-consistency laws that need no external data (Gibbs-Duhem, equifugacity,
-fugacity-pressure identity, phase stability), automatic-differentiation gradients
-checked against finite differences, and opt-in differential testing against open
-reference codes: <a href="https://github.com/CoolProp/CoolProp">CoolProp</a> and
-<a href="https://github.com/CalebBell/chemicals"><code>chemicals</code></a> for pure-fluid properties
-and the reference Helmholtz EOS layer (IAPWS-95, Span–Wagner),
-<a href="https://github.com/CalebBell/thermo"><code>thermo</code></a> /
-<a href="https://github.com/ClapeyronThermo/Clapeyron.jl">Clapeyron.jl</a> for activity
-coefficients, and <a href="https://github.com/Cantera/cantera">Cantera</a> for
-reaction equilibrium and standard-state thermochemistry.</p>
+<p>Stages are numbered from the top: with <code>condenser="total"</code> (the default) stage
+1 is the condenser and stage <code>n_stages</code> is the reboiler. A <code>"partial"</code>
+condenser returns a vapor distillate in equilibrium with the reflux; <code>None</code>
+removes the condenser (or reboiler) altogether so the top (or bottom) stage is
+an ordinary equilibrium stage with an external feed.</p>
+<h2 id="specifications">Specifications<a class="headerlink" href="#specifications" title="Permanent link">&para;</a></h2>
+<p>Each condenser and reboiler contributes one degree of freedom; a column with
+both needs exactly two <code>specs</code>. Build them with the helper constructors, all of
+which are exported from <code>fugacio.sim</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Constructor</th>
+<th>Fixes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reflux_ratio(r)</code>, <code>reflux_rate(L)</code></td>
+<td>reflux ratio (L_1/D) or reflux flow</td>
+</tr>
+<tr>
+<td><code>distillate_rate(D)</code>, <code>bottoms_rate(B)</code></td>
+<td>a product molar flow</td>
+</tr>
+<tr>
+<td><code>boilup_ratio(v)</code></td>
+<td>(V_{N-1}/B)</td>
+</tr>
+<tr>
+<td><code>condenser_duty(q)</code></td>
+<td>the condenser duty</td>
+</tr>
+<tr>
+<td><code>purity(product, i, x)</code></td>
+<td>mole fraction of component <em>i</em> in a product</td>
+</tr>
+<tr>
+<td><code>recovery(i, product, f)</code></td>
+<td>fraction of fed component <em>i</em> leaving in a product</td>
+</tr>
+<tr>
+<td><code>component_flow(product, i, n)</code></td>
+<td>molar flow of component <em>i</em> in a product</td>
+</tr>
+<tr>
+<td><code>stage_temperature(j, t)</code></td>
+<td>the temperature of stage <em>j</em></td>
+</tr>
+</tbody>
+</table>
+<p>Specifications are equations of the global system, not an outer iteration
+around a reflux-and-boilup column. A purity target therefore converges in the
+same Newton solve as the balances and costs nothing extra, and the resulting
+reflux ratio and duties are reported in the result. Because the spec values may
+be JAX tracers, they're valid parameters to differentiate with respect to:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">reboiler_duty</span><span class="p">(</span><span class="n">purity_target</span><span class="p">):</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">res</span> <span class="o">=</span> <span class="n">rigorous_column</span><span class="p">(</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="p">[</span><span class="n">ColumnFeed</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="mi">6</span><span class="p">)],</span> <span class="mi">12</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">1.013e5</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="n">specs</span><span class="o">=</span><span class="p">[</span><span class="n">distillate_rate</span><span class="p">(</span><span class="mf">50.0</span><span class="p">),</span> <span class="n">purity</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">purity_target</span><span class="p">)],</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">reboiler_duty</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">reboiler_duty</span><span class="p">)(</span><span class="mf">0.95</span><span class="p">)</span>     <span class="c1"># marginal energy cost of one more mole-percent purity</span>
+</span></code></pre></div>
+<h2 id="feeds-side-draws-stage-duties-efficiency">Feeds, side draws, stage duties, efficiency<a class="headerlink" href="#feeds-side-draws-stage-duties-efficiency" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">SideDraw</span><span class="p">,</span> <span class="n">StageDuty</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">col</span> <span class="o">=</span> <span class="n">rigorous_column</span><span class="p">(</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="p">[</span><span class="n">ColumnFeed</span><span class="p">(</span><span class="n">light_feed</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">ColumnFeed</span><span class="p">(</span><span class="n">heavy_feed</span><span class="p">,</span> <span class="mi">9</span><span class="p">)],</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">n_stages</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">p_top</span><span class="o">=</span><span class="mf">1.0e5</span><span class="p">,</span> <span class="n">p_bottom</span><span class="o">=</span><span class="mf">1.2e5</span><span class="p">,</span>                <span class="c1"># linear pressure profile</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">side_draws</span><span class="o">=</span><span class="p">[</span><span class="n">SideDraw</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;liquid&quot;</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)],</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">stage_duties</span><span class="o">=</span><span class="p">[</span><span class="n">StageDuty</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">duty</span><span class="o">=+</span><span class="mf">50e3</span><span class="p">)],</span>   <span class="c1"># intercondenser/interreboiler (W)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">efficiency</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>                             <span class="c1"># Murphree vapor efficiency on every stage</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">specs</span><span class="o">=</span><span class="p">[</span><span class="n">reflux_ratio</span><span class="p">(</span><span class="mf">3.0</span><span class="p">),</span> <span class="n">bottoms_rate</span><span class="p">(</span><span class="mf">60.0</span><span class="p">)],</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">model</span><span class="o">=</span><span class="n">package_for</span><span class="p">(</span><span class="n">comps</span><span class="p">,</span> <span class="s2">&quot;srk&quot;</span><span class="p">),</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="p">)</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">col</span><span class="o">.</span><span class="n">side_draws</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>                               <span class="c1"># the drawn stream</span>
+</span></code></pre></div>
+<p>A <code>SideDraw</code> removes a <code>fraction</code> of the stage's liquid or vapor leaving flow.
+<code>StageDuty</code> adds heat (positive) or removes it (negative) on an interior stage.</p>
+<h2 id="absorbers-and-strippers">Absorbers and strippers<a class="headerlink" href="#absorbers-and-strippers" title="Permanent link">&para;</a></h2>
+<p><code>absorber</code> and <code>stripper</code> wrap <code>rigorous_column</code> with no condenser or reboiler,
+the gas fed to the bottom stage and the liquid to the top, and no
+specifications (there are no free degrees of freedom):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">absorber</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">gas</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">((</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-decane&quot;</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]),</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">oil</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">((</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-decane&quot;</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">res</span> <span class="o">=</span> <span class="n">absorber</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">oil</span><span class="p">,</span> <span class="n">n_stages</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">20e5</span><span class="p">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">res</span><span class="o">.</span><span class="n">distillate</span>      <span class="c1"># treated gas leaving the top</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">res</span><span class="o">.</span><span class="n">bottoms</span>         <span class="c1"># rich solvent leaving the bottom</span>
+</span></code></pre></div>
+<p>A component that's absent from every feed (here none, but a stabilizer bottoms
+fed to a benzene/toluene column has no hydrogen or methane) is carried through
+at a trace far below any tolerance so the log-flow unknowns stay finite; the
+balances of the components that are present are unaffected.</p>
+<h2 id="how-its-solved">How it's solved<a class="headerlink" href="#how-its-solved" title="Permanent link">&para;</a></h2>
+<p>The unknowns are the log component liquid and vapor flows on every stage and
+the stage temperatures (plus one auxiliary per free spec). Using log flows keeps
+the flows positive and lets a component that's essentially absent from a
+section span many orders of magnitude without ill-conditioning. The residuals
+are scaled so a flow error of one part in the feed, a mole-fraction summation
+error, and an enthalpy error of (10^4) J/mol each register as order one.</p>
+<p>The initial guess comes from a bubble-point sweep over a linear composition
+profile with <code>k_seed</code> (Wilson for cubics, modified Raoult for gamma-phi) to
+start the K-values, then the Newton iteration with a step limiter runs to a
+scaled residual of (10^{-10}). The whole thing is wrapped in
+<code>newton_system</code> from <code>fugacio.thermo.implicit</code>, so the gradient of anything
+computed from the result (a duty, a purity, a reflux ratio) with respect to
+anything fed in (the feed state, a spec value, a <code>kij</code>, a stage pressure) is one
+adjoint solve against the converged Jacobian, never a differentiation <em>through</em>
+the iterations.</p>
+<p>The <code>Column</code> block in <a href="../equation-oriented/"><code>fugacio.sim.eo</code></a> embeds a
+converged <code>rigorous_column</code> inside an equation-oriented flowsheet, so a column
+can sit in the middle of a globally solved plant with recycles around it.</p>
 
 
 
@@ -2362,10 +2536,10 @@ reaction equilibrium and standard-state thermochemistry.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["announce.dismiss", "content.action.edit", "content.action.view", "content.code.annotate", "content.code.copy", "content.tabs.link", "content.tooltips", "navigation.expand", "navigation.indexes", "navigation.instant", "navigation.instant.progress", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.tracking", "search.highlight", "search.suggest", "search.share", "toc.follow"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["announce.dismiss", "content.action.edit", "content.action.view", "content.code.annotate", "content.code.copy", "content.tabs.link", "content.tooltips", "navigation.expand", "navigation.indexes", "navigation.instant", "navigation.instant.progress", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.tracking", "search.highlight", "search.suggest", "search.share", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://fugacio.com/equation-oriented/">
       
       
-        <link rel="prev" href="../optimization/">
+        <link rel="prev" href="../flowsheeting/">
       
       
         <link rel="next" href="../dynamics/">
@@ -413,6 +413,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -476,6 +482,34 @@
     
   
     Non-ideal phase equilibrium
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../property-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
   
 
     
@@ -633,6 +667,62 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../flowsheeting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flowsheeting, tears & exchangers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -744,6 +834,17 @@
     <span class="md-ellipsis">
       
         Design specs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#property-packages-and-the-plant-scale-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Property packages and the plant-scale blocks
       
     </span>
   </a>
@@ -958,6 +1059,8 @@
       
         
           
+        
+      
         
       
         
@@ -1241,6 +1344,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/thermo/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Property packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/thermo/helmholtz/" class="md-nav__link">
         
   
@@ -1365,6 +1496,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1540,6 +1675,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/sim/heat_exchanger/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two-sided heat exchanger
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/sim/eo/" class="md-nav__link">
         
   
@@ -1576,6 +1739,34 @@
     
   
     Thermodynamic models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sim/distillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rigorous distillation
   
 
     
@@ -2107,6 +2298,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#property-packages-and-the-plant-scale-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Property packages and the plant-scale blocks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#flowsheet-optimization" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2290,6 +2492,38 @@ loop.</p>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">sol</span><span class="p">[</span><span class="s2">&quot;out&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">t</span>          <span class="c1"># 360.0</span>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">sol</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s2">&quot;Q&quot;</span><span class="p">]</span>        <span class="c1"># the duty that achieves it</span>
 </span></code></pre></div>
+<h2 id="property-packages-and-the-plant-scale-blocks">Property packages and the plant-scale blocks<a class="headerlink" href="#property-packages-and-the-plant-scale-blocks" title="Permanent link">&para;</a></h2>
+<p><code>EOFlowsheet(model=...)</code> accepts any <a href="../property-packages/">property package</a>,
+and every block draws its enthalpies, volumes, and fugacities from it, so the
+whole simultaneous solve can run on NRTL, PC-SAFT, or a reference fluid as well
+as on a cubic. Three blocks cover the units that turn a chain of exchangers
+into a plant:</p>
+<ul>
+<li><code>HeatExchanger(inlets=(hot_in, cold_in), outlets=(hot_out, cold_out), ...)</code>
+  couples two streams through one duty unknown and one closing spec (<code>duty</code>,
+  <code>t_hot_out</code>, <code>t_cold_out</code>, or <code>ua</code> with the <code>q = UA * LMTD</code> rating relation).</li>
+<li><code>StoichiometricReactor(nu=..., key=..., conversion=..., t_out=... | duty=...)</code>
+  applies fixed conversions with an energy balance on absolute ideal-gas
+  enthalpies, so the heat of reaction is carried automatically.</li>
+<li><code>Column(inlets=(feed,), outlets=(distillate, bottoms), feed_stages=(6,),
+  n_stages=12, p=..., specs=(("reflux_ratio", "R"), ("distillate_rate", 50.0)))</code>
+  embeds a converged <a href="../distillation/">rigorous MESH column</a> as one block, so a
+  column can sit inside a recycle loop that the global Newton closes.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_for</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.eo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">EOFlowsheet</span><span class="p">,</span> <span class="n">HeatExchanger</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;benzene&quot;</span><span class="p">,</span> <span class="s2">&quot;toluene&quot;</span><span class="p">),</span> <span class="s2">&quot;srk&quot;</span><span class="p">))</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,</span> <span class="n">cold_feed</span><span class="p">)</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;hot&quot;</span><span class="p">,</span> <span class="n">hot_utility</span><span class="p">)</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">fs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">HeatExchanger</span><span class="p">(</span><span class="n">inlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;hot&quot;</span><span class="p">,</span> <span class="s2">&quot;cold&quot;</span><span class="p">),</span> <span class="n">outlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;hot_out&quot;</span><span class="p">,</span> <span class="s2">&quot;warm&quot;</span><span class="p">),</span> <span class="n">t_cold_out</span><span class="o">=</span><span class="mf">360.0</span><span class="p">))</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">fs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Column</span><span class="p">(</span><span class="n">inlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;warm&quot;</span><span class="p">,),</span> <span class="n">outlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;d&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span> <span class="n">feed_stages</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,),</span> <span class="n">n_stages</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>              <span class="n">p</span><span class="o">=</span><span class="mf">1.013e5</span><span class="p">,</span> <span class="n">specs</span><span class="o">=</span><span class="p">((</span><span class="s2">&quot;reflux_ratio&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;distillate_rate&quot;</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">))))</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">sol</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;R&quot;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">})</span>
+</span></code></pre></div>
+<p>The same blocks reproduce their sequential-modular counterparts
+(<code>heat_exchanger</code>, <code>stoichiometric_reactor</code>, <code>rigorous_column</code>) to solver
+tolerance, which the test suite checks.</p>
 <h2 id="flowsheet-optimization">Flowsheet optimization<a class="headerlink" href="#flowsheet-optimization" title="Permanent link">&para;</a></h2>
 <p><code>optimize_flowsheet_eo</code> minimizes an objective read off the solved streams over
 named decision variables, each given as <code>(init, lower, upper)</code>. Two equivalent
@@ -2298,19 +2532,19 @@ formulations are offered.</p>
 every objective evaluation solves the flowsheet to convergence, and the optimizer
 descends the resulting reduced objective. The flowsheet solve is differentiable,
 so the reduced gradient is exact.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.eo</span><span class="w"> </span><span class="kn">import</span> <span class="n">optimize_flowsheet_eo</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">eos</span><span class="o">=</span><span class="n">PR</span><span class="p">)</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">fresh</span><span class="p">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">fs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Flash</span><span class="p">(</span><span class="n">inlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,),</span> <span class="n">outlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vap&quot;</span><span class="p">,</span> <span class="s2">&quot;liq&quot;</span><span class="p">),</span> <span class="n">t</span><span class="o">=</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="s2">&quot;P&quot;</span><span class="p">))</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">res</span> <span class="o">=</span> <span class="n">optimize_flowsheet_eo</span><span class="p">(</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">fs</span><span class="p">,</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;vap&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="mf">60.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span>   <span class="c1"># hit a target vapour flow</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="p">{</span><span class="s2">&quot;T&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">312.0</span><span class="p">,</span> <span class="mf">305.0</span><span class="p">,</span> <span class="mf">335.0</span><span class="p">)},</span>                  <span class="c1"># (init, lower, upper)</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="mf">20e5</span><span class="p">},</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="p">)</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">res</span><span class="o">.</span><span class="n">decision</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">converged</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.eo</span><span class="w"> </span><span class="kn">import</span> <span class="n">optimize_flowsheet_eo</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">eos</span><span class="o">=</span><span class="n">PR</span><span class="p">)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">fresh</span><span class="p">)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">fs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Flash</span><span class="p">(</span><span class="n">inlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,),</span> <span class="n">outlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vap&quot;</span><span class="p">,</span> <span class="s2">&quot;liq&quot;</span><span class="p">),</span> <span class="n">t</span><span class="o">=</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="s2">&quot;P&quot;</span><span class="p">))</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">res</span> <span class="o">=</span> <span class="n">optimize_flowsheet_eo</span><span class="p">(</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">fs</span><span class="p">,</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;vap&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="mf">60.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span>   <span class="c1"># hit a target vapour flow</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="p">{</span><span class="s2">&quot;T&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">312.0</span><span class="p">,</span> <span class="mf">305.0</span><span class="p">,</span> <span class="mf">335.0</span><span class="p">)},</span>                  <span class="c1"># (init, lower, upper)</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="mf">20e5</span><span class="p">},</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="p">)</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">res</span><span class="o">.</span><span class="n">decision</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">converged</span>
 </span></code></pre></div>
 <p><strong>Simultaneous / full-space</strong> (<code>simultaneous=True</code>) optimizes the decision
 variables <em>and</em> the flowsheet state together, with the flowsheet equations
@@ -2318,17 +2552,17 @@ imposed as equality constraints through an augmented-Lagrangian solve. No inner
 loop converges the flowsheet; feasibility and optimality are reached at once, the
 classic equation-oriented optimization paradigm. The two formulations agree at
 the optimum.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">eos</span><span class="o">=</span><span class="n">PR</span><span class="p">)</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">fs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Heater</span><span class="p">(</span><span class="n">inlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,),</span> <span class="n">outlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;out&quot;</span><span class="p">,),</span> <span class="n">duty</span><span class="o">=</span><span class="s2">&quot;Q&quot;</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="mf">0.0</span><span class="p">))</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">res</span> <span class="o">=</span> <span class="n">optimize_flowsheet_eo</span><span class="p">(</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">fs</span><span class="p">,</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;out&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">t</span> <span class="o">-</span> <span class="mf">360.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="p">{</span><span class="s2">&quot;Q&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">5.0e4</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.0e6</span><span class="p">,</span> <span class="mf">5.0e6</span><span class="p">)},</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">simultaneous</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">res</span><span class="o">.</span><span class="n">decision</span><span class="p">[</span><span class="s2">&quot;Q&quot;</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">constraint_violation</span>        <span class="c1"># the duty; feasibility ~0</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">eos</span><span class="o">=</span><span class="n">PR</span><span class="p">)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">fs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Heater</span><span class="p">(</span><span class="n">inlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,),</span> <span class="n">outlets</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;out&quot;</span><span class="p">,),</span> <span class="n">duty</span><span class="o">=</span><span class="s2">&quot;Q&quot;</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="mf">0.0</span><span class="p">))</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">res</span> <span class="o">=</span> <span class="n">optimize_flowsheet_eo</span><span class="p">(</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">fs</span><span class="p">,</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;out&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">t</span> <span class="o">-</span> <span class="mf">360.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="p">{</span><span class="s2">&quot;Q&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">5.0e4</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.0e6</span><span class="p">,</span> <span class="mf">5.0e6</span><span class="p">)},</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">simultaneous</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">res</span><span class="o">.</span><span class="n">decision</span><span class="p">[</span><span class="s2">&quot;Q&quot;</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">constraint_violation</span>        <span class="c1"># the duty; feasibility ~0</span>
 </span></code></pre></div>
 <h2 id="how-it-stays-well-conditioned-and-finite">How it stays well conditioned and finite<a class="headerlink" href="#how-it-stays-well-conditioned-and-finite" title="Permanent link">&para;</a></h2>
 <p>Two implementation details make the solve trustworthy across unit systems and
