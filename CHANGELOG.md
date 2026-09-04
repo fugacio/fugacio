@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.3.0 (2026-09-04)
+
+### Features
+
+- Add property packages, MESH column, and auto-torn flowsheets
+  ([#18](https://github.com/fugacio/fugacio/pull/18),
+  [`f350806`](https://github.com/fugacio/fugacio/commit/f350806abb727814a56c34a5cd7c312901b26624))
+
+
 ## v0.2.0 (2026-06-25)
 
 ### Continuous Integration
