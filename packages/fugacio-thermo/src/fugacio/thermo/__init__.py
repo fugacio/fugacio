@@ -38,6 +38,11 @@ The public surface is grouped as:
   `saft_parameters_for`, `flash_pt_saft`, ...), the third class of
   thermodynamic method alongside the cubic EOS and gamma-phi routes;
 * **models**: the unified `EOSModel` / `GammaPhiModel` / `SAFTModel` interface;
+* **property packages**: `fugacio.thermo.package`, the one object that owns
+  phase equilibrium *and* energy (``ln_phi``, enthalpy, entropy, volume,
+  PT/PH/PS/TV flashes) for every method class (`CubicPackage`,
+  `GammaPhiPackage` with autodiff excess enthalpy, `SAFTPackage`,
+  `HelmholtzPackage`), so a whole flowsheet runs on any of them;
 * **regression**: differentiable parameter estimation
   (`levenberg_marquardt`, `fit_nrtl_binary`, ...),
   UNIFAC-to-binary prediction (`predict_nrtl_from_unifac`), and the
@@ -52,8 +57,14 @@ The public surface is grouped as:
   `fugacio.thermo.oracles`, optional differential tests against the
   ``thermo`` / ``chemicals`` / Clapeyron.jl (activity) and Cantera (reaction)
   reference libraries.
+
+Fugacio's solvers (cubic roots, Newton steps to ``1e-10`` residuals, implicit
+differentiation) are written for double precision. Importing ``fugacio.thermo``
+therefore enables JAX's 64-bit mode (``jax_enable_x64``) unless the environment
+variable ``FUGACIO_X64`` is set to ``"0"``.
 """
 
+from fugacio.thermo import _precision as _precision
 from fugacio.thermo.activity import (
     NRTL,
     UNIQUAC,
@@ -222,6 +233,19 @@ from fugacio.thermo.lle import (
     flash_lle,
     tie_line,
 )
+from fugacio.thermo.package import (
+    CubicPackage,
+    GammaPhiPackage,
+    HelmholtzPackage,
+    PropertyPackage,
+    SAFTPackage,
+    cubic_package,
+    excess_enthalpy,
+    excess_entropy,
+    gamma_phi_package,
+    helmholtz_package,
+    saft_package,
+)
 from fugacio.thermo.parameter_bank import (
     FittedBinary,
     ParameterBank,
@@ -378,6 +402,7 @@ __all__ = [
     "Compound",
     "CpIdeal",
     "CubicEOS",
+    "CubicPackage",
     "Dataset",
     "EOSModel",
     "EnergyFlashResult",
@@ -387,7 +412,9 @@ __all__ = [
     "FloryHuggins",
     "FluidState",
     "GammaPhiModel",
+    "GammaPhiPackage",
     "HelmholtzFluid",
+    "HelmholtzPackage",
     "HeterogeneousAzeotrope",
     "Hildebrand",
     "LLEResult",
@@ -395,12 +422,14 @@ __all__ = [
     "MassActionReversible",
     "ParameterBank",
     "PowerLaw",
+    "PropertyPackage",
     "R",
     "Reaction",
     "ReactionProperties",
     "RegularSolution",
     "ResidualProperties",
     "SAFTModel",
+    "SAFTPackage",
     "SaftParameters",
     "SaturationState",
     "StabilityResult",
@@ -428,6 +457,7 @@ __all__ = [
     "costald_mixture_volume",
     "costald_volume",
     "cp_ig",
+    "cubic_package",
     "delta_g_rxn",
     "delta_h_rxn",
     "delta_s_rxn",
@@ -449,6 +479,8 @@ __all__ = [
     "eos_model",
     "equilibrium_constant",
     "equilibrium_constant_of",
+    "excess_enthalpy",
+    "excess_entropy",
     "excess_gibbs",
     "fit_bundled_samples",
     "fit_nrtl_binary",
@@ -469,6 +501,7 @@ __all__ = [
     "gamma",
     "gamma_phi_k_values",
     "gamma_phi_model",
+    "gamma_phi_package",
     "gas_diffusivity",
     "gas_mixture_thermal_conductivity",
     "gas_mixture_viscosity",
@@ -483,6 +516,7 @@ __all__ = [
     "has_reference_fluid",
     "has_uniquac",
     "heat_of_vaporization",
+    "helmholtz_package",
     "henry_constant",
     "heterogeneous_azeotrope",
     "hildebrand_ln_gamma",
@@ -557,6 +591,7 @@ __all__ = [
     "residual_properties",
     "rowlinson_bondi_cp",
     "saft_model",
+    "saft_package",
     "saft_parameters",
     "saft_parameters_for",
     "saft_residual_properties",

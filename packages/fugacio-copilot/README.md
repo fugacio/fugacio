@@ -11,17 +11,22 @@ registry**, deterministic, JSON-in/JSON-out functions exposed with the same
 function-calling schemas OpenAI/Anthropic expect:
 
 - **Properties & equilibrium**: `list_components`, `component_properties`,
-  `saturation_pressure`, `bubble_pressure`, `flash_drum`.
+  `saturation_pressure`, `bubble_pressure`, `flash_drum`. The flash, the
+  heater, the columns, and the exchanger accept a `method` (`pr`, `srk`, `nrtl`,
+  `unifac`, `pcsaft`, `iapws`, ...) that selects the property package.
 - **Molecular PC-SAFT**: `saft_flash`, `saft_density`, `saft_saturation_pressure`,
   `saft_bubble_pressure`, and `saft_residual_enthalpy`, the molecular EOS preferred
   for associating fluids (water, alcohols).
-- **Unit operations**: `heat_exchanger`, `compressor` (and turbine), `pump`,
-  `valve`, each closing a rigorous energy balance.
-- **Distillation**: `shortcut_distillation` (Fenske-Underwood-Gilliland) and
-  `rigorous_distillation` (multistage column with duties).
-- **Gradient-based optimization**: `optimize_flash_temperature` and
-  `optimize_column_reflux` solve for the operating variable that hits a target by
-  differentiating straight through the equilibrium flash and the column.
+- **Unit operations**: `heat_exchanger` (one-sided heater/cooler),
+  `two_sided_heat_exchanger` (hot and cold streams, rigorous T-Q curves, one
+  closing spec), `compressor` (and turbine), `pump`, `valve`, each closing a
+  rigorous energy balance.
+- **Distillation**: `shortcut_distillation` (Fenske-Underwood-Gilliland),
+  `rigorous_distillation` (simultaneous-correction MESH column with stage
+  energy balances, profiles, and duties), and `absorber`.
+- **Gradient-based optimization**: `optimize_flash_temperature` differentiates
+  straight through the equilibrium flash; `optimize_column_reflux` imposes the
+  purity as a specification of the MESH column and reports the reflux it takes.
 
 A model-agnostic **agent loop** (`run_agent`) drives plan→act→answer; the planner
 is injected, so the loop is fully testable with a scripted planner while a real

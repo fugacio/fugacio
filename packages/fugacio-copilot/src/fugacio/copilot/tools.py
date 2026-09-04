@@ -26,8 +26,11 @@ from fugacio.copilot.integration_tools import integration_tool_specs
 from fugacio.copilot.mpc_tools import mpc_tool_specs
 from fugacio.copilot.saft_tools import saft_tool_specs
 from fugacio.sim import (
+    METHODS,
     STEAM_LEVELS,
+    ColumnFeed,
     Stream,
+    absorber,
     annualized_capital,
     azeotrope_pressure,
     azeotrope_temperature,
@@ -41,19 +44,21 @@ from fugacio.sim import (
     cylinder_volume,
     equilibrium_reactor,
     flash_drum,
+    heat_exchanger,
     heat_exchanger_area,
     heater,
     lmtd,
     npv,
     nrtl_model_for,
+    package_for,
     pfr,
     pump,
     pxy_diagram,
     reactive_flash,
     relative_volatility,
     residue_curve_map,
+    rigorous_column,
     shortcut_column,
-    solve_column,
     steam_heating,
     steam_turbine,
     stoichiometric_reactor,
@@ -66,6 +71,9 @@ from fugacio.sim import (
     valve,
     vapor_molar_volume_ideal,
 )
+from fugacio.sim import distillate_rate as _spec_distillate_rate
+from fugacio.sim import purity as _spec_purity
+from fugacio.sim import reflux_ratio as _spec_reflux_ratio
 from fugacio.thermo import (
     PR,
     PowerLaw,
@@ -209,15 +217,25 @@ def _bubble_pressure(components: list[str], x: list[float], temperature: float) 
     }
 
 
+def _package(components: list[str], method: str | None) -> Any:
+    """Property package for ``method`` (``None`` keeps the Peng-Robinson default)."""
+    if method is None or method.lower() == "pr":
+        return None
+    if method.lower() not in METHODS:
+        raise ValueError(f"unknown thermodynamic method {method!r}; choose from {METHODS}")
+    return package_for(components, method.lower())
+
+
 def _flash(
     components: list[str],
     z: list[float],
     flow: float,
     temperature: float,
     pressure: float,
+    method: str | None = None,
 ) -> JsonDict:
     feed = Stream.from_fractions(tuple(components), jnp.asarray(z), flow, temperature, pressure)
-    vapor, liquid = flash_drum(feed, temperature, pressure)
+    vapor, liquid = flash_drum(feed, temperature, pressure, model=_package(components, method))
     return {
         "vapor_fraction": float(vapor.total / feed.total),
         "vapor": {"flow_mol_s": float(vapor.total), "composition": [float(v) for v in vapor.z]},
@@ -237,9 +255,10 @@ def _heat_exchanger(
     pressure: float,
     t_out: float | None = None,
     duty: float | None = None,
+    method: str | None = None,
 ) -> JsonDict:
     feed = _stream(components, z, flow, temperature, pressure)
-    res = heater(feed, t_out=t_out, duty=duty)
+    res = heater(feed, t_out=t_out, duty=duty, model=_package(components, method))
     return {
         "outlet_temperature_k": float(res.outlet.t),
         "duty_w": float(res.duty),
@@ -358,6 +377,15 @@ def _shortcut_distillation(
     }
 
 
+def _stream_dict(s: Stream) -> JsonDict:
+    return {
+        "flow_mol_s": float(s.total),
+        "composition": [float(v) for v in s.z],
+        "temperature_k": float(s.t),
+        "pressure_pa": float(s.p),
+    }
+
+
 def _rigorous_distillation(
     components: list[str],
     z: list[float],
@@ -368,11 +396,28 @@ def _rigorous_distillation(
     feed_stage: int,
     reflux: float,
     distillate_rate: float,
-    q: float = 1.0,
+    q: float | None = None,
+    condenser: str = "total",
+    efficiency: float = 1.0,
+    method: str | None = None,
 ) -> JsonDict:
+    del q  # the MESH model takes the feed state from its temperature and pressure
     feed = _stream(components, z, feed_flow, feed_temperature, pressure)
-    res = solve_column(feed, n_stages, feed_stage, reflux, distillate_rate, q=q)
+    res = rigorous_column(
+        [ColumnFeed(feed, feed_stage)],
+        n_stages,
+        p=pressure,
+        condenser=condenser,
+        specs=[_spec_reflux_ratio(reflux), _spec_distillate_rate(distillate_rate)],
+        efficiency=efficiency,
+        model=_package(components, method),
+    )
     return {
+        "converged": bool(res.residual_norm < 1e-6),
+        "residual_norm": float(res.residual_norm),
+        "stage_temperatures_k": [float(v) for v in res.t],
+        "liquid_flows_mol_s": [float(v) for v in res.liquid_flow],
+        "vapor_flows_mol_s": [float(v) for v in res.vapor_flow],
         "distillate": {
             "flow_mol_s": float(res.distillate.total),
             "composition": [float(v) for v in res.distillate.z],
@@ -387,6 +432,83 @@ def _rigorous_distillation(
         "reboiler_duty_w": float(res.reboiler_duty),
         "top_temperature_k": float(res.t[0]),
         "bottom_temperature_k": float(res.t[-1]),
+    }
+
+
+def _two_sided_heat_exchanger(
+    hot_components: list[str],
+    hot_z: list[float],
+    hot_flow: float,
+    hot_temperature: float,
+    hot_pressure: float,
+    cold_components: list[str],
+    cold_z: list[float],
+    cold_flow: float,
+    cold_temperature: float,
+    cold_pressure: float,
+    duty: float | None = None,
+    t_hot_out: float | None = None,
+    t_cold_out: float | None = None,
+    min_approach: float | None = None,
+    ua: float | None = None,
+    zones: int = 4,
+    flow: str = "counter",
+    hot_method: str | None = None,
+    cold_method: str | None = None,
+) -> JsonDict:
+    hot = _stream(hot_components, hot_z, hot_flow, hot_temperature, hot_pressure)
+    cold = _stream(cold_components, cold_z, cold_flow, cold_temperature, cold_pressure)
+    res = heat_exchanger(
+        hot,
+        cold,
+        duty=duty,
+        t_hot_out=t_hot_out,
+        t_cold_out=t_cold_out,
+        min_approach=min_approach,
+        ua=ua,
+        zones=zones,
+        flow=flow,
+        model_hot=_package(hot_components, hot_method),
+        model_cold=_package(cold_components, cold_method),
+    )
+    return {
+        "duty_w": float(res.duty),
+        "ua_w_per_k": _finite(float(res.ua)),
+        "lmtd_k": _finite(float(res.lmtd)),
+        "approach_hot_end_k": float(res.approach_hot_end),
+        "approach_cold_end_k": float(res.approach_cold_end),
+        "min_approach_k": float(res.min_approach),
+        "hot_out": _stream_dict(res.hot_out),
+        "cold_out": _stream_dict(res.cold_out),
+        "hot_curve_k": [float(v) for v in res.hot_curve],
+        "cold_curve_k": [float(v) for v in res.cold_curve],
+    }
+
+
+def _absorber(
+    components: list[str],
+    gas_z: list[float],
+    gas_flow: float,
+    gas_temperature: float,
+    solvent_z: list[float],
+    solvent_flow: float,
+    solvent_temperature: float,
+    pressure: float,
+    n_stages: int,
+    method: str | None = None,
+) -> JsonDict:
+    gas = _stream(components, gas_z, gas_flow, gas_temperature, pressure)
+    solvent = _stream(components, solvent_z, solvent_flow, solvent_temperature, pressure)
+    res = absorber(gas, solvent, n_stages, p=pressure, model=_package(components, method))
+    absorbed = gas.n - res.distillate.n
+    return {
+        "converged": bool(res.residual_norm < 1e-6),
+        "treated_gas": _stream_dict(res.distillate),
+        "rich_solvent": _stream_dict(res.bottoms),
+        "fraction_absorbed": [
+            float(a / g) if float(g) > 0.0 else 0.0 for a, g in zip(absorbed, gas.n, strict=True)
+        ],
+        "stage_temperatures_k": [float(v) for v in res.t],
     }
 
 
@@ -450,22 +572,29 @@ def _optimize_column_reflux(
     distillate_rate: float,
     light_key: int,
     target_purity: float,
-    q: float = 1.0,
-    iters: int = 8,
+    q: float | None = None,
+    iters: int | None = None,
+    method: str | None = None,
 ) -> JsonDict:
+    del q, iters  # the purity is imposed directly as a MESH specification
     feed = _stream(components, z, feed_flow, feed_temperature, pressure)
-
-    def purity_of_reflux(reflux: float) -> Any:
-        res = solve_column(feed, n_stages, feed_stage, reflux, distillate_rate, q=q)
-        return res.distillate.z[light_key]
-
-    reflux_opt = _safeguarded_newton(
-        lambda r: purity_of_reflux(r) - target_purity, 0.2, 25.0, iters=iters
+    res = rigorous_column(
+        [ColumnFeed(feed, feed_stage)],
+        n_stages,
+        p=pressure,
+        specs=[
+            _spec_distillate_rate(distillate_rate),
+            _spec_purity("distillate", light_key, target_purity),
+        ],
+        model=_package(components, method),
     )
     return {
-        "reflux_ratio": reflux_opt,
-        "achieved_purity": float(purity_of_reflux(reflux_opt)),
+        "reflux_ratio": float(res.reflux_ratio),
+        "achieved_purity": float(res.distillate.z[light_key]),
         "target_purity": target_purity,
+        "converged": bool(res.residual_norm < 1e-6),
+        "condenser_duty_w": float(res.condenser_duty),
+        "reboiler_duty_w": float(res.reboiler_duty),
     }
 
 
@@ -1335,6 +1464,11 @@ def default_registry() -> dict[str, ToolSpec]:
                     "flow": {"type": "number", "description": "Total feed flow (mol/s)"},
                     "temperature": {"type": "number"},
                     "pressure": {"type": "number"},
+                    "method": {
+                        "type": "string",
+                        "enum": list(METHODS),
+                        "description": "Thermodynamic method (default pr)",
+                    },
                 },
                 "required": ["components", "z", "flow", "temperature", "pressure"],
             },
@@ -1356,10 +1490,62 @@ def default_registry() -> dict[str, ToolSpec]:
                     "pressure": {"type": "number"},
                     "t_out": {"type": "number", "description": "Target outlet temperature (K)"},
                     "duty": {"type": "number", "description": "Signed heat added (W)"},
+                    "method": {
+                        "type": "string",
+                        "enum": list(METHODS),
+                        "description": "Thermodynamic method (default pr)",
+                    },
                 },
                 "required": ["components", "z", "flow", "temperature", "pressure"],
             },
             run=_heat_exchanger,
+        ),
+        ToolSpec(
+            name="two_sided_heat_exchanger",
+            description=(
+                "Countercurrent (or parallel) two-stream exchanger with rigorous enthalpy "
+                "curves on both sides. Give exactly one closing spec: duty (W), t_hot_out, "
+                "t_cold_out, min_approach (K), or ua (W/K). Returns duty, UA, LMTD, "
+                "approaches, both outlets, and the T-Q curves. Each side may use its own "
+                "method (e.g. iapws for steam, nrtl for aqueous)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "hot_components": {"type": "array", "items": {"type": "string"}},
+                    "hot_z": {"type": "array", "items": {"type": "number"}},
+                    "hot_flow": {"type": "number"},
+                    "hot_temperature": {"type": "number"},
+                    "hot_pressure": {"type": "number"},
+                    "cold_components": {"type": "array", "items": {"type": "string"}},
+                    "cold_z": {"type": "array", "items": {"type": "number"}},
+                    "cold_flow": {"type": "number"},
+                    "cold_temperature": {"type": "number"},
+                    "cold_pressure": {"type": "number"},
+                    "duty": {"type": "number"},
+                    "t_hot_out": {"type": "number"},
+                    "t_cold_out": {"type": "number"},
+                    "min_approach": {"type": "number"},
+                    "ua": {"type": "number"},
+                    "zones": {"type": "integer"},
+                    "flow": {"type": "string", "enum": ["counter", "parallel"]},
+                    "hot_method": {"type": "string", "enum": list(METHODS)},
+                    "cold_method": {"type": "string", "enum": list(METHODS)},
+                },
+                "required": [
+                    "hot_components",
+                    "hot_z",
+                    "hot_flow",
+                    "hot_temperature",
+                    "hot_pressure",
+                    "cold_components",
+                    "cold_z",
+                    "cold_flow",
+                    "cold_temperature",
+                    "cold_pressure",
+                ],
+            },
+            run=_two_sided_heat_exchanger,
         ),
         ToolSpec(
             name="compressor",
@@ -1457,8 +1643,9 @@ def default_registry() -> dict[str, ToolSpec]:
         ToolSpec(
             name="rigorous_distillation",
             description=(
-                "Rigorous multistage column (Wang-Henke, constant molar overflow) with EOS "
-                "K-values; returns product compositions, temperatures, and column duties."
+                "Rigorous multistage column: simultaneous-correction MESH (Naphtali-Sandholm) "
+                "with full stage energy balances and the chosen property package; returns "
+                "product streams, stage temperature and flow profiles, and column duties."
             ),
             parameters={
                 "type": "object",
@@ -1472,7 +1659,13 @@ def default_registry() -> dict[str, ToolSpec]:
                     "feed_stage": {"type": "integer"},
                     "reflux": {"type": "number"},
                     "distillate_rate": {"type": "number"},
-                    "q": {"type": "number"},
+                    "condenser": {"type": "string", "enum": ["total", "partial"]},
+                    "efficiency": {"type": "number", "description": "Murphree efficiency"},
+                    "method": {
+                        "type": "string",
+                        "enum": list(METHODS),
+                        "description": "Thermodynamic method (default pr)",
+                    },
                 },
                 "required": [
                     "components",
@@ -1487,6 +1680,45 @@ def default_registry() -> dict[str, ToolSpec]:
                 ],
             },
             run=_rigorous_distillation,
+        ),
+        ToolSpec(
+            name="absorber",
+            description=(
+                "Countercurrent absorber (no condenser or reboiler): gas enters the bottom "
+                "stage, lean solvent the top; returns treated gas, rich solvent, the "
+                "fraction of each component absorbed, and the stage temperatures."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "components": {"type": "array", "items": {"type": "string"}},
+                    "gas_z": {"type": "array", "items": {"type": "number"}},
+                    "gas_flow": {"type": "number"},
+                    "gas_temperature": {"type": "number"},
+                    "solvent_z": {"type": "array", "items": {"type": "number"}},
+                    "solvent_flow": {"type": "number"},
+                    "solvent_temperature": {"type": "number"},
+                    "pressure": {"type": "number"},
+                    "n_stages": {"type": "integer"},
+                    "method": {
+                        "type": "string",
+                        "enum": list(METHODS),
+                        "description": "Thermodynamic method (default pr)",
+                    },
+                },
+                "required": [
+                    "components",
+                    "gas_z",
+                    "gas_flow",
+                    "gas_temperature",
+                    "solvent_z",
+                    "solvent_flow",
+                    "solvent_temperature",
+                    "pressure",
+                    "n_stages",
+                ],
+            },
+            run=_absorber,
         ),
         ToolSpec(
             name="optimize_flash_temperature",
@@ -1509,8 +1741,8 @@ def default_registry() -> dict[str, ToolSpec]:
         ToolSpec(
             name="optimize_column_reflux",
             description=(
-                "Gradient-based solve for the reflux ratio that achieves a target distillate "
-                "purity of the light key, differentiating through the rigorous column."
+                "Reflux ratio that achieves a target distillate purity of the light key, "
+                "imposed directly as a specification of the rigorous MESH column."
             ),
             parameters={
                 "type": "object",
@@ -1525,7 +1757,11 @@ def default_registry() -> dict[str, ToolSpec]:
                     "distillate_rate": {"type": "number"},
                     "light_key": {"type": "integer"},
                     "target_purity": {"type": "number"},
-                    "q": {"type": "number"},
+                    "method": {
+                        "type": "string",
+                        "enum": list(METHODS),
+                        "description": "Thermodynamic method (default pr)",
+                    },
                 },
                 "required": [
                     "components",

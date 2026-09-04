@@ -124,6 +124,34 @@ def _rachford_rice_jvp(
     return beta, beta_dot
 
 
+#: ``max |ln K|`` below which a converged K-iteration is the trivial solution.
+_TRIVIAL_LN_K = 1.0e-6
+
+
+def classify_trivial(z: Array, k: Array, beta: Array, k_wilson: Array, z_factor: Array) -> Array:
+    """Vapour fraction of a single-phase feed when the K-iteration went trivial.
+
+    Successive substitution on a feed that is single phase collapses to the
+    trivial solution ``K = 1`` (identical trial phases), and the Rachford-Rice
+    residual at ``K = 1`` is zero on both ends, so ``beta`` alone cannot tell a
+    superheated vapour from a subcooled liquid. When ``max |ln K|`` is below
+    `_TRIVIAL_LN_K`, the phase is decided from the Wilson K-values instead: the
+    feed is a vapour if it lies below its Wilson dew pressure
+    (``sum z_i (K_i - 1) / K_i >= 0``) and a liquid if above its Wilson bubble
+    pressure (``sum z_i (K_i - 1) <= 0``). If Wilson claims two phases where
+    the rigorous iteration found one, the compressibility factor of the single
+    root decides (``Z > 0.5`` is vapour-like). Away from the trivial solution
+    ``beta`` is returned unchanged.
+    """
+    trivial = jnp.max(jnp.abs(jnp.log(k))) < _TRIVIAL_LN_K
+    f0 = jnp.sum(z * (k_wilson - 1.0))
+    f1 = jnp.sum(z * (k_wilson - 1.0) / k_wilson)
+    single = jnp.where(
+        f1 >= 0.0, 1.0, jnp.where(f0 <= 0.0, 0.0, jnp.where(z_factor > 0.5, 1.0, 0.0))
+    )
+    return jnp.where(trivial, single, beta)
+
+
 def flash_pt(
     eos: CubicEOS,
     t: ArrayLike,
@@ -168,6 +196,8 @@ def flash_pt(
     ln_k_star = fixed_point(g, jnp.log(k0), theta, tol, max_iter)
     k = jnp.exp(ln_k_star)
     beta = rachford_rice(z, k)
+    _, z_single = ln_phi_mixture(eos, t, p, z, tc, pc, omega, phase="vapor", kij=kij_arr)
+    beta = classify_trivial(z, k, beta, k0, z_single)
     denom = 1.0 + beta * (k - 1.0)
     x = z / denom
     y = k * x

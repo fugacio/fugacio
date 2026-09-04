@@ -66,11 +66,14 @@ nav:
   - Home: index.md
   - Guides:
     - Non-ideal phase equilibrium: phase-equilibrium.md
+    - Property packages: property-packages.md
     - Molecular SAFT (PC-SAFT): molecular-saft.md
     - Reference fluids & steam tables: reference-fluids.md
     - Physical & transport properties: physical-properties.md
     - Reactions & reactors: reactions.md
     - Optimization, design & economics: optimization.md
+    - Rigorous distillation: distillation.md
+    - Flowsheeting, tears & exchangers: flowsheeting.md
     - Equation-oriented flowsheeting: equation-oriented.md
     - Dynamics & process control: dynamics.md
     - Advanced control (MPC & estimation): advanced-control.md
@@ -86,6 +89,7 @@ nav:
       - Liquid-liquid & VLLE: api/thermo/lle.md
       - Activity & group contribution: api/thermo/activity.md
       - Energy & property models: api/thermo/energy.md
+      - Property packages: api/thermo/packages.md
       - Reference fluids (Helmholtz): api/thermo/helmholtz.md
       - Transport & volumetric: api/thermo/transport.md
       - Reactions & kinetics: api/thermo/reactions.md
@@ -95,8 +99,10 @@ nav:
       - Streams & properties: api/sim/streams.md
       - Unit operations: api/sim/units.md
       - Flowsheet & recycle: api/sim/flowsheet.md
+      - Two-sided heat exchanger: api/sim/heat_exchanger.md
       - Equation-oriented flowsheeting: api/sim/eo.md
       - Thermodynamic models: api/sim/models.md
+      - Rigorous distillation: api/sim/distillation.md
       - Distillation & diagrams: api/sim/columns.md
       - Reactors & reactive separations: api/sim/reactors.md
       - Optimization & design: api/sim/optimization.md

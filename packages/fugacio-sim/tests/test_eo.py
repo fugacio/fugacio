@@ -294,3 +294,65 @@ def test_optimize_flowsheet_eo_nested_and_simultaneous_agree() -> None:
     )
     assert bool(nested.converged)
     assert float(nested.decision["Q"]) == pytest.approx(float(simult.decision["Q"]), rel=2e-2)
+
+
+# --------------------------------------------------------------------------- #
+# 4. Two-sided exchanger, reactor, and embedded column blocks
+# --------------------------------------------------------------------------- #
+def test_eo_heat_exchanger_matches_sequential_modular() -> None:
+    from fugacio.sim import heat_exchanger
+    from fugacio.sim.eo import HeatExchanger
+
+    comps = ("methane", "ethane", "propane")
+    hot = Stream.from_fractions(comps, jnp.array([0.2, 0.3, 0.5]), 50.0, 400.0, 30e5)
+    cold = Stream.from_fractions(comps, jnp.array([0.7, 0.2, 0.1]), 80.0, 250.0, 25e5)
+    ref = heat_exchanger(hot, cold, t_hot_out=330.0)
+
+    fs = EOFlowsheet()
+    fs.feed("hot", hot)
+    fs.feed("cold", cold)
+    fs.add(HeatExchanger(inlets=("hot", "cold"), outlets=("h_out", "c_out"), t_hot_out="Th"))
+    sol = fs.solve({"Th": 330.0})
+    assert float(sol.residual_norm) < 1e-8
+    _same_stream(sol.streams["h_out"], ref.hot_out)
+    _same_stream(sol.streams["c_out"], ref.cold_out)
+
+    # The rating form (UA given) closes on the same duty.
+    fs2 = EOFlowsheet()
+    fs2.feed("hot", hot)
+    fs2.feed("cold", cold)
+    fs2.add(HeatExchanger(inlets=("hot", "cold"), outlets=("h_out", "c_out"), ua=float(ref.ua)))
+    sol2 = fs2.solve({})
+    assert float(sol2.residual_norm) < 1e-8
+    assert float(sol2.streams["h_out"].t) == pytest.approx(330.0, abs=1e-4)
+
+
+def test_eo_stoichiometric_reactor_matches_sequential_modular() -> None:
+    from fugacio.sim.eo import StoichiometricReactor
+    from fugacio.sim.reactors import stoichiometric_reactor
+    from fugacio.thermo.reactions import Reaction
+
+    comps = ("ethylene", "hydrogen", "ethane")
+    feed = Stream.from_fractions(comps, jnp.array([0.4, 0.5, 0.1]), 100.0, 500.0, 10e5)
+    nu = [[-1.0, -1.0, 1.0]]
+
+    fs = EOFlowsheet()
+    fs.feed("feed", feed)
+    fs.add(
+        StoichiometricReactor(
+            inlets=("feed",), outlets=("prod",), nu=nu, key=(0,), conversion="X", duty=0.0
+        )
+    )
+    sol = fs.solve({"X": 0.6})
+    assert float(sol.residual_norm) < 1e-8
+
+    ref = stoichiometric_reactor(
+        feed, Reaction(components=comps, nu=jnp.array(nu[0])), conversion=0.6, adiabatic=True
+    )
+    _same_stream(sol.streams["prod"], ref.outlet)
+    assert float(sol.streams["prod"].t) > 500.0  # hydrogenation is exothermic
+
+    with pytest.raises(ValueError, match="exactly one"):
+        StoichiometricReactor(inlets=("feed",), outlets=("prod",), nu=nu, key=(0,), duty=None)
+    with pytest.raises(ValueError, match="reactant"):
+        StoichiometricReactor(inlets=("feed",), outlets=("prod",), nu=nu, key=(2,))

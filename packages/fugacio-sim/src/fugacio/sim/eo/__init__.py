@@ -16,7 +16,8 @@ The public surface is:
   `EOSolution`;
 * unit blocks mirroring the sequential-modular units, each written as residual
   equations: `Mixer`, `Splitter`, `Heater`, `Valve`, `Pump`, `Compressor`,
-  `Turbine`, `Flash`, `ComponentSeparator`;
+  `Turbine`, `Flash`, `ComponentSeparator`, `HeatExchanger`,
+  `StoichiometricReactor`, and the embedded rigorous `Column`;
 * `Scales` / `Context` for residual conditioning and shared solve data;
 * `optimize_flowsheet_eo` (with `EOOptResult`): nested or full-space simultaneous
   optimization over named decision variables.
@@ -24,15 +25,18 @@ The public surface is:
 
 from fugacio.sim.eo.blocks import (
     Block,
+    Column,
     ComponentSeparator,
     Compressor,
     Context,
     Flash,
     Heater,
+    HeatExchanger,
     Mixer,
     Pump,
     Scales,
     Splitter,
+    StoichiometricReactor,
     Turbine,
     Valve,
 )
@@ -50,6 +54,7 @@ from fugacio.sim.eo.optimize import (
 
 __all__ = [
     "Block",
+    "Column",
     "ComponentSeparator",
     "Compressor",
     "Context",
@@ -59,12 +64,14 @@ __all__ = [
     "EOOptResult",
     "EOSolution",
     "Flash",
+    "HeatExchanger",
     "Heater",
     "Mixer",
     "Objective",
     "Pump",
     "Scales",
     "Splitter",
+    "StoichiometricReactor",
     "Turbine",
     "Valve",
     "optimize_flowsheet_eo",

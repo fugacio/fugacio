@@ -42,8 +42,9 @@ class Stream:
 
     @property
     def z(self) -> Array:
-        """Mole fractions (the flow normalised to sum to one)."""
-        return self.n / jnp.sum(self.n)
+        """Mole fractions (the flow normalised to sum to one; all zero for an empty stream)."""
+        total = jnp.sum(self.n)
+        return self.n / jnp.where(total > 0.0, total, 1.0)
 
     @classmethod
     def from_fractions(

@@ -148,6 +148,7 @@ ignore_missing_imports = true
 addopts = "-q -m 'not oracle'"
 markers = [
     "oracle: differential tests against external reference codes (opt-in; needs CoolProp/chemicals)",
+    "plant: whole-plant case studies (slow; several nested implicit solvers per test)",
 ]
 testpaths = [
     "packages/fugacio-thermo/tests",

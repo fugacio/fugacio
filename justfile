@@ -25,9 +25,13 @@ types:
 imports:
     uv run lint-imports
 
-# Run the test suite (fast, hermetic; oracle tests excluded).
+# Run the test suite (hermetic; oracle tests excluded).
 test:
     uv run pytest
+
+# The unit suite without the whole-plant case studies (several minutes of compiles).
+test-fast:
+    uv run pytest -m 'not oracle and not plant'
 
 # Opt-in differential tests against external references (thermo / chemicals).
 oracles:

@@ -21,9 +21,11 @@ from fugacio.sim import Stream, flash_drum, tear_solve, linear_mpc, pinch_analys
 | --- | --- | --- |
 | Streams & properties | [Streams & properties](streams.md) | `Stream`, `enthalpy_flow`, `molar_enthalpy`, `liquid_density` |
 | Unit operations | [Unit operations](units.md) | `flash_drum`, `heater`, `pump`, `compressor`, `mix`, `splitter`, `flash_vle` |
-| Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `tear_solve` |
-| Equation-oriented flowsheeting | [Equation-oriented flowsheeting](eo.md) | `EOFlowsheet`, `Flash`, `Heater`, `optimize_flowsheet_eo` |
-| Thermodynamic models | [Thermodynamic models](models.md) | `eos_model_for`, `nrtl_model_for`, `uniquac_model_for`, `unifac_model_for` |
+| Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `Partition`, `tear_solve`, `TEAR_METHODS` |
+| Two-sided heat exchanger | [Two-sided heat exchanger](heat_exchanger.md) | `heat_exchanger`, `HeatExchangerResult` |
+| Equation-oriented flowsheeting | [Equation-oriented flowsheeting](eo.md) | `EOFlowsheet`, `Flash`, `HeatExchanger`, `Column`, `optimize_flowsheet_eo` |
+| Thermodynamic models | [Thermodynamic models](models.md) | `package_for`, `METHODS`, `eos_model_for`, `nrtl_model_for`, `unifac_model_for` |
+| Rigorous distillation | [Rigorous distillation](distillation.md) | `rigorous_column`, `ColumnFeed`, `reflux_ratio`, `purity`, `absorber`, `stripper` |
 | Distillation & diagrams | [Distillation & diagrams](columns.md) | `shortcut_column`, `solve_column`, `pxy_diagram`, `residue_curve_map` |
 | Reactors | [Reactors & reactive separations](reactors.md) | `equilibrium_reactor`, `cstr`, `pfr`, `reactive_flash`, `reactive_distillation` |
 | Optimization & design | [Optimization & design](optimization.md) | `minimize`, `argmin`, `meet_spec`, `optimize_flowsheet` |
@@ -33,7 +35,9 @@ from fugacio.sim import Stream, flash_drum, tear_solve, linear_mpc, pinch_analys
 | Heat integration | [Heat integration](integration.md) | `pinch_analysis`, `composite_curves`, `optimal_dt_min`, `synthesize_network` |
 | Steam & cooling utilities | [Steam & cooling utilities](utilities.md) | `steam_heating`, `cooling_water`, `steam_turbine` |
 
-See the [optimization & economics guide](../../optimization.md), the
+See the [flowsheeting guide](../../flowsheeting.md), the
+[rigorous distillation guide](../../distillation.md), the
+[optimization & economics guide](../../optimization.md), the
 [equation-oriented flowsheeting guide](../../equation-oriented.md), the
 [dynamics & control guide](../../dynamics.md), the
 [advanced-control guide](../../advanced-control.md), and the
