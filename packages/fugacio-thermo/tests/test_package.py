@@ -217,6 +217,36 @@ def test_helmholtz_package_matches_steam_tables() -> None:
     assert float(res.t) == pytest.approx(float(pkg.bubble_temperature(5e5, one)[0]), abs=1e-6)
 
 
+@pytest.mark.parametrize(
+    "property_name,flash_name", [("enthalpy", "flash_ph"), ("entropy", "flash_ps")]
+)
+def test_pure_energy_flash_quality_has_forward_and_reverse_derivatives(
+    property_name: str, flash_name: str
+) -> None:
+    pkg = _cubic(["water"])
+    z = jnp.ones(1)
+    p = 1e5
+    ts, _ = pkg.bubble_temperature(p, z, t_min=300.0, t_max=450.0)
+    prop = getattr(pkg, property_name)
+    liquid = prop(ts, p, z, phase="liquid")
+    gap = prop(ts, p, z, phase="vapor") - liquid
+
+    @jax.jit
+    def state(quality):
+        result = getattr(pkg, flash_name)(p, liquid + quality * gap, z)
+        return jnp.array([result.t, result.beta])
+
+    q = jnp.asarray(0.3)
+    value, forward = jax.jvp(state, (q,), (jnp.ones_like(q),))
+    reverse = jax.jacrev(state)(q)
+    assert jnp.allclose(value, jnp.array([ts, q]), atol=1e-7)
+    # At fixed pressure inside a pure-fluid dome, added energy changes quality,
+    # while the saturation temperature stays fixed.
+    expected = jnp.array([0.0, 1.0])
+    assert jnp.allclose(forward, expected, atol=1e-8)
+    assert jnp.allclose(reverse, expected, atol=1e-8)
+
+
 # --------------------------------------------------------------------------- #
 # Seeds and single-phase classification
 # --------------------------------------------------------------------------- #
@@ -236,6 +266,26 @@ def test_flash_classifies_superheated_vapour_not_liquid() -> None:
     assert float(pkg.flash_pt(320.0, 20e5, z).beta) == 1.0
     # ... and far above its bubble pressure at low temperature it is all liquid.
     assert float(pkg.flash_pt(200.0, 60e5, z).beta) == 0.0
+
+
+def test_single_phase_properties_do_not_differentiate_an_absent_phase() -> None:
+    pkg = _cubic(["propane", "n-butane", "n-pentane"])
+    z = jnp.array([0.4, 0.35, 0.25])
+    t, p = 391.70363314, 16e5
+    assert pkg.flash_pt(t, p, z).beta == 1.0
+
+    def bulk(tt, composition):
+        return pkg.mixture_enthalpy(tt, p, composition)
+
+    def vapor(tt, composition):
+        return pkg.enthalpy(tt, p, composition, phase="vapor")
+
+    actual = jax.jit(jax.grad(bulk, argnums=(0, 1)))(t, z)
+    expected = jax.grad(vapor, argnums=(0, 1))(t, z)
+    for value, reference in zip(actual, expected, strict=True):
+        assert jnp.allclose(value, reference, rtol=1e-9)
+    finite_difference = (bulk(t + 0.001, z) - bulk(t - 0.001, z)) / 0.002
+    assert actual[0] == pytest.approx(float(finite_difference), rel=1e-6)
 
 
 def test_classify_trivial_leaves_interior_solutions_alone() -> None:

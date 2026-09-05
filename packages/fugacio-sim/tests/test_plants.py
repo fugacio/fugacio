@@ -22,6 +22,7 @@ implicit solvers); they are marked ``plant`` so they can be selected or
 deselected explicitly.
 """
 
+import jax
 import jax.numpy as jnp
 import pytest
 
@@ -42,6 +43,7 @@ from fugacio.sim import (
     reflux_ratio,
     rigorous_column,
     splitter,
+    valve,
 )
 from fugacio.sim.reactors import stoichiometric_reactor
 from fugacio.thermo.reactions import Reaction
@@ -58,6 +60,7 @@ HDA = ("hydrogen", "methane", "benzene", "toluene")
 def _hda_flowsheet() -> Flowsheet:
     toluene = Stream.from_fractions(HDA, jnp.array([0.0, 0.0, 0.0, 1.0]), 100.0, 300.0, 30e5)
     makeup = Stream.from_fractions(HDA, jnp.array([0.95, 0.05, 0.0, 0.0]), 250.0, 300.0, 30e5)
+    pkg = package_for(HDA)
     rxn = Reaction(components=HDA, nu=jnp.array([-1.0, 1.0, 1.0, -1.0]))
 
     fs = Flowsheet()
@@ -77,7 +80,9 @@ def _hda_flowsheet() -> Flowsheet:
     )
     fs.unit(
         "reactor",
-        lambda s, th: stoichiometric_reactor(s, rxn, conversion=th["X"], t_out=th["T_rx"]).outlet,
+        lambda s, th: (
+            stoichiometric_reactor(s, rxn, conversion=th["X"], t_out=th["T_rx"], model=pkg).outlet
+        ),
         inputs=("hot",),
         outputs=("effluent",),
     )
@@ -115,12 +120,7 @@ def _hda_flowsheet() -> Flowsheet:
 
 
 def _bt_column(aromatics: Stream, r: float) -> tuple[Stream, Stream]:
-    liquid = Stream(
-        n=aromatics.n,
-        t=aromatics.t,
-        p=jnp.asarray(1.5e5),
-        components=aromatics.components,
-    )
+    liquid = valve(aromatics, 1.5e5)
     res = rigorous_column(
         [ColumnFeed(liquid, 6)],
         12,
@@ -138,7 +138,9 @@ def test_hda_lite_plant_closes_and_meets_specs() -> None:
     assert len(parts[0].tears) == 1 and len(parts[0].units) == 6
 
     theta = {"T_rx": 900.0, "X": 0.75, "purge": 0.10, "R": 2.5}
-    s = fs.solve(theta, method="wegstein")
+    solved = fs.solve_with_info(theta, method="wegstein")
+    solved.check()
+    s = solved.streams
 
     fresh = s["toluene"].n + s["makeup"].n
     out = s["purge"].n + s["offgas"].n + s["benzene"].n + s["toluene_rec"].n
@@ -163,6 +165,39 @@ def test_hda_lite_plant_closes_and_meets_specs() -> None:
     # Column delivers 99 % benzene recovery.
     assert float(s["benzene"].n[2] / s["aromatics"].n[2]) == pytest.approx(0.99, abs=1e-6)
     assert float(s["benzene"].z[2]) > 0.95
+
+    # Close total energy on one reference, including formation enthalpies at
+    # the reacting boundary and the ideal separator's required heat exchange.
+    from fugacio.thermo.reactions import reaction_arrays
+
+    pkg = package_for(HDA)
+    hf, _, _ = reaction_arrays(list(HDA))
+    rxn = Reaction(components=HDA, nu=jnp.array([-1.0, 1.0, 1.0, -1.0]))
+    reactor = stoichiometric_reactor(
+        s["hot"], rxn, conversion=theta["X"], t_out=theta["T_rx"], model=pkg
+    )
+    col = rigorous_column(
+        [ColumnFeed(valve(s["aromatics"], 1.5e5), 6)],
+        12,
+        p=1.5e5,
+        specs=[reflux_ratio(theta["R"]), recovery(2, "distillate", 0.99)],
+    )
+
+    def h(name):
+        return enthalpy_flow(s[name], model=pkg)
+
+    mixer_duty = h("mixed") - h("toluene") - h("makeup") - h("recycle")
+    separator_duty = h("offgas") + h("aromatics") - h("crude")
+    duties = mixer_duty + heater(s["mixed"], t_out=theta["T_rx"], model=pkg).duty + reactor.duty
+    duties += (
+        heater(s["effluent"], t_out=310.0, model=pkg).duty
+        + separator_duty
+        + col.condenser_duty
+        + col.reboiler_duty
+    )
+    inlet_energy = h("toluene") + h("makeup") + fresh @ hf
+    outlet_energy = h("purge") + h("offgas") + h("benzene") + h("toluene_rec") + out @ hf
+    assert float(inlet_energy + duties - outlet_energy) == pytest.approx(0.0, abs=1.0)
 
 
 # --------------------------------------------------------------------------- #
@@ -209,13 +244,12 @@ def test_depropanizer_with_economiser_loop() -> None:
     assert float(s["bottoms"].z[0]) < 0.02
     # Balances around the whole train.
     assert jnp.allclose(s["distillate"].n + s["bottoms_cooled"].n, cold_feed.n, atol=1e-6)
-    # Energy balance around the column. The products leave saturated, so a bulk
-    # PT flash of them sits on the dome boundary and carries a little phase-split
-    # noise; the balance closes to well under 0.1 % of the reboiler duty.
+    # Saturated product phases are preserved, so the energy balance can be
+    # checked directly through the public stream property interface.
     h_in = enthalpy_flow(s["preheated"])
     h_out = enthalpy_flow(col.distillate) + enthalpy_flow(col.bottoms)
     assert float(h_in + col.condenser_duty + col.reboiler_duty - h_out) == pytest.approx(
-        0.0, abs=1e-3 * float(col.reboiler_duty)
+        0.0, abs=1e-7 * float(col.reboiler_duty)
     )
     # Exchanger: the recovered heat is consistent on both sides and pinches at 15 K.
     hx = heat_exchanger(s["bottoms"], cold_feed, min_approach=15.0)
@@ -235,6 +269,17 @@ def test_depropanizer_with_economiser_loop() -> None:
     saving = float(col0.reboiler_duty - col.reboiler_duty)
     assert 0.5 * float(hx.duty) < saving < 1.5 * float(hx.duty)
 
+    # A sensitivity of the converged, heat-integrated train agrees with an
+    # independent operating-condition perturbation through both units.
+    def recovered_heat(approach):
+        result = fs.solve({"dt": approach}, method="broyden", tol=1e-9, guess=s)
+        return enthalpy_flow(result["preheated"]) - enthalpy_flow(cold_feed)
+
+    derivative = jax.grad(recovered_heat)(jnp.asarray(15.0))
+    finite_difference = (recovered_heat(15.01) - recovered_heat(14.99)) / 0.02
+    assert jnp.isfinite(derivative)
+    assert float(derivative) == pytest.approx(float(finite_difference), rel=5e-3, abs=1e-2)
+
 
 def _swap(res) -> tuple[Stream, Stream]:
     return res.cold_out, res.hot_out
@@ -249,7 +294,7 @@ def test_ethanol_water_train_recovers_bottoms_heat() -> None:
     feed = Stream.from_fractions(comps, jnp.array([0.10, 0.90]), 100.0, 300.0, 1.5e5)
 
     def column(s: Stream):
-        liquid = Stream(n=s.n, t=s.t, p=jnp.asarray(1.013e5), components=comps)
+        liquid = valve(s, 1.013e5, model=pkg)
         return rigorous_column(
             [ColumnFeed(liquid, 6)],
             12,
@@ -288,3 +333,27 @@ def test_ethanol_water_train_recovers_bottoms_heat() -> None:
     saving = float(col0.reboiler_duty - col.reboiler_duty)
     assert saving == pytest.approx(recovered, rel=0.05)
     assert float(col.distillate.z[0]) == pytest.approx(float(col0.distillate.z[0]), abs=0.02)
+
+    # Close the economizer loop against the current column bottoms.
+    fs = Flowsheet().feed("feed", feed)
+    fs.unit(
+        "economizer",
+        lambda cold, hot, th: _swap(heat_exchanger(hot, cold, min_approach=th["dt"], model=pkg)),
+        inputs=("feed", "bottoms"),
+        outputs=("preheated", "cooled"),
+    )
+
+    def column_products(stream, th):
+        result = column(stream)
+        return result.distillate, result.bottoms
+
+    fs.unit("column", column_products, inputs=("preheated",), outputs=("distillate", "bottoms"))
+    solved = fs.solve_with_info({"dt": 10.0}, method="broyden", guess={"bottoms": col.bottoms})
+    solved.check()
+    final = column(solved["preheated"])
+    assert jnp.allclose(solved["distillate"].n + solved["cooled"].n, feed.n, atol=1e-6)
+    balance = enthalpy_flow(feed, model=pkg) + final.condenser_duty + final.reboiler_duty
+    balance -= enthalpy_flow(solved["distillate"], model=pkg) + enthalpy_flow(
+        solved["cooled"], model=pkg
+    )
+    assert float(balance) == pytest.approx(0.0, abs=1.0)

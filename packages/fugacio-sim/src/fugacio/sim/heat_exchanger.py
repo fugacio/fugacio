@@ -36,9 +36,10 @@ import jax.numpy as jnp
 from jax import Array, lax
 
 from fugacio.sim.economics import lmtd
-from fugacio.sim.properties import Model, resolve_package
+from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS, PropertyPackage
+from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
 from fugacio.thermo.implicit import bracketed_root
 
 ArrayLike = Array | float
@@ -72,6 +73,20 @@ class HeatExchangerResult(NamedTuple):
     min_approach: Array
     hot_curve: Array
     cold_curve: Array
+    report: SolveReport
+
+    @property
+    def converged(self) -> Array:
+        """Whether energy, feasibility, and the requested specification all close."""
+        return self.report.converged
+
+    def check(self) -> None:
+        """Raise if a capped duty or failed flash misses the specification."""
+        require_converged(
+            self.report,
+            "heat exchanger",
+            ("hot energy", "cold energy", "specification", "temperature crossing"),
+        )
 
 
 _FLOW_FLOOR = 1.0e-12
@@ -88,7 +103,13 @@ def _nonempty(stream: Stream) -> Stream:
     total = jnp.sum(stream.n)
     trace = jnp.full_like(stream.n, _FLOW_FLOOR / stream.n.shape[0])
     n = jnp.where(total > _FLOW_FLOOR, stream.n, trace)
-    return Stream(n=n, t=stream.t, p=stream.p, components=stream.components)
+    return Stream(
+        n=n,
+        t=stream.t,
+        p=stream.p,
+        components=stream.components,
+        vapor_n=jnp.where(total > _FLOW_FLOOR, jnp.asarray(stream.vapor_n), -1.0),
+    )
 
 
 def _outlet_temperature(
@@ -116,7 +137,8 @@ def _curves(
     Position 0 is the hot inlet. The hot stream has given up ``k/zones`` of the
     duty at position ``k``; counter-current, the cold stream there has absorbed
     ``(zones - k)/zones`` of it (it enters at the far end), parallel it has
-    absorbed ``k/zones``.
+    absorbed ``k/zones``. Pressure drops are distributed linearly in each
+    stream's flow direction; the inlet endpoints retain their supplied states.
     """
     frac = jnp.linspace(0.0, 1.0, zones + 1)
     cold_frac = (1.0 - frac) if flow == "counter" else frac
@@ -126,10 +148,24 @@ def _curves(
     n_cold = jnp.maximum(cold.total, _FLOW_FLOOR)
 
     def t_hot(fr: Array) -> Array:
-        return _outlet_temperature(pkg_h, hot, h_hot_in - fr * q / n_hot, p_hot_out, t_init)
+        pressure = hot.p + fr * (p_hot_out - hot.p)
+        return lax.cond(
+            fr == 0.0,
+            lambda _: hot.t,
+            lambda _: _outlet_temperature(pkg_h, hot, h_hot_in - fr * q / n_hot, pressure, t_init),
+            None,
+        )
 
     def t_cold(fr: Array) -> Array:
-        return _outlet_temperature(pkg_c, cold, h_cold_in + fr * q / n_cold, p_cold_out, t_init)
+        pressure = cold.p + fr * (p_cold_out - cold.p)
+        return lax.cond(
+            fr == 0.0,
+            lambda _: cold.t,
+            lambda _: _outlet_temperature(
+                pkg_c, cold, h_cold_in + fr * q / n_cold, pressure, t_init
+            ),
+            None,
+        )
 
     # `lax.map` (a scan) compiles each side's isenthalpic flash once and runs it
     # sequentially over the positions; a Python loop would emit ``zones + 1``
@@ -169,8 +205,8 @@ def _solve(
     """Duty, both temperature curves, required ``UA``, and the outlet pressures."""
     p_hot_out = hot.p - dp_hot
     p_cold_out = cold.p - dp_cold
-    h_hot_in = pkg_h.mixture_enthalpy(hot.t, hot.p, hot.z)
-    h_cold_in = pkg_c.mixture_enthalpy(cold.t, cold.p, cold.z)
+    h_hot_in = molar_enthalpy(hot, model=pkg_h)
+    h_cold_in = molar_enthalpy(cold, model=pkg_c)
 
     # Second-law duty cap: hot cooled to the cold inlet, cold heated to the hot inlet.
     q_hot_max = hot.total * (h_hot_in - pkg_h.mixture_enthalpy(cold.t, p_hot_out, hot.z))
@@ -331,15 +367,41 @@ def heat_exchanger(
         t_init=t_init,
         tol=tol,
     )
-    hot_out = Stream(n=hot.n, t=t_h[-1], p=p_hot_out, components=hot.components)
-    cold_out = Stream(
-        n=cold.n,
-        t=t_c[-1] if flow == "parallel" else t_c[0],
-        p=p_cold_out,
-        components=cold.components,
-    )
+    hh = molar_enthalpy(_nonempty(hot), model=pkg_h) - q / jnp.maximum(hot.total, _FLOW_FLOOR)
+    hc = molar_enthalpy(_nonempty(cold), model=pkg_c) + q / jnp.maximum(cold.total, _FLOW_FLOOR)
+    rh = pkg_h.flash_ph(p_hot_out, hh, _nonempty(hot).z, t_init=t_init)
+    rc = pkg_c.flash_ph(p_cold_out, hc, _nonempty(cold).z, t_init=t_init)
+    hot_out = Stream(hot.n, rh.t, p_hot_out, hot.components, rh.beta * hot.total * rh.y)
+    cold_out = Stream(cold.n, rc.t, p_cold_out, cold.components, rc.beta * cold.total * rc.y)
     dt = t_h - t_c
     area_out = ua_req / jnp.asarray(u, dtype=float) if u is not None else jnp.asarray(jnp.nan)
+    actual = {
+        "duty": q,
+        "t_hot_out": hot_out.t,
+        "t_cold_out": cold_out.t,
+        "min_approach": jnp.min(dt),
+        "ua": ua_req,
+    }[spec]
+    energy_scale = jnp.maximum(jnp.abs(q), 1e4)
+    errors = jnp.array(
+        [
+            (
+                hot.total
+                * (molar_enthalpy(hot, model=pkg_h) - molar_enthalpy(hot_out, model=pkg_h))
+                - q
+            )
+            / energy_scale,
+            (
+                cold.total
+                * (molar_enthalpy(cold_out, model=pkg_c) - molar_enthalpy(cold, model=pkg_c))
+                - q
+            )
+            / energy_scale,
+            (actual - value) / jnp.maximum(jnp.abs(value), 1.0),
+            jnp.maximum(-jnp.min(dt), 0.0) / 300.0,
+        ]
+    )
+    report = residual_report(errors, tol=1e-6, failure=SolveStatus.INFEASIBLE)
     return HeatExchangerResult(
         hot_out=hot_out,
         cold_out=cold_out,
@@ -352,6 +414,7 @@ def heat_exchanger(
         min_approach=jnp.min(dt),
         hot_curve=t_h,
         cold_curve=t_c,
+        report=report,
     )
 
 

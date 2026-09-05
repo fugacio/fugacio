@@ -21,7 +21,7 @@ from fugacio.sim import Stream, flash_drum, tear_solve, linear_mpc, pinch_analys
 | --- | --- | --- |
 | Streams & properties | [Streams & properties](streams.md) | `Stream`, `enthalpy_flow`, `molar_enthalpy`, `liquid_density` |
 | Unit operations | [Unit operations](units.md) | `flash_drum`, `heater`, `pump`, `compressor`, `mix`, `splitter`, `flash_vle` |
-| Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `Partition`, `tear_solve`, `TEAR_METHODS` |
+| Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `FlowsheetResult`, `tear_solve_with_info`, `continuation_solve` |
 | Two-sided heat exchanger | [Two-sided heat exchanger](heat_exchanger.md) | `heat_exchanger`, `HeatExchangerResult` |
 | Equation-oriented flowsheeting | [Equation-oriented flowsheeting](eo.md) | `EOFlowsheet`, `Flash`, `HeatExchanger`, `Column`, `optimize_flowsheet_eo` |
 | Thermodynamic models | [Thermodynamic models](models.md) | `package_for`, `METHODS`, `eos_model_for`, `nrtl_model_for`, `unifac_model_for` |

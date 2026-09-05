@@ -30,14 +30,22 @@ temperatures carry implicit-function gradients.
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
+import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.sim.properties import Model, resolve_package
+from fugacio.sim.properties import (
+    Model,
+    _composition,
+    molar_enthalpy,
+    molar_entropy,
+    resolve_package,
+)
 from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS
+from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
 
 ArrayLike = Array | float
 
@@ -52,6 +60,7 @@ class HeaterResult(NamedTuple):
 
     outlet: Stream
     duty: Array
+    report: SolveReport
 
 
 class PumpResult(NamedTuple):
@@ -64,6 +73,7 @@ class PumpResult(NamedTuple):
 
     outlet: Stream
     work: Array
+    report: SolveReport
 
 
 class WorkResult(NamedTuple):
@@ -79,6 +89,32 @@ class WorkResult(NamedTuple):
     outlet: Stream
     work: Array
     ideal_work: Array
+    report: SolveReport
+
+
+def _efficiency(value: ArrayLike, context: str) -> Array:
+    """Validate a machine efficiency in eager and compiled calculations."""
+    efficiency = jnp.asarray(value, dtype=float)
+    report = residual_report(
+        jnp.atleast_1d(jnp.where((efficiency > 0) & (efficiency <= 1), 0.0, 1.0)),
+        failure=SolveStatus.INVALID_INPUT,
+    )
+    require_converged(report, context, ("efficiency must be in (0, 1]",))
+    return efficiency * jnp.where(report.converged, 1.0, jnp.nan)
+
+
+def _energy_outlet(
+    outlet: Stream, target: Array, pkg: Any, context: str
+) -> tuple[Stream, SolveReport]:
+    """Independently verify energy closure before handing a state downstream."""
+    error = (molar_enthalpy(outlet, model=pkg) - target) / jnp.maximum(jnp.abs(target), 1e4)
+    report = residual_report(jnp.atleast_1d(jnp.where(outlet.total > 0, error, 0.0)), tol=1e-7)
+    report = report._replace(
+        status=jnp.where(outlet.report.converged, report.status, SolveStatus.INVALID_INPUT)
+    )
+    require_converged(report, context, ("molar enthalpy",))
+    checked = jax.tree_util.tree_map(lambda x: jnp.where(report.converged, x, jnp.nan), outlet)
+    return checked, report
 
 
 def flash_drum(
@@ -106,18 +142,38 @@ def flash_drum(
         respect to ``t``, ``p``, the feed, and the package parameters.
     """
     pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
-    result = pkg.flash_pt(t, p, feed.z)
+    z = _composition(feed.n)
+    classified = jax.lax.stop_gradient(pkg.flash_pt(t, p, z))
     total = feed.total
+
+    def single_phase(_: None) -> tuple[Array, Array]:
+        vapor_flow = jnp.where(classified.beta <= 0.0, jnp.zeros_like(feed.n), feed.n)
+        return vapor_flow, feed.n - vapor_flow
+
+    def two_phase(_: None) -> tuple[Array, Array]:
+        result = pkg.flash_pt(t, p, z)
+        return result.y * result.beta * total, result.x * (1.0 - result.beta) * total
+
+    # Outside the two-phase region, phase flows follow the material balance
+    # directly. Don't differentiate an absent phase's trial equilibrium state.
+    vapor_flow, liquid_flow = jax.lax.cond(
+        jnp.isfinite(classified.beta) & ((classified.beta <= 0.0) | (classified.beta >= 1.0)),
+        single_phase,
+        two_phase,
+        None,
+    )
     t_arr = jnp.asarray(t, dtype=float)
     p_arr = jnp.asarray(p, dtype=float)
     vapor = Stream(
-        n=result.y * result.beta * total,
+        n=vapor_flow,
+        vapor_n=vapor_flow,
         t=t_arr,
         p=p_arr,
         components=feed.components,
     )
     liquid = Stream(
-        n=result.x * (1.0 - result.beta) * total,
+        n=liquid_flow,
+        vapor_n=jnp.zeros_like(feed.n),
         t=t_arr,
         p=p_arr,
         components=feed.components,
@@ -151,17 +207,30 @@ def heater(
         raise ValueError("heater requires exactly one of t_out or duty")
     pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
     p_out = feed.p - jnp.asarray(dp)
-    h_in = pkg.mixture_enthalpy(feed.t, feed.p, feed.z)
+    h_in = molar_enthalpy(feed, model=pkg)
     if t_out is not None:
         outlet = Stream(
             n=feed.n, t=jnp.asarray(t_out, dtype=float), p=p_out, components=feed.components
         )
-        duty_w = feed.total * (pkg.mixture_enthalpy(outlet.t, outlet.p, outlet.z) - h_in)
-        return HeaterResult(outlet=outlet, duty=duty_w)
-    h_spec = h_in + jnp.asarray(duty) / feed.total
-    r = pkg.flash_ph(p_out, h_spec, feed.z, t_init=t_init)
-    outlet = Stream(n=feed.n, t=r.t, p=p_out, components=feed.components)
-    return HeaterResult(outlet=outlet, duty=jnp.asarray(duty, dtype=float))
+        duty_w = feed.total * (molar_enthalpy(outlet, model=pkg) - h_in)
+        report = residual_report(jnp.atleast_1d(jnp.where(jnp.isfinite(duty_w), 0.0, jnp.nan)))
+        report = report._replace(
+            status=jnp.where(outlet.report.converged, report.status, SolveStatus.INVALID_INPUT)
+        )
+        require_converged(report, "heater")
+        outlet = jax.tree_util.tree_map(lambda x: jnp.where(report.converged, x, jnp.nan), outlet)
+        return HeaterResult(outlet=outlet, duty=duty_w, report=report)
+    h_spec = h_in + jnp.asarray(duty) / jnp.where(feed.total > 0, feed.total, 1.0)
+    r = pkg.flash_ph(p_out, h_spec, _composition(feed.n), t_init=t_init)
+    outlet = Stream(
+        n=feed.n, t=r.t, p=p_out, components=feed.components, vapor_n=r.beta * feed.total * r.y
+    )
+    outlet, report = _energy_outlet(outlet, h_spec, pkg, "heater")
+    feasible = (feed.total > 0) | (jnp.asarray(duty) == 0)
+    report = report._replace(status=jnp.where(feasible, report.status, SolveStatus.INFEASIBLE))
+    require_converged(report, "heater: duty on an empty stream")
+    outlet = jax.tree_util.tree_map(lambda x: jnp.where(report.converged, x, jnp.nan), outlet)
+    return HeaterResult(outlet=outlet, duty=jnp.asarray(duty, dtype=float), report=report)
 
 
 def valve(
@@ -181,9 +250,16 @@ def valve(
     temperature.
     """
     pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
-    h_spec = pkg.mixture_enthalpy(feed.t, feed.p, feed.z)
-    r = pkg.flash_ph(p_out, h_spec, feed.z, t_init=t_init)
-    return Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out, dtype=float), components=feed.components)
+    h_spec = molar_enthalpy(feed, model=pkg)
+    r = pkg.flash_ph(p_out, h_spec, _composition(feed.n), t_init=t_init)
+    outlet = Stream(
+        n=feed.n,
+        t=r.t,
+        p=jnp.asarray(p_out, dtype=float),
+        components=feed.components,
+        vapor_n=r.beta * feed.total * r.y,
+    )
+    return _energy_outlet(outlet, h_spec, pkg, "valve")[0]
 
 
 def pump(
@@ -204,13 +280,20 @@ def pump(
     balance on ``H_out = H_in + W_actual``.
     """
     pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
-    v_l = pkg.volume(feed.t, feed.p, feed.z, phase="liquid")
+    v_l = pkg.volume(feed.t, feed.p, _composition(feed.n), phase="liquid")
     w_ideal = v_l * (jnp.asarray(p_out) - feed.p)
-    w_actual = w_ideal / jnp.asarray(efficiency)
-    h_out = pkg.mixture_enthalpy(feed.t, feed.p, feed.z) + w_actual
-    r = pkg.flash_ph(p_out, h_out, feed.z, t_init=t_init)
-    outlet = Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out, dtype=float), components=feed.components)
-    return PumpResult(outlet=outlet, work=w_actual * feed.total)
+    w_actual = w_ideal / _efficiency(efficiency, "pump")
+    h_out = molar_enthalpy(feed, model=pkg) + w_actual
+    r = pkg.flash_ph(p_out, h_out, _composition(feed.n), t_init=t_init)
+    outlet = Stream(
+        n=feed.n,
+        t=r.t,
+        p=jnp.asarray(p_out, dtype=float),
+        components=feed.components,
+        vapor_n=r.beta * feed.total * r.y,
+    )
+    outlet, report = _energy_outlet(outlet, h_out, pkg, "pump")
+    return PumpResult(outlet=outlet, work=w_actual * feed.total, report=report)
 
 
 def _compress(
@@ -226,18 +309,35 @@ def _compress(
 ) -> WorkResult:
     """Shared isentropic-machine model for `compressor` and `turbine`."""
     pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
-    z = feed.z
-    h_in = pkg.mixture_enthalpy(feed.t, feed.p, z)
-    s_in = pkg.mixture_entropy(feed.t, feed.p, z)
+    z = _composition(feed.n)
+    h_in = molar_enthalpy(feed, model=pkg)
+    s_in = molar_entropy(feed, model=pkg)
     iso = pkg.flash_ps(p_out, s_in, z, t_init=t_init)
-    h_out_ideal = pkg.mixture_enthalpy(iso.t, p_out, z)
+    iso_stream = Stream(
+        feed.n, iso.t, jnp.asarray(p_out), feed.components, iso.beta * feed.total * iso.y
+    )
+    entropy_error = (molar_entropy(iso_stream, model=pkg) - s_in) / jnp.maximum(jnp.abs(s_in), 10.0)
+    entropy_report = residual_report(jnp.atleast_1d(entropy_error), tol=1e-7)
+    require_converged(entropy_report, "isentropic machine", ("entropy",))
+    h_out_ideal = jnp.where(
+        entropy_report.converged, molar_enthalpy(iso_stream, model=pkg), jnp.nan
+    )
     w_ideal = h_out_ideal - h_in
-    eff = jnp.asarray(efficiency)
+    eff = _efficiency(efficiency, "turbine" if is_turbine else "compressor")
     w_actual = eff * w_ideal if is_turbine else w_ideal / eff
     h_out = h_in + w_actual
     r = pkg.flash_ph(p_out, h_out, z, t_init=t_init)
-    outlet = Stream(n=feed.n, t=r.t, p=jnp.asarray(p_out, dtype=float), components=feed.components)
-    return WorkResult(outlet=outlet, work=w_actual * feed.total, ideal_work=w_ideal * feed.total)
+    outlet = Stream(
+        n=feed.n,
+        t=r.t,
+        p=jnp.asarray(p_out, dtype=float),
+        components=feed.components,
+        vapor_n=r.beta * feed.total * r.y,
+    )
+    outlet, report = _energy_outlet(outlet, h_out, pkg, "turbine" if is_turbine else "compressor")
+    return WorkResult(
+        outlet=outlet, work=w_actual * feed.total, ideal_work=w_ideal * feed.total, report=report
+    )
 
 
 def compressor(
@@ -287,9 +387,7 @@ def splitter(feed: Stream, fractions: ArrayLike) -> tuple[Stream, ...]:
     """
     fr = jnp.asarray(fractions)
     k = fr.shape[0]
-    return tuple(
-        Stream(n=feed.n * fr[i], t=feed.t, p=feed.p, components=feed.components) for i in range(k)
-    )
+    return tuple(feed.scaled(fr[i]) for i in range(k))
 
 
 def component_separator(
@@ -358,17 +456,19 @@ def mix(
         return Stream(n=n_total, t=jnp.asarray(t, dtype=float), p=p_out, components=components)
     pkg = resolve_package(components, model, eos=eos, kij=kij)
     total = jnp.sum(n_total)
-    z = n_total / total
+    z = n_total / jnp.where(total > 0.0, total, 1.0)
+    z = jnp.where(total > 0.0, z, jnp.ones_like(z) / z.size)
     # An empty inlet (a zero-flow recycle guess on the first tear iteration)
     # contributes no enthalpy; guard it so its undefined composition cannot
     # poison the balance.
     h_in = jnp.sum(
         jnp.stack(
-            [
-                jnp.where(s.total > 0.0, s.total * pkg.mixture_enthalpy(s.t, s.p, s.z), 0.0)
-                for s in streams
-            ]
+            [jnp.where(s.total > 0.0, s.total * molar_enthalpy(s, model=pkg), 0.0) for s in streams]
         )
     )
-    r = pkg.flash_ph(p_out, h_in / total, z, t_init=t_init)
-    return Stream(n=n_total, t=r.t, p=p_out, components=components)
+    target = jnp.where(
+        total > 0, h_in / jnp.where(total > 0, total, 1.0), molar_enthalpy(streams[0], model=pkg)
+    )
+    r = pkg.flash_ph(p_out, target, z, t_init=t_init)
+    outlet = Stream(n=n_total, t=r.t, p=p_out, components=components, vapor_n=r.beta * total * r.y)
+    return _energy_outlet(outlet, target, pkg, "mixer")[0]

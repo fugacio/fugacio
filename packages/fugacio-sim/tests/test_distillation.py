@@ -65,6 +65,27 @@ def test_benzene_toluene_total_condenser_column() -> None:
     # Condenser removes heat, reboiler adds it.
     assert float(res.condenser_duty) < 0.0 < float(res.reboiler_duty)
 
+    warm = rigorous_column(
+        [ColumnFeed(feed, 6)],
+        12,
+        p=1.013e5,
+        specs=[reflux_ratio(2.5), distillate_rate(50.0)],
+        guess=res.warm_start(),
+    )
+    assert warm.report.converged and warm.report.iterations == 0
+    assert jnp.allclose(warm.distillate.n, res.distillate.n, atol=1e-8)
+    bad_guess = {**res.warm_start(), "t": res.t + 30.0}
+    failed = rigorous_column(
+        [ColumnFeed(feed, 6)],
+        12,
+        p=1.013e5,
+        specs=[reflux_ratio(2.5), distillate_rate(50.0)],
+        guess=bad_guess,
+        max_iter=0,
+        check=False,
+    )
+    assert not failed.report.converged
+
 
 def test_partial_condenser_with_purity_spec() -> None:
     feed = _bt_feed()

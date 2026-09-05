@@ -36,12 +36,14 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
+from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.thermo import component_arrays
 from fugacio.thermo.constants import P_REF, R
 from fugacio.thermo.eos import PR, CubicEOS
 from fugacio.thermo.ideal import cp_ig, enthalpy_ig
 from fugacio.thermo.implicit import bracketed_root, newton_system
+from fugacio.thermo.package import HelmholtzPackage
 from fugacio.thermo.reaction_equilibrium import equilibrium
 from fugacio.thermo.reactions import (
     CpCoeffs,
@@ -257,6 +259,7 @@ def stoichiometric_reactor(
     conversion: ArrayLike | None = None,
     t_out: ArrayLike | None = None,
     adiabatic: bool = False,
+    model: Model = None,
     t_lo: float = 200.0,
     t_hi: float = 6000.0,
 ) -> ReactorResult:
@@ -266,6 +269,11 @@ def stoichiometric_reactor(
     single-reaction fractional conversion of its limiting reactant). The outlet is
     ``n = n_feed + extent @ nu``; the energy balance is the same isothermal-duty /
     adiabatic-temperature treatment as `equilibrium_reactor`.
+
+    Pass ``model`` to use the flowsheet package's sensible and residual
+    enthalpies plus ideal-gas formation enthalpies. With no model, the historical
+    ideal-gas energy basis is retained. Reference-fluid packages have a different
+    energy reference and aren't supported for reaction thermochemistry.
 
     Raises:
         ValueError: if not exactly one of ``extent`` / ``conversion`` is given, or
@@ -294,6 +302,21 @@ def stoichiometric_reactor(
         extent_arr = jnp.atleast_1d(jnp.asarray(extent, dtype=float))
 
     n_out = n_feed + extent_arr @ nu
+    if model is not None:
+        pkg = resolve_package(comps, model)
+        if isinstance(pkg, HelmholtzPackage):
+            raise ValueError(
+                "reaction energy requires the ideal-gas reference of a mixture package"
+            )
+        h_in_real = feed.total * molar_enthalpy(feed, model=pkg) + n_feed @ hf
+        if adiabatic:
+            flow = jnp.sum(n_out)
+            target = (h_in_real - n_out @ hf) / flow
+            outlet = Stream.from_ph(comps, n_out / flow, flow, p, target, model=pkg)
+            return ReactorResult(outlet, jnp.asarray(0.0), extent_arr)
+        outlet = Stream(n_out, jnp.asarray(feed.t if t_out is None else t_out), p, comps)
+        duty_real = outlet.total * molar_enthalpy(outlet, model=pkg) + n_out @ hf - h_in_real
+        return ReactorResult(outlet, duty_real, extent_arr)
     h_in = _h_total(n_feed, t_in, hf, coeffs)
     if adiabatic:
         t_solved = _solve_adiabatic_t(n_out, h_in, hf, coeffs, t_lo=t_lo, t_hi=t_hi)

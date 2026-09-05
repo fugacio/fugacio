@@ -75,6 +75,7 @@ nav:
     - Rigorous distillation: distillation.md
     - Flowsheeting, tears & exchangers: flowsheeting.md
     - Equation-oriented flowsheeting: equation-oriented.md
+    - Reliability and diagnostics: reliability.md
     - Dynamics & process control: dynamics.md
     - Advanced control (MPC & estimation): advanced-control.md
     - Heat integration & pinch analysis: heat-integration.md
@@ -84,6 +85,7 @@ nav:
       - Package: api/thermo/index.md
       - Components & data: api/thermo/data.md
       - Equations of state: api/thermo/eos.md
+      - Solvers and diagnostics: api/thermo/solvers.md
       - PC-SAFT (molecular SAFT): api/thermo/saft.md
       - Phase equilibrium: api/thermo/equilibrium.md
       - Liquid-liquid & VLLE: api/thermo/lle.md

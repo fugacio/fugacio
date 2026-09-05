@@ -50,9 +50,19 @@ def flash_vle(feed: Stream, t: ArrayLike, p: ArrayLike, model: _VLEModel) -> tup
     total = feed.total
     t_arr = jnp.asarray(t)
     p_arr = jnp.asarray(p)
-    vapor = Stream(n=res.y * res.beta * total, t=t_arr, p=p_arr, components=feed.components)
+    vapor = Stream(
+        n=res.y * res.beta * total,
+        vapor_n=res.y * res.beta * total,
+        t=t_arr,
+        p=p_arr,
+        components=feed.components,
+    )
     liquid = Stream(
-        n=res.x * (1.0 - res.beta) * total, t=t_arr, p=p_arr, components=feed.components
+        n=res.x * (1.0 - res.beta) * total,
+        vapor_n=jnp.zeros_like(feed.n),
+        t=t_arr,
+        p=p_arr,
+        components=feed.components,
     )
     return vapor, liquid
 
@@ -91,8 +101,12 @@ def decanter(
     i_first = res.x_i[0] >= res.x_ii[0]
     n_i = jnp.where(i_first, n_a, n_b)
     n_ii = jnp.where(i_first, n_b, n_a)
-    liquid_i = Stream(n=n_i, t=t_arr, p=feed.p, components=feed.components)
-    liquid_ii = Stream(n=n_ii, t=t_arr, p=feed.p, components=feed.components)
+    liquid_i = Stream(
+        n=n_i, vapor_n=jnp.zeros_like(n_i), t=t_arr, p=feed.p, components=feed.components
+    )
+    liquid_ii = Stream(
+        n=n_ii, vapor_n=jnp.zeros_like(n_ii), t=t_arr, p=feed.p, components=feed.components
+    )
     return liquid_i, liquid_ii
 
 
@@ -135,10 +149,26 @@ def three_phase_flash(
     total = feed.total
     t_arr = jnp.asarray(t)
     p_arr = jnp.asarray(p)
-    vapor = Stream(n=res.y * res.beta_v * total, t=t_arr, p=p_arr, components=feed.components)
-    liquid_i = Stream(n=res.x_i * res.beta_l1 * total, t=t_arr, p=p_arr, components=feed.components)
+    vapor = Stream(
+        n=res.y * res.beta_v * total,
+        vapor_n=res.y * res.beta_v * total,
+        t=t_arr,
+        p=p_arr,
+        components=feed.components,
+    )
+    liquid_i = Stream(
+        n=res.x_i * res.beta_l1 * total,
+        vapor_n=jnp.zeros_like(feed.n),
+        t=t_arr,
+        p=p_arr,
+        components=feed.components,
+    )
     liquid_ii = Stream(
-        n=res.x_ii * res.beta_l2 * total, t=t_arr, p=p_arr, components=feed.components
+        n=res.x_ii * res.beta_l2 * total,
+        vapor_n=jnp.zeros_like(feed.n),
+        t=t_arr,
+        p=p_arr,
+        components=feed.components,
     )
     return vapor, liquid_i, liquid_ii
 

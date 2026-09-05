@@ -35,13 +35,12 @@ Algorithms
 Differentiation
 ---------------
 `argmin` returns just the optimal decision variable and attaches an
-implicit-function-theorem ``custom_vjp``: for an unconstrained minimum the
+implicit-function-theorem ``custom_jvp``: for an unconstrained minimum the
 stationarity condition ``grad_x f(x*, theta) = 0`` is differentiated; with box
-bounds the active variables are held fixed and the reduced Hessian system is
-solved on the free set; with equality constraints the full KKT system is
-differentiated. The forward solve (however many iterations it took) never appears
-in the backward pass, so a gradient of an optimized design with respect to a
-price, a feed spec, or a model parameter costs a single linear solve.
+bounds and other constraints, the full KKT system includes active constraints
+and identity equations for inactive multipliers. Both forward and reverse
+sensitivities solve the linearized optimality equations. The primal iteration
+history doesn't enter those derivatives.
 """
 
 from __future__ import annotations
@@ -53,6 +52,9 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 from jax.flatten_util import ravel_pytree
+
+from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged
+from fugacio.thermo.implicit import implicit_solution
 
 ArrayLike = Array | float
 
@@ -87,6 +89,24 @@ class OptimizeResult(NamedTuple):
     n_iter: Array
     converged: Array
     constraint_violation: Array
+
+    @property
+    def report(self) -> SolveReport:
+        """Shared report of optimality and feasibility, with finite-value checks."""
+        residuals = jnp.array([self.grad_norm, self.constraint_violation])
+        finite = jnp.all(jnp.isfinite(residuals)) & jnp.isfinite(self.fun)
+        status = jnp.where(
+            finite,
+            jnp.where(self.converged, SolveStatus.CONVERGED, SolveStatus.MAX_ITERATIONS),
+            SolveStatus.NONFINITE,
+        )
+        return SolveReport(
+            status, self.n_iter, jnp.max(residuals), jnp.asarray(0.0), jnp.argmax(residuals)
+        )
+
+    def check(self) -> None:
+        """Raise when optimization didn't reach a finite feasible stationary point."""
+        require_converged(self.report, "optimization", ("optimality", "feasibility"))
 
 
 # --------------------------------------------------------------------------- #
@@ -386,6 +406,23 @@ def _auglag(
             x_new, _, _ = _bfgs(la, x_start, tol=tol, max_iter=inner_iter)
         return x_new
 
+    def optimality(x: Array, le: Array, li: Array) -> Array:
+        def lagrangian(xx: Array) -> Array:
+            value = f(xx)
+            if eq is not None:
+                value = value + jnp.vdot(le, eq(xx))
+            if ineq is not None:
+                value = value + jnp.vdot(li, ineq(xx))
+            return value
+
+        gradient = jax.grad(lagrangian)(x)
+        if has_bounds:
+            gradient = x - jnp.clip(x - gradient, lower, upper)
+        norm = jnp.max(jnp.abs(gradient))
+        if ineq is not None:
+            norm = jnp.maximum(norm, jnp.max(jnp.abs(li * ineq(x)), initial=0.0))
+        return norm
+
     def cond(carry: tuple[Array, Array, Array, Array, Array, Array]) -> Array:
         _x, _le, _li, _mu, i, done = carry
         return (~done) & (i < max_iter)
@@ -399,8 +436,9 @@ def _auglag(
         lam_eq_new = lam_eq + mu * eq(x_new) if eq is not None else lam_eq
         lam_in_new = jnp.maximum(0.0, lam_in + mu * ineq(x_new)) if ineq is not None else lam_in
         mu_new = jnp.minimum(mu * penalty_growth, 1e12)
-        step = jnp.max(jnp.abs(x_new - x))
-        done = (violation(x_new) <= tol) & (step <= jnp.sqrt(tol))
+        done = (violation(x_new) <= tol) & (
+            optimality(x_new, lam_eq_new, lam_in_new) <= jnp.sqrt(tol)
+        )
         return x_new, lam_eq_new, lam_in_new, mu_new, i + 1, done
 
     init = (
@@ -411,8 +449,8 @@ def _auglag(
         jnp.asarray(0),
         jnp.asarray(False),
     )
-    x_star, _, _, _, n_outer, done = jax.lax.while_loop(cond, body, init)
-    grad_norm = jnp.max(jnp.abs(jax.grad(f)(x_star)))
+    x_star, le, li, _, n_outer, done = jax.lax.while_loop(cond, body, init)
+    grad_norm = optimality(x_star, le, li)
     return x_star, n_outer, grad_norm, violation(x_star), done
 
 
@@ -634,105 +672,78 @@ def argmin(
 
     eq_flat = (lambda x, th: eq_constraints(unravel(x), th)) if eq_constraints else None
     ineq_flat = (lambda x, th: ineq_constraints(unravel(x), th)) if ineq_constraints else None
-    free = jnp.ones((n,), dtype=bool) if bounds is None else None
-
-    @jax.custom_vjp
-    def solve(th: Any) -> Array:
-        x_star, *_ = _solve_flat(
-            lambda x: f_flat(x, th),
-            flat0,
-            method=method,
-            lower=lower,
-            upper=upper,
-            eq=(lambda x: eq_flat(x, th)) if eq_flat else None,
-            ineq=(lambda x: ineq_flat(x, th)) if ineq_flat else None,
-            tol=tol,
-            max_iter=max_iter,
-            inner_iter=inner_iter,
-        )
-        return x_star
-
-    def solve_fwd(th: Any) -> tuple[Array, tuple[Array, Any]]:
-        x_star = solve(th)
-        return x_star, (x_star, th)
-
-    def solve_bwd(res: tuple[Array, Any], x_bar: Array) -> tuple[Any]:
-        x_star, th = res
-        return (_argmin_adjoint(f_flat, eq_flat, ineq_flat, lower, upper, free, x_star, th, x_bar),)
-
-    solve.defvjp(solve_fwd, solve_bwd)
-    return unravel(solve(theta))
-
-
-def _free_mask(x: Array, lower: Array | None, upper: Array | None) -> Array:
-    """Boolean mask of *free* (inactive-bound) variables at the solution ``x``."""
-    n = x.shape[0]
-    if lower is None or upper is None:
-        return jnp.ones((n,), dtype=bool)
-    at_lo = jnp.abs(x - lower) <= 1e-6 * (1.0 + jnp.abs(lower))
-    at_hi = jnp.abs(x - upper) <= 1e-6 * (1.0 + jnp.abs(upper))
-    return ~(at_lo | at_hi)
-
-
-def _argmin_adjoint(
-    f_flat: Callable[[Array, Any], Array],
-    eq_flat: Callable[[Array, Any], Array] | None,
-    ineq_flat: Callable[[Array, Any], Array] | None,
-    lower: Array | None,
-    upper: Array | None,
-    free_all: Array | None,
-    x_star: Array,
-    theta: Any,
-    x_bar: Array,
-) -> Any:
-    """Implicit-function-theorem cotangent ``theta_bar`` of the optimum ``x*(theta)``.
-
-    Solves the adjoint of the optimality conditions in flat space and pushes it
-    back to the parameter pytree. The forward iteration never appears here.
-    """
-    n = x_star.shape[0]
-
-    def grad_x(x: Array, th: Any) -> Array:
-        return jax.grad(lambda xx: f_flat(xx, th))(x)
+    # Run the primal on detached parameters. Only the optimality system below
+    # defines the sensitivity, including forward-mode and higher derivatives.
+    detached = jax.lax.stop_gradient(theta)
+    x_star, n_iter, norm, violation, converged = _solve_flat(
+        lambda x: f_flat(x, detached),
+        jax.lax.stop_gradient(flat0),
+        method=method,
+        lower=lower,
+        upper=upper,
+        eq=(lambda x: eq_flat(x, detached)) if eq_flat else None,
+        ineq=(lambda x: ineq_flat(x, detached)) if ineq_flat else None,
+        tol=tol,
+        max_iter=max_iter,
+        inner_iter=inner_iter,
+    )
+    primal = OptimizeResult(
+        unravel(x_star), f_flat(x_star, detached), norm, n_iter, converged, violation
+    )
+    if not any(
+        isinstance(leaf, jax.core.Tracer) for leaf in jax.tree_util.tree_leaves((theta, x0))
+    ):
+        primal.check()
+    x_star = jax.lax.stop_gradient(x_star)
+    active_parts = []
+    if eq_flat is not None:
+        active_parts.append(jnp.ones_like(eq_flat(x_star, detached), dtype=bool))
+    if ineq_flat is not None:
+        active_parts.append(ineq_flat(x_star, detached) >= -1e-6)
+    if lower is not None and upper is not None:
+        at_lower = jnp.isfinite(lower) & (jnp.abs(x_star - lower) <= 1e-6 * (1 + jnp.abs(lower)))
+        at_upper = jnp.isfinite(upper) & (jnp.abs(x_star - upper) <= 1e-6 * (1 + jnp.abs(upper)))
+        # A fixed variable contributes one equation, not two duplicate bounds.
+        active_parts.extend([at_lower, at_upper & ~at_lower])
+    active = jax.lax.stop_gradient(
+        jnp.concatenate(active_parts) if active_parts else jnp.zeros((0,), dtype=bool)
+    )
 
     def constraints(x: Array, th: Any) -> Array:
         parts = []
         if eq_flat is not None:
             parts.append(eq_flat(x, th))
         if ineq_flat is not None:
-            g = ineq_flat(x, th)
-            active = jax.lax.stop_gradient(g > -1e-6)
-            parts.append(jnp.where(active, g, 0.0))
-        if not parts:
-            return jnp.zeros((0,))
-        return jnp.concatenate(parts)
+            parts.append(ineq_flat(x, th))
+        if lower is not None and upper is not None:
+            parts.extend(
+                [
+                    jnp.where(jnp.isfinite(lower), lower, 0.0) - x,
+                    x - jnp.where(jnp.isfinite(upper), upper, 0.0),
+                ]
+            )
+        raw = jnp.concatenate(parts) if parts else jnp.zeros((0,))
+        return jnp.where(active, raw, 0.0)
 
-    m = constraints(x_star, theta).shape[0]
-    free = free_all if free_all is not None else _free_mask(x_star, lower, upper)
-    hxx = jax.hessian(lambda x: f_flat(x, theta))(x_star)
+    jac_c = jax.jacrev(lambda x: constraints(x, detached))(x_star)
+    gradient = jax.grad(lambda x: f_flat(x, detached))(x_star)
+    lam = jnp.linalg.lstsq(jac_c.T, -gradient)[0] if active.size else jnp.zeros((0,))
+    initial = jax.lax.stop_gradient(jnp.concatenate([x_star, lam]))
 
-    if m == 0:
-        proj = jnp.diag(free.astype(x_star.dtype))
-        h_eff = proj @ hxx @ proj + (jnp.eye(n) - proj)
-        w = jnp.linalg.solve(h_eff.T, x_bar * free)
-        _, vjp_theta = jax.vjp(lambda th: grad_x(x_star, th), theta)
-        return vjp_theta(-w)[0]
+    def kkt_residual(u: Array, th: Any) -> Array:
+        x, multipliers = u[:n], u[n:]
+        stationarity = jax.grad(
+            lambda xx: f_flat(xx, th) + jnp.vdot(multipliers, constraints(xx, th))
+        )(x)
+        # Inactive multiplier rows get an identity equation. Leaving them zero
+        # makes the full KKT matrix singular even at a regular optimum.
+        feasibility = constraints(x, th) + jnp.where(active, 0.0, multipliers)
+        return jnp.concatenate([stationarity, feasibility])
 
-    jac_c = jax.jacobian(lambda x: constraints(x, theta))(x_star)
-    lam = jnp.linalg.lstsq(jac_c.T, -grad_x(x_star, theta))[0]
-    # KKT (1,1) block is the Hessian of the Lagrangian (exact for nonlinear c).
-    hxx_l = jax.hessian(lambda x: f_flat(x, theta) + jnp.vdot(lam, constraints(x, theta)))(x_star)
-    kkt = jnp.block([[hxx_l, jac_c.T], [jac_c, jnp.zeros((m, m))]])
-    rhs = jnp.concatenate([x_bar, jnp.zeros((m,))])
-    y = jnp.linalg.solve(kkt.T, rhs)
-
-    def kkt_residual(th: Any) -> Array:
-        _, vjp_c = jax.vjp(lambda xx: constraints(xx, th), x_star)
-        gx = grad_x(x_star, th) + vjp_c(lam)[0]
-        return jnp.concatenate([gx, constraints(x_star, th)])
-
-    _, vjp_theta = jax.vjp(kkt_residual, theta)
-    return vjp_theta(-y)[0]
+    solution = implicit_solution(
+        kkt_residual, initial, theta, jax.lax.stop_gradient(primal.report.converged)
+    )
+    return unravel(solution[:n])
 
 
 def least_squares(

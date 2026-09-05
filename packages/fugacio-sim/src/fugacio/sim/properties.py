@@ -6,10 +6,10 @@ enthalpy and entropy, not just its composition. This module resolves a stream's
 expect (caching that lookup, since names never change during a solve) and
 exposes the resulting molar and total-flow properties.
 
-Enthalpy and entropy are two-phase aware: they run the equilibrium flash at the
-stream's ``(T, P)`` and blend the phase properties, so a subcooled liquid, a
-superheated vapour, and a flashing two-phase stream are all handled by the same
-call. Everything stays differentiable with respect to the stream's flows,
+Enthalpy and entropy use the stream's resolved phase inventory when present.
+Otherwise, they run the equilibrium flash at its ``(T, P)`` and blend the phase
+properties. The same calls handle subcooled liquid, superheated vapor, and
+partially vaporized streams. Properties are differentiable with respect to the stream's flows,
 temperature, and pressure (the component constants are not differentiated, which
 is exactly right: they are reference data, not decision variables).
 
@@ -36,9 +36,11 @@ correlations of `fugacio.sim.economics`.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from functools import cache
+from dataclasses import replace
+from functools import cache, partial
 from typing import Any
 
+import jax
 import jax.numpy as jnp
 from jax import Array
 
@@ -102,7 +104,10 @@ def default_package(
 ) -> CubicPackage:
     """The cubic-EOS package a stream falls back to when no ``model`` is given."""
     tc, pc, omega, _, cp = _resolve(tuple(components))
-    return cubic_package(tc, pc, omega, cp, kij=kij, eos=eos)
+    return replace(
+        cubic_package(tc, pc, omega, cp, kij=kij, eos=eos),
+        component_names=tuple(get(c).name for c in components),
+    )
 
 
 def as_package(model: Any, components: Sequence[str]) -> PropertyPackage:
@@ -120,22 +125,31 @@ def as_package(model: Any, components: Sequence[str]) -> PropertyPackage:
         return model
     _, _, _, _, cp = _resolve(tuple(components))
     if isinstance(model, EOSModel):
-        return cubic_package(model.tc, model.pc, model.omega, cp, kij=model.kij, eos=model.eos)
+        return replace(
+            cubic_package(model.tc, model.pc, model.omega, cp, kij=model.kij, eos=model.eos),
+            component_names=tuple(get(c).name for c in components),
+        )
     if isinstance(model, GammaPhiModel):
-        return gamma_phi_package(
-            model.activity,
-            model.tc,
-            model.pc,
-            model.omega,
-            cp,
-            kij=model.kij,
-            eos=model.eos,
-            vapor=model.vapor,
-            poynting=model.poynting,
-            phi_saturation=model.phi_saturation,
+        return replace(
+            gamma_phi_package(
+                model.activity,
+                model.tc,
+                model.pc,
+                model.omega,
+                cp,
+                kij=model.kij,
+                eos=model.eos,
+                vapor=model.vapor,
+                poynting=model.poynting,
+                phi_saturation=model.phi_saturation,
+            ),
+            component_names=tuple(get(c).name for c in components),
         )
     if isinstance(model, SAFTModel):
-        return saft_package(model.params, model.tc, model.pc, model.omega, cp)
+        return replace(
+            saft_package(model.params, model.tc, model.pc, model.omega, cp),
+            component_names=tuple(get(c).name for c in components),
+        )
     raise TypeError(
         f"unsupported thermodynamic model {type(model).__name__}; pass a PropertyPackage "
         "(CubicPackage, GammaPhiPackage, SAFTPackage, HelmholtzPackage) or an "
@@ -168,7 +182,49 @@ def resolve_package(
             f"property package describes {pkg.n_components} components but the stream has "
             f"{len(components)} ({', '.join(components)})"
         )
+    names = getattr(pkg, "component_names", ())
+    if names and tuple(get(c).name for c in components) != names:
+        raise ValueError(
+            f"property package component order {names} does not match stream {tuple(components)}; "
+            "reorder the stream or rebuild the package"
+        )
     return pkg
+
+
+def _composition(n: Array) -> Array:
+    """Finite trial composition even for an absent or empty phase."""
+    total = jnp.sum(n)
+    return jnp.where(total > 0.0, n / jnp.where(total > 0, total, 1.0), jnp.ones_like(n) / n.size)
+
+
+@partial(jax.jit, static_argnames=("prop",))
+def _stream_property(stream: Stream, pkg: PropertyPackage, prop: str) -> Array:
+    """Evaluate a preserved phase split or resolve an unspecified PT state."""
+    z = _composition(stream.n)
+
+    def resolved(_: None) -> Array:
+        nv = jnp.asarray(stream.vapor_n)
+        nl = stream.n - nv
+        nt = jnp.maximum(stream.total, 1e-300)
+        beta = jnp.sum(nv) / nt
+        fn = getattr(pkg, prop)
+
+        def liquid(_: None) -> Array:
+            return fn(stream.t, stream.p, _composition(nl), phase="liquid")
+
+        def vapor(_: None) -> Array:
+            return fn(stream.t, stream.p, _composition(nv), phase="vapor")
+
+        def both(_: None) -> Array:
+            return (1.0 - beta) * liquid(None) + beta * vapor(None)
+
+        index = jnp.where(beta <= 0.0, 0, jnp.where(beta >= 1.0, 2, 1)).astype(jnp.int32)
+        return jax.lax.switch(index, [liquid, both, vapor], None)
+
+    def unspecified(_: None) -> Array:
+        return getattr(pkg, "mixture_" + prop)(stream.t, stream.p, z)
+
+    return jax.lax.cond(stream.phase_known, resolved, unspecified, None)
 
 
 def molar_enthalpy(
@@ -176,7 +232,7 @@ def molar_enthalpy(
 ) -> Array:
     """Molar enthalpy of the stream (J/mol), relative to the package's reference."""
     pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return pkg.mixture_enthalpy(stream.t, stream.p, stream.z)
+    return _stream_property(stream, pkg, "enthalpy")
 
 
 def molar_entropy(
@@ -184,7 +240,7 @@ def molar_entropy(
 ) -> Array:
     """Molar entropy of the stream (J/mol/K), relative to the package's reference."""
     pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return pkg.mixture_entropy(stream.t, stream.p, stream.z)
+    return _stream_property(stream, pkg, "entropy")
 
 
 def molar_volume(
@@ -192,7 +248,7 @@ def molar_volume(
 ) -> Array:
     """Two-phase-aware molar volume of the stream (m^3/mol)."""
     pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return pkg.mixture_volume(stream.t, stream.p, stream.z)
+    return _stream_property(stream, pkg, "volume")
 
 
 def vapor_fraction(
@@ -200,7 +256,12 @@ def vapor_fraction(
 ) -> Array:
     """Equilibrium molar vapour fraction of the stream at its ``(T, P)``."""
     pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return pkg.flash_pt(stream.t, stream.p, stream.z).beta
+    return jax.lax.cond(
+        stream.phase_known,
+        lambda _: jnp.sum(jnp.asarray(stream.vapor_n)) / jnp.maximum(stream.total, 1e-300),
+        lambda _: pkg.flash_pt(stream.t, stream.p, _composition(stream.n)).beta,
+        None,
+    )
 
 
 def enthalpy_flow(
@@ -227,12 +288,13 @@ def volumetric_flow(
 def molar_mass(stream: Stream) -> Array:
     """Mole-fraction-averaged molar mass of the stream (g/mol)."""
     _, _, _, mw, _ = _resolve(stream.components)
-    return jnp.sum(stream.z * mw)
+    return jnp.sum(_composition(stream.n) * mw)
 
 
 def mass_flow(stream: Stream) -> Array:
     """Total mass flow of the stream (kg/s)."""
-    return stream.total * molar_mass(stream) * 1.0e-3
+    _, _, _, mw, _ = _resolve(stream.components)
+    return jnp.sum(stream.n * mw) * 1.0e-3
 
 
 # --------------------------------------------------------------------------- #
@@ -246,12 +308,12 @@ def _names(stream: Stream) -> list[str]:
 
 def liquid_density(stream: Stream) -> Array:
     """Saturated-liquid mass density at the stream's ``T`` and composition (kg/m^3)."""
-    return _liquid_density(_names(stream), stream.t, stream.z)
+    return _liquid_density(_names(stream), stream.t, _composition(stream.n))
 
 
 def vapor_density(stream: Stream, *, eos: CubicEOS = PR) -> Array:
     """Vapour mass density from the EOS at the stream's ``(T, P)`` (kg/m^3)."""
-    return _vapor_density(_names(stream), stream.t, stream.p, stream.z, eos=eos)
+    return _vapor_density(_names(stream), stream.t, stream.p, _composition(stream.n), eos=eos)
 
 
 def liquid_volumetric_flow(stream: Stream) -> Array:
@@ -266,27 +328,27 @@ def vapor_volumetric_flow(stream: Stream, *, eos: CubicEOS = PR) -> Array:
 
 def liquid_viscosity(stream: Stream) -> Array:
     """Liquid-mixture viscosity at the stream's ``T`` (Pa*s), Grunberg-Nissan."""
-    return _liquid_mu(_names(stream), stream.t, stream.z)
+    return _liquid_mu(_names(stream), stream.t, _composition(stream.n))
 
 
 def vapor_viscosity(stream: Stream) -> Array:
     """Dilute-gas mixture viscosity at the stream's ``T`` (Pa*s), Wilke."""
-    return _gas_mu(_names(stream), stream.t, stream.z)
+    return _gas_mu(_names(stream), stream.t, _composition(stream.n))
 
 
 def liquid_thermal_conductivity(stream: Stream) -> Array:
     """Liquid-mixture thermal conductivity at the stream's ``T`` (W/m/K), DIPPR9H."""
-    return _liquid_k(_names(stream), stream.t, stream.z)
+    return _liquid_k(_names(stream), stream.t, _composition(stream.n))
 
 
 def vapor_thermal_conductivity(stream: Stream) -> Array:
     """Gas-mixture thermal conductivity at the stream's ``T`` (W/m/K), Wassiljewa."""
-    return _gas_k(_names(stream), stream.t, stream.z)
+    return _gas_k(_names(stream), stream.t, _composition(stream.n))
 
 
 def surface_tension(stream: Stream) -> Array:
     """Liquid-mixture surface tension at the stream's ``T`` (N/m)."""
-    return _surface_tension(_names(stream), stream.t, stream.z)
+    return _surface_tension(_names(stream), stream.t, _composition(stream.n))
 
 
 def column_diameter_for(

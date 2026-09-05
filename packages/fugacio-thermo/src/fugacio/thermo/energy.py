@@ -113,11 +113,11 @@ def mixture_entropy(
     return (1.0 - r.beta) * s_l + r.beta * s_v
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 2, 3, 4, 5, 6))
+@partial(jax.custom_jvp, nondiff_argnums=(0, 3, 4, 5, 6))
 def _implicit_temperature(
     residual: Callable[[Array, Any], Array],
     params: Any,
-    t_init: float,
+    t_init: ArrayLike,
     t_min: float,
     t_max: float,
     tol: float,
@@ -141,7 +141,7 @@ def _implicit_temperature(
     The converged temperature is differentiated by the implicit function theorem
     in the ``custom_jvp`` rule below: ``dT* = -(dr/dparams . dparams) / (dr/dT)``,
     using only *first-order* sensitivities of the residual at the solution (so the
-    flash's own ``custom_vjp`` handles them and nothing differentiates through the
+    flash's own implicit rules handle them and nothing differentiates through the
     iteration itself).
     """
 
@@ -179,16 +179,15 @@ def _implicit_temperature(
 @_implicit_temperature.defjvp
 def _implicit_temperature_jvp(
     residual: Callable[[Array, Any], Array],
-    t_init: float,
     t_min: float,
     t_max: float,
     tol: float,
     max_iter: int,
-    primals: tuple[Any],
-    tangents: tuple[Any],
+    primals: tuple[Any, ArrayLike],
+    tangents: tuple[Any, Any],
 ) -> tuple[Array, Array]:
-    (params,) = primals
-    (params_dot,) = tangents
+    params, t_init = primals
+    params_dot, _ = tangents
     t_star = _implicit_temperature(residual, params, t_init, t_min, t_max, tol, max_iter)
     r_t = jax.grad(lambda tt: residual(tt, params))(t_star)
     grad_params = jax.grad(lambda pp: residual(t_star, pp))(params)
@@ -196,7 +195,9 @@ def _implicit_temperature_jvp(
         jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
     )
     r_dot = sum(leaves, jnp.asarray(0.0))
-    t_dot = -r_dot / r_t
+    error = jnp.abs(residual(t_star, params))
+    valid = jnp.isfinite(error) & (error <= jnp.maximum(4 * tol * jnp.abs(r_t), 1e-6))
+    t_dot = (-r_dot / r_t) * jnp.where(valid, 1.0, jnp.nan)
     return t_star, t_dot
 
 
@@ -225,18 +226,18 @@ def flash_ph(
     temperature is bracketed to ``[t_min, t_max]`` (raise ``t_max`` for very hot
     streams, but keep it where the EOS evaluates cleanly).
     """
-    z = jnp.asarray(z)
-    n = z.shape[0]
-    kij_arr = jnp.zeros((n, n)) if kij is None else jnp.asarray(kij)
-    params = (jnp.asarray(p, dtype=float), jnp.asarray(h_spec, dtype=float), z, tc, pc, omega)
+    from fugacio.thermo.package import CubicPackage
 
-    def residual(t: Array, params: Any) -> Array:
-        p_, h_, z_, tc_, pc_, omega_ = params
-        return mixture_enthalpy(eos, t, p_, z_, tc_, pc_, omega_, cp, kij=kij_arr) - h_
-
-    t_star = _implicit_temperature(residual, params, float(t_init), t_min, t_max, tol, max_iter)
-    r = flash_pt(eos, t_star, p, z, tc, pc, omega, kij=kij_arr)
-    return EnergyFlashResult(t=t_star, beta=r.beta, x=r.x, y=r.y, k=r.k)
+    return CubicPackage(tc, pc, omega, cp, kij=kij, eos=eos).flash_ph(
+        p,
+        h_spec,
+        jnp.asarray(z),
+        t_init=t_init,
+        t_min=t_min,
+        t_max=t_max,
+        tol=tol,
+        max_iter=max_iter,
+    )
 
 
 def flash_ps(
@@ -262,15 +263,15 @@ def flash_ps(
     entropy and an outlet pressure, ``flash_ps`` returns the ideal outlet state.
     The temperature is bracketed to ``[t_min, t_max]``.
     """
-    z = jnp.asarray(z)
-    n = z.shape[0]
-    kij_arr = jnp.zeros((n, n)) if kij is None else jnp.asarray(kij)
-    params = (jnp.asarray(p, dtype=float), jnp.asarray(s_spec, dtype=float), z, tc, pc, omega)
+    from fugacio.thermo.package import CubicPackage
 
-    def residual(t: Array, params: Any) -> Array:
-        p_, s_, z_, tc_, pc_, omega_ = params
-        return mixture_entropy(eos, t, p_, z_, tc_, pc_, omega_, cp, kij=kij_arr) - s_
-
-    t_star = _implicit_temperature(residual, params, float(t_init), t_min, t_max, tol, max_iter)
-    r = flash_pt(eos, t_star, p, z, tc, pc, omega, kij=kij_arr)
-    return EnergyFlashResult(t=t_star, beta=r.beta, x=r.x, y=r.y, k=r.k)
+    return CubicPackage(tc, pc, omega, cp, kij=kij, eos=eos).flash_ps(
+        p,
+        s_spec,
+        jnp.asarray(z),
+        t_init=t_init,
+        t_min=t_min,
+        t_max=t_max,
+        tol=tol,
+        max_iter=max_iter,
+    )

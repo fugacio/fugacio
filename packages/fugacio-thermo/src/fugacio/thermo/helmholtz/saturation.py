@@ -73,7 +73,11 @@ def _coexistence_residual(x: Array, params: tuple[HelmholtzFluid, Array]) -> Arr
     fluid, t = params
     rho_liquid = jnp.exp(x[0]) * fluid.rho_reducing
     rho_vapor = jnp.exp(x[1]) * fluid.rho_reducing
-    p_scale = psat_ancillary(fluid, t)
+    # Dense-liquid pressure subtracts large Helmholtz terms. Normalizing its
+    # roundoff by a small vapor pressure demands sub-nanopascal accuracy at
+    # ambient water conditions. A 1 MPa floor permits 1 microPa at tol=1e-12
+    # while retaining a strict chemical-potential residual.
+    p_scale = jnp.maximum(psat_ancillary(fluid, t), 1e6)
     r_mech = (pressure(fluid, rho_liquid, t) - pressure(fluid, rho_vapor, t)) / p_scale
     r_chem = (gibbs_energy(fluid, rho_liquid, t) - gibbs_energy(fluid, rho_vapor, t)) / (
         fluid.gas_constant * t
@@ -126,7 +130,7 @@ def _boiling_residual(x: Array, params: tuple[HelmholtzFluid, Array]) -> Array:
     rho_liquid = jnp.exp(x[0]) * fluid.rho_reducing
     rho_vapor = jnp.exp(x[1]) * fluid.rho_reducing
     t = x[2] * fluid.t_critical
-    r_liquid = pressure(fluid, rho_liquid, t) / p - 1.0
+    r_liquid = (pressure(fluid, rho_liquid, t) - p) / jnp.maximum(p, 1e6)
     r_vapor = pressure(fluid, rho_vapor, t) / p - 1.0
     r_chem = (gibbs_energy(fluid, rho_liquid, t) - gibbs_energy(fluid, rho_vapor, t)) / (
         fluid.gas_constant * t

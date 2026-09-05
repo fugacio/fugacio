@@ -43,6 +43,11 @@ All three distributions share the `fugacio`
 [PEP 420 namespace](https://peps.python.org/pep-0420/), so they publish to PyPI
 independently yet import under one roof.
 
+Converged roots, recycles, columns, and equation-oriented solves expose numerical
+reports, and streams preserve resolved phase inventories through energy-balanced
+units. See [reliability and diagnostics](docs/reliability.md) for checked solves,
+component ordering, warm starts, continuation, and derivative limits.
+
 ## Quickstart
 
 ```bash
@@ -79,7 +84,7 @@ flow through the *converged* flowsheet, not the iteration:
 from fugacio.sim import mix, splitter, tear_solve
 
 def one_pass(recycle, theta):                      # mixer -> flash -> recycle split
-    mixed = mix([feed, recycle], t=320.0)          # adiabatic, energy-balanced
+    mixed = mix([feed, recycle], t=320.0)          # fixed outlet temperature
     _vapor, liquid = flash_drum(mixed, theta["T"], theta["P"])
     recycled, _purge = splitter(liquid, jnp.array([theta["r"], 1.0 - theta["r"]]))
     return recycled

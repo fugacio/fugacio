@@ -123,6 +123,8 @@ jobs:
               flowsheeting=(
                 packages/fugacio-sim/tests/test_distillation.py
                 packages/fugacio-sim/tests/test_eo.py
+                packages/fugacio-sim/tests/test_eo_reliability.py
+                packages/fugacio-sim/tests/test_utility_reliability.py
                 packages/fugacio-sim/tests/test_flowsheet.py
                 packages/fugacio-sim/tests/test_heat_exchanger.py
                 packages/fugacio-sim/tests/test_plants.py
@@ -134,12 +136,21 @@ jobs:
               ;;
             flowsheeting)
               run packages/fugacio-sim/tests/test_eo.py
+              run packages/fugacio-sim/tests/test_eo_reliability.py
               run packages/fugacio-sim/tests/test_distillation.py
               run packages/fugacio-sim/tests/test_heat_exchanger.py \
                   packages/fugacio-sim/tests/test_flowsheet.py
               ;;
             plants)
-              run packages/fugacio-sim/tests/test_plants.py
+              # Each plant builds a different nested solver graph. Release its
+              # compiled executables before compiling the next plant.
+              for plant in \
+                test_hda_lite_plant_closes_and_meets_specs \
+                test_depropanizer_with_economiser_loop \
+                test_ethanol_water_train_recovers_bottoms_heat; do
+                run "packages/fugacio-sim/tests/test_plants.py::$plant"
+              done
+              run packages/fugacio-sim/tests/test_utility_reliability.py
               run packages/fugacio-copilot/tests/test_steam_tools.py
               run packages/fugacio-copilot/tests \
                 --ignore=packages/fugacio-copilot/tests/test_steam_tools.py
