@@ -67,7 +67,10 @@ def continuation_solve(
     """
     if not 0 < min_step <= initial_step <= 1 or max_steps < 1:
         raise ValueError("require 0 < min_step <= initial_step <= 1 and max_steps >= 1")
-    if jax.tree_util.tree_structure(start) != jax.tree_util.tree_structure(target):
+    # Some jaxlib wheels don't expose PyTreeDef's comparison types to mypy.
+    start_structure: object = jax.tree_util.tree_structure(start)
+    target_structure: object = jax.tree_util.tree_structure(target)
+    if start_structure != target_structure:
         raise ValueError("start and target must have matching parameter trees")
     if any(isinstance(x, jax.core.Tracer) for x in jax.tree_util.tree_leaves((start, target))):
         raise ValueError("continuation runs on the host; differentiate the endpoint solve")

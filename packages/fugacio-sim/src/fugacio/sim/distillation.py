@@ -501,11 +501,12 @@ def _bubble_newton(pkg: PropertyPackage, t: Array, p: Array, x: Array, steps: in
         def g(tt: Array) -> Array:
             return jnp.log(jnp.sum(_k_estimate(pkg, tt, pj, xj) * xj))
 
-        for _ in range(steps):
+        def update(_: int, tj: Array) -> Array:
             val, slope = jax.value_and_grad(g)(tj)
             step = -val / jnp.where(jnp.abs(slope) > 1e-12, slope, 1e-12)
-            tj = tj + jnp.clip(step, -25.0, 25.0)
-        return tj
+            return tj + jnp.clip(step, -25.0, 25.0)
+
+        return jax.lax.fori_loop(0, steps, update, tj)
 
     return jax.vmap(one)(t, p, x)
 
@@ -570,8 +571,8 @@ def _seed(
         bot_t = jnp.asarray(feeds[order[-1]].t, dtype=float)
         t = jnp.linspace(top_t, bot_t, n)
 
-    x = jnp.tile(z, (n, 1))
-    for _ in range(sweeps):
+    def sweep(_: int, state: tuple[Array, Array]) -> tuple[Array, Array]:
+        t, x = state
         k = jax.vmap(lambda tj, pj, xj: _k_estimate(pkg, tj, pj, xj))(t, p, x)
         if st.condenser == "total":
             k = k.at[0].set(jnp.ones(c))
@@ -587,6 +588,11 @@ def _seed(
         x = l_mat / jnp.sum(l_mat, axis=1)[:, None]
         if refine_t:
             t = _bubble_newton(pkg, t, p, x, steps=3)
+        return t, x
+
+    # Keep initialization loops compact: unrolling the nested EOS derivatives
+    # duplicates large graphs and can exhaust a cold CI runner during compilation.
+    t, x = jax.lax.fori_loop(0, sweeps, sweep, (t, jnp.tile(z, (n, 1))))
 
     k = jax.vmap(lambda tj, pj, xj: _k_estimate(pkg, tj, pj, xj))(t, p, x)
     if st.condenser == "total":
