@@ -189,14 +189,13 @@ def _implicit_temperature_jvp(
     params, t_init = primals
     params_dot, _ = tangents
     t_star = _implicit_temperature(residual, params, t_init, t_min, t_max, tol, max_iter)
-    # A temperature flash is nested at every exchanger zone. Evaluate the
-    # requested parameter direction without constructing a full adjoint for
-    # every package constant, composition, pressure, and energy target.
-    residual_value, r_t = jax.jvp(
-        lambda tt: residual(tt, params), (t_star,), (jnp.ones_like(t_star),)
+    r_t = jax.grad(lambda tt: residual(tt, params))(t_star)
+    grad_params = jax.grad(lambda pp: residual(t_star, pp))(params)
+    leaves = jax.tree_util.tree_leaves(
+        jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
     )
-    _, r_dot = jax.jvp(lambda pp: residual(t_star, pp), (params,), (params_dot,))
-    error = jnp.abs(residual_value)
+    r_dot = sum(leaves, jnp.asarray(0.0))
+    error = jnp.abs(residual(t_star, params))
     valid = jnp.isfinite(error) & (error <= jnp.maximum(4 * tol * jnp.abs(r_t), 1e-6))
     t_dot = (-r_dot / r_t) * jnp.where(valid, 1.0, jnp.nan)
     return t_star, t_dot

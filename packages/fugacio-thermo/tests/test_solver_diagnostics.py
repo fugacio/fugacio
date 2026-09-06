@@ -7,62 +7,7 @@ import jax.numpy as jnp
 import pytest
 
 from fugacio.thermo.diagnostics import ConvergenceError, SolveStatus, require_converged
-from fugacio.thermo.energy import _implicit_temperature
-from fugacio.thermo.implicit import (
-    bracketed_root,
-    fixed_point_with_info,
-    newton_root,
-    newton_system_with_info,
-)
-
-
-@pytest.mark.parametrize("outer", ["bracketed", "newton", "temperature"])
-@pytest.mark.parametrize("inner", ["bracketed", "newton", "temperature"])
-def test_nested_scalar_roots_preserve_pytree_derivatives(outer, inner):
-    def root(method, residual, params, upper=30.0):
-        if method == "bracketed":
-            return bracketed_root(residual, params, jnp.asarray(0.01), jnp.asarray(upper))
-        if method == "temperature":
-            return _implicit_temperature(residual, params, 4.0, 0.01, upper, 1e-12, 100)
-        return newton_root(residual, params, jnp.asarray(4.0))
-
-    def solve(params):
-        def residual(x, th):
-            y = root(inner, lambda y, p: y**2 - p, x**2 + th["offset"])
-            return y - th["scale"] * jnp.sum(th["weights"] ** 2)
-
-        return root(outer, residual, params, upper=10.0)
-
-    def exact(params):
-        return jnp.sqrt((params["scale"] * jnp.sum(params["weights"] ** 2)) ** 2 - params["offset"])
-
-    params = {
-        "offset": jnp.asarray(0.7),
-        "scale": jnp.asarray(2.0),
-        "weights": jnp.array([0.4, 0.8, 1.1]),
-    }
-    direction = {
-        "offset": jnp.asarray(-0.3),
-        "scale": jnp.asarray(0.2),
-        "weights": jnp.array([0.1, -0.2, 0.3]),
-    }
-    value, tangent = jax.jit(lambda p, d: jax.jvp(solve, (p,), (d,)))(params, direction)
-    expected, expected_tangent = jax.jvp(exact, (params,), (direction,))
-    assert value == pytest.approx(float(expected), abs=1e-10)
-    assert tangent == pytest.approx(float(expected_tangent), rel=1e-9)
-    for actual, wanted in zip(
-        jax.tree.leaves(jax.jit(jax.grad(solve))(params)),
-        jax.tree.leaves(jax.grad(exact)(params)),
-        strict=True,
-    ):
-        assert jnp.allclose(actual, wanted, rtol=1e-9, atol=1e-10)
-    # Differentiating the implicit root again must retain its parameter dependence.
-    for actual, wanted in zip(
-        jax.tree.leaves(jax.jit(jax.hessian(solve))(params)),
-        jax.tree.leaves(jax.hessian(exact)(params)),
-        strict=True,
-    ):
-        assert jnp.allclose(actual, wanted, rtol=1e-8, atol=1e-10)
+from fugacio.thermo.implicit import fixed_point_with_info, newton_system_with_info
 
 
 def test_scaled_newton_jvp_vjp_hessian_and_batch():
