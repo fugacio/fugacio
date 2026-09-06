@@ -39,6 +39,34 @@ def test_temperature_spec_closes_both_energy_balances() -> None:
     assert float(res.ua) > 0.0 and float(res.lmtd) == pytest.approx(float(res.duty / res.ua))
 
 
+def test_pressure_drop_preserves_inlet_endpoints_and_energy() -> None:
+    hot, cold = _hot(), _cold()
+    res = heat_exchanger(hot, cold, duty=2e5, dp_hot=1e5, dp_cold=2e5, zones=2)
+    res.check()
+    assert res.hot_curve[0] == hot.t
+    assert res.cold_curve[-1] == cold.t
+    assert res.hot_out.p == hot.p - 1e5
+    assert res.cold_out.p == cold.p - 2e5
+    assert enthalpy_flow(hot) - enthalpy_flow(res.hot_out) == pytest.approx(2e5, abs=1e-3)
+    assert enthalpy_flow(res.cold_out) - enthalpy_flow(cold) == pytest.approx(2e5, abs=1e-3)
+
+
+def test_saturated_liquid_inlet_has_a_finite_heat_recovery_sensitivity() -> None:
+    comps = ("propane", "n-butane", "n-pentane")
+    pkg = package_for(comps)
+    composition = jnp.array([0.014, 0.56, 0.426])
+    ts, _ = pkg.bubble_temperature(16e5, composition)
+    hot = Stream.from_fractions(comps, composition, 59.0, ts, 16e5, phase="liquid")
+    cold = Stream.from_fractions(comps, jnp.array([0.4, 0.35, 0.25]), 100.0, 300.0, 16e5)
+
+    def duty(approach):
+        return heat_exchanger(hot, cold, min_approach=approach).duty
+
+    derivative = jax.grad(duty)(jnp.asarray(15.0))
+    finite_difference = (duty(15.01) - duty(14.99)) / 0.02
+    assert float(derivative) == pytest.approx(float(finite_difference), rel=1e-4)
+
+
 def test_ua_spec_reproduces_the_duty_of_a_temperature_spec() -> None:
     hot, cold = _hot(), _cold()
     ref = heat_exchanger(hot, cold, t_hot_out=330.0)

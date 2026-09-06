@@ -33,10 +33,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.sim.properties import Model, resolve_package
+from fugacio.sim.properties import Model, molar_enthalpy, molar_entropy, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.sim.units import (
     compressor as _compressor_unit,
@@ -116,6 +117,9 @@ class Context:
     kij: Array | None = None
     scales: Scales = field(default_factory=Scales)
     model: Model = None
+    # Local to one residual assembly. Pure-fluid enthalpy coordinates are
+    # already known, including for an empty stream, and need no PH/PT round trip.
+    enthalpy_coordinates: Mapping[int, Array] = field(default_factory=dict, repr=False)
 
     @property
     def n_components(self) -> int:
@@ -164,12 +168,13 @@ def _bulk_molar_enthalpy(stream: Stream, ctx: Context) -> Array:
     only the phase that exists (an absent cubic root would otherwise contribute a
     ``NaN`` derivative through ``0 * NaN``).
     """
-    return ctx.package.mixture_enthalpy(stream.t, stream.p, _x(stream))
+    coordinate = ctx.enthalpy_coordinates.get(id(stream))
+    return molar_enthalpy(stream, model=ctx.package) if coordinate is None else coordinate
 
 
 def _bulk_molar_entropy(stream: Stream, ctx: Context) -> Array:
     """Bulk molar entropy of a (possibly two-phase) stream (J/mol/K)."""
-    return ctx.package.mixture_entropy(stream.t, stream.p, _x(stream))
+    return molar_entropy(stream, model=ctx.package)
 
 
 def _bulk_enthalpy_flow(stream: Stream, ctx: Context) -> Array:
@@ -349,7 +354,14 @@ class Splitter(Block):
         for i, name in enumerate(self.outlets):
             out = streams[name]
             rows.append(self._material(out, fr[i] * feed.n, ctx))
-            rows.append(self._temperature(out, feed.t, ctx))
+            rows.append(
+                (
+                    (_bulk_molar_enthalpy(out, ctx) - _bulk_molar_enthalpy(feed, ctx))
+                    / ctx.scales.enthalpy_molar
+                )[None]
+                if ctx.n_components == 1
+                else self._temperature(out, feed.t, ctx)
+            )
             rows.append(self._pressure(out, feed.p, ctx))
         return jnp.concatenate(rows)
 
@@ -539,7 +551,11 @@ class _Machine(Block):
 
     def aux_scales(self, ctx: Context) -> dict[str, float]:
         """One auxiliary unknown: the isentropic outlet temperature."""
-        return {self._aux_key(): ctx.scales.temperature}
+        return {
+            self._aux_key(): ctx.scales.enthalpy_molar
+            if ctx.n_components == 1
+            else ctx.scales.temperature
+        }
 
     def n_residuals(self, ctx: Context) -> int:
         """Material + pressure + entropy(aux) + energy: ``n_components + 3``."""
@@ -553,7 +569,11 @@ class _Machine(Block):
         outs = self.forward(streams, params, ctx)
         # The forward outlet temperature is a good (slightly high) seed; the feed
         # temperature is an even safer interior seed for the isentropic state.
-        return {self._aux_key(): 0.5 * (feed.t + outs[self.outlets[0]].t)}
+        return {
+            self._aux_key(): _bulk_molar_enthalpy(feed, ctx)
+            if ctx.n_components == 1
+            else 0.5 * (feed.t + outs[self.outlets[0]].t)
+        }
 
     def forward(
         self, streams: Mapping[str, Stream], params: Mapping[str, Any], ctx: Context
@@ -588,7 +608,11 @@ class _Machine(Block):
         mat = self._material(out, feed.n, ctx)
         pres = self._pressure(out, p_out, ctx)
 
-        iso = Stream(n=feed.n, t=t_iso, p=p_out, components=ctx.components)
+        if ctx.n_components == 1:
+            r_iso = ctx.package.flash_ph(p_out, t_iso, jnp.ones(1))
+            iso = Stream(feed.n, r_iso.t, p_out, ctx.components, r_iso.beta * feed.n)
+        else:
+            iso = Stream(n=feed.n, t=t_iso, p=p_out, components=ctx.components)
         s_in = _bulk_molar_entropy(feed, ctx)
         s_iso = _bulk_molar_entropy(iso, ctx)
         entropy = ((s_iso - s_in) / ctx.scales.entropy_molar)[None]
@@ -670,17 +694,36 @@ class Flash(Block):
 
         mat = (feed.n - vapor.n - liquid.n) / ctx.scales.flow
 
-        x = _x(liquid)
-        y = _x(vapor)
-        ln_phi_l = pkg.ln_phi(t, p, x, phase="liquid")
-        ln_phi_v = pkg.ln_phi(t, p, y, phase="vapor")
-        # ln(phi_i^L x_i) - ln(phi_i^V y_i) = 0, i.e. equal component fugacities.
-        equil = (ln_phi_l + jnp.log(x)) - (ln_phi_v + jnp.log(y))
+        regime = pkg.flash_pt(t, p, _x(feed)).beta
+
+        def two_phase(_: None) -> Array:
+            x = _x(liquid)
+            y = _x(vapor)
+            ln_phi_l = pkg.ln_phi(t, p, x, phase="liquid")
+            ln_phi_v = pkg.ln_phi(t, p, y, phase="vapor")
+            return (ln_phi_l + jnp.log(x)) - (ln_phi_v + jnp.log(y))
+
+        # Equifugacity is an equality only when both phases exist. In a
+        # single-phase region the absent product has zero component flows.
+        index = jnp.where(regime <= 1e-9, 0, jnp.where(regime >= 1 - 1e-9, 2, 1)).astype(jnp.int32)
+        equil = jax.lax.switch(
+            index,
+            [lambda _: vapor.n / ctx.scales.flow, two_phase, lambda _: liquid.n / ctx.scales.flow],
+            None,
+        )
+
+        def thermal(stream: Stream, phase: str) -> Array:
+            if ctx.n_components == 1:
+                target = pkg.enthalpy(t, p, jnp.ones(1), phase=phase)
+                return ((_bulk_molar_enthalpy(stream, ctx) - target) / ctx.scales.enthalpy_molar)[
+                    None
+                ]
+            return self._temperature(stream, t, ctx)
 
         specs = jnp.concatenate(
             [
-                self._temperature(vapor, t, ctx),
-                self._temperature(liquid, t, ctx),
+                thermal(vapor, "vapor"),
+                thermal(liquid, "liquid"),
                 self._pressure(vapor, p, ctx),
                 self._pressure(liquid, p, ctx),
             ]

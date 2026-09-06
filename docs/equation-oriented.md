@@ -119,9 +119,10 @@ jax.grad(methane_recovered)(322.0)        # exact, matches a finite difference
 ## Degrees of freedom
 
 `degrees_of_freedom` reports the unknown/equation balance, the EO analogue of a
-specification check. A square system (`degrees_of_freedom == 0`) is exactly
-specified and solvable; a positive count is under-specified (add a spec), and a
-negative one is over-specified. `solve` runs this check by default and raises a
+specification check. A square system (`degrees_of_freedom == 0`) has balanced
+equation counts; its Jacobian can still be singular. Use `diagnose` to inspect
+local rank and `solve().report` to check convergence. A positive count is
+under-specified (add a spec), and a negative one is over-specified. `solve` runs this check by default and raises a
 descriptive error when the flowsheet isn't square.
 
 ```python
@@ -261,3 +262,6 @@ plan is then cached on the flowsheet, so repeated solves, the forward sweeps of 
 finite-difference check, and the inner solves of an optimization all reuse one
 compilation.
 ```
+
+See [reliability and diagnostics](reliability.md) for phase-preserving streams,
+checked failures, warm starts, continuation, and derivative limits.

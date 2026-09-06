@@ -22,6 +22,7 @@ The reference is grouped by topic so each page stays scannable:
 | --- | --- | --- |
 | Components & data | [Components & data](data.md) | `Component`, `DATABASE`, `component_arrays`, `R`, `T_REF` |
 | Equations of state | [Equations of state](eos.md) | `PR`, `SRK`, `RK`, `VDW`, `ln_phi_mixture`, `molar_volume` |
+| Numerical solvers | [Solvers and diagnostics](solvers.md) | `SolveReport`, `ConvergenceError`, `newton_system_with_info`, `fixed_point_with_info` |
 | Phase equilibrium | [Phase equilibrium](equilibrium.md) | `flash_pt`, `rachford_rice`, `bubble_pressure_eos`, `EOSModel`, `GammaPhiModel` |
 | LLE & VLLE | [Liquid-liquid & VLLE](lle.md) | `flash_lle`, `flash_vlle`, `heterogeneous_azeotrope` |
 | Activity models | [Activity & group contribution](activity.md) | `NRTL`, `UNIQUAC`, `Wilson`, `Margules`, `unifac_activity`, `joback_estimate` |

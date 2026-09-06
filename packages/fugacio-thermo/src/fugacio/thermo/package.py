@@ -45,7 +45,7 @@ balance.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, NamedTuple, Protocol, runtime_checkable
 
 import jax
 import jax.numpy as jnp
@@ -54,6 +54,7 @@ from jax import Array, lax
 from fugacio.thermo.activity.models import ActivityModel
 from fugacio.thermo.constants import R
 from fugacio.thermo.departure import residual_properties
+from fugacio.thermo.diagnostics import SolveReport, residual_report
 from fugacio.thermo.energy import EnergyFlashResult, _implicit_temperature
 from fugacio.thermo.eos import PR, CubicEOS, ln_phi_mixture, molar_volume
 from fugacio.thermo.equilibrium import (
@@ -86,7 +87,7 @@ from fugacio.thermo.ideal import (
     entropy_ig,
     entropy_ig_mixture,
 )
-from fugacio.thermo.implicit import bracketed_root
+from fugacio.thermo.implicit import bracketed_root, newton_system_with_info
 from fugacio.thermo.reference import (
     liquid_reference_fugacity,
     pure_liquid_volumes,
@@ -109,6 +110,13 @@ CpCoeffs = tuple[Array, Array, Array, Array, Array]
 #: Vapour fractions closer than this to 0 or 1 are treated as single-phase when a
 #: bulk property is differentiated (so the absent phase is never differentiated).
 _SINGLE_PHASE_EPS = 1.0e-9
+
+
+class EnergySolveResult(NamedTuple):
+    """A PH/PS flash state and its independently verified solve report."""
+
+    value: EnergyFlashResult
+    report: SolveReport
 
 
 @runtime_checkable
@@ -347,20 +355,26 @@ class _PackageBase:
         multiplying an absent phase by zero would still propagate the ``NaN``
         gradient of a cubic root that does not exist in that region.
         """
-        r = self.flash_pt(t, p, z)
+        beta = lax.stop_gradient(self.flash_pt(t, p, z).beta)
         fn = getattr(self, prop)
 
         def liquid(_: None) -> Array:
-            return fn(t, p, r.x, phase="liquid")
+            return fn(t, p, z, phase="liquid")
 
         def vapor(_: None) -> Array:
-            return fn(t, p, r.y, phase="vapor")
+            return fn(t, p, z, phase="vapor")
 
         def both(_: None) -> Array:
-            return (1.0 - r.beta) * liquid(None) + r.beta * vapor(None)
+            # Differentiate the equilibrium split only when both phases exist.
+            # A single-phase K iteration can have a singular adjoint even though
+            # its bulk property is a regular single-phase EOS evaluation.
+            r = self.flash_pt(t, p, z)
+            return (1.0 - r.beta) * fn(t, p, r.x, phase="liquid") + r.beta * fn(
+                t, p, r.y, phase="vapor"
+            )
 
         idx = jnp.where(
-            r.beta <= _SINGLE_PHASE_EPS, 0, jnp.where(r.beta >= 1.0 - _SINGLE_PHASE_EPS, 2, 1)
+            beta <= _SINGLE_PHASE_EPS, 0, jnp.where(beta >= 1.0 - _SINGLE_PHASE_EPS, 2, 1)
         ).astype(jnp.int32)
         return lax.switch(idx, [liquid, both, vapor], None)
 
@@ -382,6 +396,112 @@ class _PackageBase:
         return self._blend(t, p, z, "volume")
 
     # -- derived: energy-specified flashes --------------------------------- #
+    def _energy_flash(
+        self,
+        p: ArrayLike,
+        target: ArrayLike,
+        z: Array,
+        prop: str,
+        t_init: ArrayLike,
+        t_min: float,
+        t_max: float,
+        tol: float,
+        max_iter: int,
+    ) -> EnergyFlashResult:
+        """Resolve temperature and, for pure fluids, saturation quality."""
+        params = (
+            self,
+            jnp.asarray(p, dtype=float),
+            jnp.asarray(target, dtype=float),
+            jnp.asarray(z),
+        )
+
+        def residual(t: Array, th: Any) -> Array:
+            pkg, pressure, specified, composition = th
+            return getattr(pkg, "mixture_" + prop)(t, pressure, composition) - specified
+
+        # For a pure fluid this first solve only locates the phase regime. Its
+        # temperature-only residual jumps inside the saturation dome, so its
+        # failed implicit derivative must never enter the saturation branch,
+        # even with a zero reverse-mode cotangent.
+        locator_params = lax.stop_gradient(params) if self.n_components == 1 else params
+        locator_init = lax.stop_gradient(t_init) if self.n_components == 1 else t_init
+        t_star = _implicit_temperature(
+            residual, locator_params, locator_init, t_min, t_max, tol, max_iter
+        )
+
+        def pt(_: None) -> EnergyFlashResult:
+            temperature = t_star
+            if self.n_components == 1:
+                temperature = _implicit_temperature(
+                    residual, params, t_star, t_min, t_max, tol, max_iter
+                )
+            classified = lax.stop_gradient(self.flash_pt(temperature, p, z))
+
+            def two_phase(_: None) -> EnergyFlashResult:
+                r = self.flash_pt(temperature, p, z)
+                return EnergyFlashResult(t=temperature, beta=r.beta, x=r.x, y=r.y, k=r.k)
+
+            def single_phase(_: None) -> EnergyFlashResult:
+                # Present-phase composition is the feed composition. An absent
+                # phase's trial K iteration must not supply its derivative to
+                # an otherwise regular single-phase energy state.
+                return EnergyFlashResult(
+                    t=temperature,
+                    beta=classified.beta,
+                    x=jnp.where(classified.beta <= 0.0, z, classified.x),
+                    y=jnp.where(classified.beta >= 1.0, z, classified.y),
+                    k=classified.k,
+                )
+
+            return lax.cond(
+                (classified.beta > 0.0) & (classified.beta < 1.0), two_phase, single_phase, None
+            )
+
+        if self.n_components != 1:
+            return pt(None)
+
+        # A temperature-only PH/PS solve encounters a jump at pure-fluid
+        # saturation. Its temperature locates the jump, but its PT flash cannot
+        # determine the phase amounts. Close fugacity and energy together there.
+        seed_t = lax.stop_gradient(t_star)
+        fn = getattr(self, prop)
+        ml = fn(seed_t, p, z, phase="liquid")
+        mv = fn(seed_t, p, z, phase="vapor")
+        gap = mv - ml
+        beta = (target - ml) / jnp.where(jnp.abs(gap) > 1e-12, gap, 1.0)
+        inside = (gap > 1e-6) & (beta > 1e-8) & (beta < 1.0 - 1e-8)
+
+        def saturated(_: None) -> EnergyFlashResult:
+            def equations(u: Array, th: Any) -> Array:
+                pkg, pressure, specified, composition = th
+                temperature, quality = u
+                phase_property = getattr(pkg, prop)
+                liquid = phase_property(temperature, pressure, composition, phase="liquid")
+                vapor = phase_property(temperature, pressure, composition, phase="vapor")
+                fugacity = pkg.ln_phi(
+                    temperature, pressure, composition, phase="liquid"
+                ) - pkg.ln_phi(temperature, pressure, composition, phase="vapor")
+                energy = ((1 - quality) * liquid + quality * vapor - specified) / jnp.maximum(
+                    jnp.abs(specified), 1.0
+                )
+                return jnp.array([fugacity[0], energy])
+
+            result = newton_system_with_info(
+                equations,
+                jnp.array([seed_t, beta]),
+                params,
+                tol=1e-10,
+                max_iter=max_iter,
+                scale=jnp.array([300.0, 1.0]),
+                lower=jnp.array([t_min, 0.0]),
+                upper=jnp.array([t_max, 1.0]),
+            )
+            state = jnp.where(result.report.converged, result.value, jnp.nan)
+            return EnergyFlashResult(t=state[0], beta=state[1], x=z, y=z, k=jnp.ones_like(z))
+
+        return lax.cond(lax.stop_gradient(inside), saturated, pt, None)
+
     def flash_ph(
         self,
         p: ArrayLike,
@@ -402,15 +522,7 @@ class _PackageBase:
         package's own parameters. Returns the temperature together with the
         equilibrium split there.
         """
-        params = (self, jnp.asarray(p, dtype=float), jnp.asarray(h, dtype=float), jnp.asarray(z))
-
-        def residual(t: Array, params: Any) -> Array:
-            pkg, p_, h_, z_ = params
-            return pkg.mixture_enthalpy(t, p_, z_) - h_
-
-        t_star = _implicit_temperature(residual, params, float(t_init), t_min, t_max, tol, max_iter)
-        r = self.flash_pt(t_star, p, z)
-        return EnergyFlashResult(t=t_star, beta=r.beta, x=r.x, y=r.y, k=r.k)
+        return self._energy_flash(p, h, z, "enthalpy", t_init, t_min, t_max, tol, max_iter)
 
     def flash_ps(
         self,
@@ -429,15 +541,7 @@ class _PackageBase:
         The backbone of isentropic compressor and turbine models; same solver and
         differentiability as `flash_ph`.
         """
-        params = (self, jnp.asarray(p, dtype=float), jnp.asarray(s, dtype=float), jnp.asarray(z))
-
-        def residual(t: Array, params: Any) -> Array:
-            pkg, p_, s_, z_ = params
-            return pkg.mixture_entropy(t, p_, z_) - s_
-
-        t_star = _implicit_temperature(residual, params, float(t_init), t_min, t_max, tol, max_iter)
-        r = self.flash_pt(t_star, p, z)
-        return EnergyFlashResult(t=t_star, beta=r.beta, x=r.x, y=r.y, k=r.k)
+        return self._energy_flash(p, s, z, "entropy", t_init, t_min, t_max, tol, max_iter)
 
     def flash_tv(
         self,
@@ -499,6 +603,8 @@ class CubicPackage(_PackageBase):
     kij: Array | None = None
     eos: CubicEOS = PR
 
+    component_names: tuple[str, ...] = ()
+
     @property
     def n_components(self) -> int:
         """Number of components."""
@@ -506,7 +612,13 @@ class CubicPackage(_PackageBase):
 
     def signature(self) -> tuple[Any, ...]:
         """Class, component count, cubic, and whether a ``kij`` matrix is present."""
-        return ("CubicPackage", self.n_components, repr(self.eos), self.kij is not None)
+        return (
+            "CubicPackage",
+            self.n_components,
+            repr(self.eos),
+            self.kij is not None,
+            self.component_names,
+        )
 
     def ln_phi(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
         """Log fugacity coefficients from the cubic EOS."""
@@ -557,7 +669,9 @@ class CubicPackage(_PackageBase):
 
 
 jax.tree_util.register_dataclass(
-    CubicPackage, data_fields=["tc", "pc", "omega", "cp", "kij"], meta_fields=["eos"]
+    CubicPackage,
+    data_fields=["tc", "pc", "omega", "cp", "kij"],
+    meta_fields=["eos", "component_names"],
 )
 
 
@@ -660,6 +774,8 @@ class GammaPhiPackage(_PackageBase):
     poynting: bool = False
     phi_saturation: bool = False
 
+    component_names: tuple[str, ...] = ()
+
     @property
     def n_components(self) -> int:
         """Number of components."""
@@ -669,6 +785,7 @@ class GammaPhiPackage(_PackageBase):
         """Class, component count, activity-model class, and the static flags."""
         return (
             "GammaPhiPackage",
+            self.component_names,
             self.n_components,
             type(self.activity).__name__,
             repr(self.eos),
@@ -844,7 +961,7 @@ class GammaPhiPackage(_PackageBase):
 jax.tree_util.register_dataclass(
     GammaPhiPackage,
     data_fields=["activity", "tc", "pc", "omega", "cp", "kij"],
-    meta_fields=["eos", "vapor", "poynting", "phi_saturation"],
+    meta_fields=["eos", "vapor", "poynting", "phi_saturation", "component_names"],
 )
 
 
@@ -875,6 +992,8 @@ class SAFTPackage(_PackageBase):
     omega: Array
     cp: CpCoeffs
 
+    component_names: tuple[str, ...] = ()
+
     @property
     def n_components(self) -> int:
         """Number of components."""
@@ -882,7 +1001,7 @@ class SAFTPackage(_PackageBase):
 
     def signature(self) -> tuple[Any, ...]:
         """Class and component count."""
-        return ("SAFTPackage", self.n_components)
+        return ("SAFTPackage", self.n_components, self.component_names)
 
     def ln_phi(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
         """Log fugacity coefficients on the PC-SAFT density branch ``phase``."""
@@ -922,7 +1041,7 @@ class SAFTPackage(_PackageBase):
 
 
 jax.tree_util.register_dataclass(
-    SAFTPackage, data_fields=["params", "tc", "pc", "omega", "cp"], meta_fields=[]
+    SAFTPackage, data_fields=["params", "tc", "pc", "omega", "cp"], meta_fields=["component_names"]
 )
 
 
@@ -952,6 +1071,8 @@ class HelmholtzPackage(_PackageBase):
 
     fluid: HelmholtzFluid
 
+    component_names: tuple[str, ...] = ()
+
     @property
     def n_components(self) -> int:
         """Always one."""
@@ -959,7 +1080,7 @@ class HelmholtzPackage(_PackageBase):
 
     def signature(self) -> tuple[Any, ...]:
         """Class and fluid name."""
-        return ("HelmholtzPackage", self.fluid.name)
+        return ("HelmholtzPackage", self.fluid.name, self.component_names)
 
     def _branch(self, phase: str) -> str:
         return "liquid" if phase == "liquid" else "vapor"
@@ -1048,7 +1169,9 @@ class HelmholtzPackage(_PackageBase):
         return saturation_temperature(self.fluid, p), jnp.ones(1)
 
 
-jax.tree_util.register_dataclass(HelmholtzPackage, data_fields=["fluid"], meta_fields=[])
+jax.tree_util.register_dataclass(
+    HelmholtzPackage, data_fields=["fluid"], meta_fields=["component_names"]
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -1126,14 +1249,87 @@ def helmholtz_package(fluid: HelmholtzFluid) -> HelmholtzPackage:
 
 __all__ = [
     "CubicPackage",
+    "EnergySolveResult",
     "GammaPhiPackage",
     "HelmholtzPackage",
     "PropertyPackage",
     "SAFTPackage",
     "cubic_package",
+    "energy_flash_report",
     "excess_enthalpy",
     "excess_entropy",
+    "flash_ph_with_info",
+    "flash_ps_with_info",
     "gamma_phi_package",
     "helmholtz_package",
     "saft_package",
 ]
+
+
+def energy_flash_report(
+    pkg: PropertyPackage,
+    result: EnergyFlashResult,
+    p: ArrayLike,
+    target: ArrayLike,
+    z: Array,
+    *,
+    prop: str = "enthalpy",
+    tol: float = 1e-7,
+) -> SolveReport:
+    """Verify an energy flash independently from its temperature iteration.
+
+    The residual checks component closure, composition normalization, phase
+    fractions, and the specified molar property. The iteration count is zero
+    because this is a verification of the returned state, not its iteration log.
+    """
+    fn = getattr(pkg, prop)
+    beta = result.beta
+
+    def liquid(_: None) -> Array:
+        return fn(result.t, p, result.x, phase="liquid")
+
+    def vapor(_: None) -> Array:
+        return fn(result.t, p, result.y, phase="vapor")
+
+    index = jnp.where(beta <= 0, 0, jnp.where(beta >= 1, 2, 1)).astype(jnp.int32)
+    value = lax.switch(
+        index, [liquid, lambda _: (1 - beta) * liquid(None) + beta * vapor(None), vapor], None
+    )
+    scale = jnp.maximum(jnp.abs(target), 1e4 if prop == "enthalpy" else 10.0)
+    errors = jnp.concatenate(
+        [
+            (1 - beta) * result.x + beta * result.y - z,
+            jnp.array(
+                [
+                    (value - target) / scale,
+                    jnp.sum(z) - 1.0,
+                    jnp.maximum(-beta, 0.0) + jnp.maximum(beta - 1.0, 0.0),
+                ]
+            ),
+        ]
+    )
+    return residual_report(errors, tol)
+
+
+def flash_ph_with_info(
+    pkg: PropertyPackage,
+    p: ArrayLike,
+    h: ArrayLike,
+    z: Array,
+    **options: Any,
+) -> EnergySolveResult:
+    """PH flash and an independent material/enthalpy verification report."""
+    result = pkg.flash_ph(p, h, z, **options)
+    return EnergySolveResult(result, energy_flash_report(pkg, result, p, h, z))
+
+
+def flash_ps_with_info(
+    pkg: PropertyPackage,
+    p: ArrayLike,
+    s: ArrayLike,
+    z: Array,
+    **options: Any,
+) -> EnergySolveResult:
+    """PS flash and an independent material/entropy verification report."""
+    result = pkg.flash_ps(p, s, z, **options)
+    return EnergySolveResult(result, energy_flash_report(pkg, result, p, s, z, prop="entropy"))

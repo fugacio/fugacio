@@ -132,8 +132,8 @@ def _optimize_nested(
         decision=dict(res.x),
         objective=res.fun,
         solution=final,
-        converged=res.converged,
-        constraint_violation=jnp.asarray(0.0),
+        converged=res.converged & final.converged,
+        constraint_violation=final.residual_norm,
     )
 
 
@@ -235,6 +235,6 @@ def _optimize_simultaneous(
         decision=d_star,
         objective=res.fun,
         solution=final,
-        converged=res.converged,
-        constraint_violation=res.constraint_violation,
+        converged=res.converged & final.converged,
+        constraint_violation=jnp.maximum(res.constraint_violation, final.residual_norm),
     )

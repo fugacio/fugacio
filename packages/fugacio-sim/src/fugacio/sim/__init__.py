@@ -61,6 +61,7 @@ from fugacio.sim.column import (
     solve_column,
     underwood_min_reflux,
 )
+from fugacio.sim.continuation import ContinuationResult, ContinuationStep, continuation_solve
 
 # Dynamic simulation & control (time-domain). Imported last; these layers build on
 # the steady-state engine above (control depends on the optimizers, the dynamic
@@ -205,7 +206,15 @@ from fugacio.sim.eo import (
     Valve,
     optimize_flowsheet_eo,
 )
-from fugacio.sim.flowsheet import TEAR_METHODS, Flowsheet, Partition, tear_solve
+from fugacio.sim.flowsheet import (
+    TEAR_METHODS,
+    Flowsheet,
+    FlowsheetResult,
+    Partition,
+    TearResult,
+    tear_solve,
+    tear_solve_with_info,
+)
 from fugacio.sim.heat_exchanger import HeatExchangerResult, heat_exchanger
 from fugacio.sim.integration import (
     CompositeCurves,
@@ -352,6 +361,13 @@ from fugacio.sim.utilities import (
     steam_turbine,
 )
 from fugacio.sim.vle import antoine_psat, bubble_pressure
+from fugacio.thermo.diagnostics import (
+    ConvergenceError,
+    SolveReport,
+    SolveResult,
+    SolveStatus,
+    require_converged,
+)
 
 __all__ = [
     "CEPCI_DEFAULT",
@@ -370,6 +386,9 @@ __all__ = [
     "CompositeCurves",
     "Compressor",
     "Context",
+    "ContinuationResult",
+    "ContinuationStep",
+    "ConvergenceError",
     "CoolingWaterResult",
     "DOFReport",
     "DesignSpec",
@@ -389,6 +408,7 @@ __all__ = [
     "Flash",
     "Flowsheet",
     "FlowsheetOptResult",
+    "FlowsheetResult",
     "GasReceiver",
     "GaussianState",
     "GrandComposite",
@@ -428,6 +448,9 @@ __all__ = [
     "Scales",
     "ShortcutResult",
     "SideDraw",
+    "SolveReport",
+    "SolveResult",
+    "SolveStatus",
     "SpecResult",
     "Splitter",
     "StageDuty",
@@ -437,6 +460,7 @@ __all__ = [
     "StepInfo",
     "Stream",
     "SuperTargetResult",
+    "TearResult",
     "ThermalMass",
     "Turbine",
     "TxyDiagram",
@@ -476,6 +500,7 @@ __all__ = [
     "condensate_flash_fraction",
     "condenser_duty",
     "constant_setpoint",
+    "continuation_solve",
     "controller",
     "conversion",
     "cooling_water",
@@ -567,6 +592,7 @@ __all__ = [
     "reflux_rate",
     "reflux_ratio",
     "relative_volatility",
+    "require_converged",
     "residue_curve",
     "residue_curve_map",
     "rigorous_column",
@@ -595,6 +621,7 @@ __all__ = [
     "surface_tension",
     "synthesize_network",
     "tear_solve",
+    "tear_solve_with_info",
     "three_phase_flash",
     "total_annual_cost",
     "total_annual_cost_target",

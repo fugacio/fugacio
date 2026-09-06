@@ -13,6 +13,7 @@ sequences them lives behind the optional ``llm`` extra (`fugacio.copilot.agent`)
 
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -167,25 +168,50 @@ def _physical_properties(
     x_arr = jnp.asarray(x, dtype=float)
     hvap = heat_of_vaporization(components, t)
     cp_l = liquid_heat_capacity(components, t)
-    return {
+    result: JsonDict = {
         "components": list(components),
         "x": [float(v) for v in x],
         "temperature_k": t,
         "pressure_pa": p,
-        "liquid_density_kg_m3": float(liquid_density(components, t, x_arr)),
+        "liquid_density_kg_m3": _finite(float(liquid_density(components, t, x_arr))),
         "vapor_density_kg_m3": float(vapor_density(components, t, p, x_arr)),
-        "liquid_viscosity_pa_s": float(liquid_mixture_viscosity(components, t, x_arr)),
+        "liquid_viscosity_pa_s": _finite(float(liquid_mixture_viscosity(components, t, x_arr))),
         "vapor_viscosity_pa_s": float(gas_mixture_viscosity(components, t, x_arr)),
-        "liquid_thermal_conductivity_w_m_k": float(
-            liquid_mixture_thermal_conductivity(components, t, x_arr)
+        "liquid_thermal_conductivity_w_m_k": _finite(
+            float(liquid_mixture_thermal_conductivity(components, t, x_arr))
         ),
         "vapor_thermal_conductivity_w_m_k": float(
             gas_mixture_thermal_conductivity(components, t, x_arr)
         ),
-        "surface_tension_n_m": float(mixture_surface_tension(components, t, x_arr)),
-        "heat_of_vaporization_j_mol": [float(v) for v in hvap],
-        "liquid_heat_capacity_j_mol_k": [float(v) for v in cp_l],
+        "surface_tension_n_m": _finite(float(mixture_surface_tension(components, t, x_arr))),
+        "heat_of_vaporization_j_mol": [_finite(float(v)) for v in hvap],
+        "liquid_heat_capacity_j_mol_k": [_finite(float(v)) for v in cp_l],
     }
+
+    subcritical = [t < get(component).tc for component in components]
+    if not all(subcritical):
+        for key in (
+            "liquid_density_kg_m3",
+            "liquid_viscosity_pa_s",
+            "liquid_thermal_conductivity_w_m_k",
+            "surface_tension_n_m",
+        ):
+            result[key] = None
+    for key in ("heat_of_vaporization_j_mol", "liquid_heat_capacity_j_mol_k"):
+        result[key] = [
+            value if valid else None for value, valid in zip(result[key], subcritical, strict=True)
+        ]
+    unavailable = [
+        key
+        for key, value in result.items()
+        if value is None or (isinstance(value, list) and any(v is None for v in value))
+    ]
+    if unavailable:
+        result["unavailable_properties"] = unavailable
+        result["availability_note"] = (
+            "Some liquid correlations are unavailable at this temperature; their values are null."
+        )
+    return result
 
 
 def _binary_diffusivity(
@@ -413,7 +439,8 @@ def _rigorous_distillation(
         model=_package(components, method),
     )
     return {
-        "converged": bool(res.residual_norm < 1e-6),
+        "converged": bool(res.report.converged),
+        "report": res.report.to_dict(),
         "residual_norm": float(res.residual_norm),
         "stage_temperatures_k": [float(v) for v in res.t],
         "liquid_flows_mol_s": [float(v) for v in res.liquid_flow],
@@ -471,8 +498,10 @@ def _two_sided_heat_exchanger(
         model_hot=_package(hot_components, hot_method),
         model_cold=_package(cold_components, cold_method),
     )
+    res.check()
     return {
         "duty_w": float(res.duty),
+        "report": res.report.to_dict(),
         "ua_w_per_k": _finite(float(res.ua)),
         "lmtd_k": _finite(float(res.lmtd)),
         "approach_hot_end_k": float(res.approach_hot_end),
@@ -2325,4 +2354,9 @@ def call_tool(
     registry = default_registry() if registry is None else registry
     if name not in registry:
         raise KeyError(f"unknown tool {name!r}; available: {sorted(registry)}")
-    return registry[name].run(**arguments)
+    # JSON forbids NaN and infinity. Catch them at the tool boundary before a
+    # model or report renderer can present a failed calculation as a result.
+    json.dumps(arguments, allow_nan=False)
+    result = registry[name].run(**arguments)
+    json.dumps(result, allow_nan=False)
+    return result

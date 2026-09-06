@@ -65,10 +65,20 @@ jobs:
         #                own processes, see below)
         # sim:           fugacio-sim unit operations, reactors, dynamics, control,
         #                economics, heat integration
-        # flowsheeting:  the MESH column, the two-sided exchanger, the recycle
-        #                partitioner, and the equation-oriented engine
-        # plants:        the whole-plant case studies and fugacio-copilot
-        group: [thermo, sim, flowsheeting, plants]
+        # flowsheeting:  the recycle partitioner and equation-oriented engine
+        # Compile columns, exchangers, and each plant on separate runners so
+        # their cold compilation times don't accumulate against one timeout.
+        group:
+          - thermo
+          - sim
+          - flowsheeting
+          - distillation
+          - heat-exchanger
+          - plant-hda
+          - plant-c3
+          - plant-ew
+          - utility-reliability
+          - copilot
     env:
       # Pin every uv invocation (sync + run) to the matrix interpreter. Otherwise
       # `.python-version` (3.12) wins on the `uv run` steps, which rebuilds .venv
@@ -90,14 +100,17 @@ jobs:
       # and save are split so the cache is written even when a later step fails
       # (see the matching save step): the first run to survive long enough to
       # compile the solvers warms the cache for every run after it. The key
-      # carries the group because each group compiles a different set of graphs
-      # and a cache key can only be saved once per run.
+      # carries the group because each group compiles a different set of graphs.
+      # Include the commit so new solver graphs can be saved after restoring an
+      # older cache; an existing cache key is immutable.
       - name: Restore JAX compilation cache
         uses: actions/cache/restore@v4
         with:
           path: .jax_cache
-          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}
-          restore-keys: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-
+          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}-${{ github.sha }}
+          restore-keys: |
+            jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}-
+            jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-
 
       # JAX keeps every compiled XLA executable alive for the life of the
       # process, so a group that jit-compiles dozens of float64 solver graphs
@@ -107,9 +120,11 @@ jobs:
       # which releases that memory between them; the shared on-disk .jax_cache
       # de-duplicates compilation across the processes.
       - name: Tests (pytest)
+        # Leave time to save compiled graphs even if the tests time out.
+        timeout-minutes: 55
         run: |
           set -euo pipefail
-          run() { uv run --no-sync pytest "$@"; }
+          run() { uv run --no-sync pytest -vv --durations=10 "$@"; }
           case "${{ matrix.group }}" in
             thermo)
               heavy=(
@@ -123,6 +138,8 @@ jobs:
               flowsheeting=(
                 packages/fugacio-sim/tests/test_distillation.py
                 packages/fugacio-sim/tests/test_eo.py
+                packages/fugacio-sim/tests/test_eo_reliability.py
+                packages/fugacio-sim/tests/test_utility_reliability.py
                 packages/fugacio-sim/tests/test_flowsheet.py
                 packages/fugacio-sim/tests/test_heat_exchanger.py
                 packages/fugacio-sim/tests/test_plants.py
@@ -134,15 +151,35 @@ jobs:
               ;;
             flowsheeting)
               run packages/fugacio-sim/tests/test_eo.py
-              run packages/fugacio-sim/tests/test_distillation.py
-              run packages/fugacio-sim/tests/test_heat_exchanger.py \
-                  packages/fugacio-sim/tests/test_flowsheet.py
+              run packages/fugacio-sim/tests/test_eo_reliability.py
+              run packages/fugacio-sim/tests/test_flowsheet.py
               ;;
-            plants)
-              run packages/fugacio-sim/tests/test_plants.py
+            distillation)
+              run packages/fugacio-sim/tests/test_distillation.py
+              ;;
+            heat-exchanger)
+              run packages/fugacio-sim/tests/test_heat_exchanger.py
+              ;;
+            plant-hda)
+              run packages/fugacio-sim/tests/test_plants.py::test_hda_lite_plant_closes_and_meets_specs
+              ;;
+            plant-c3)
+              run packages/fugacio-sim/tests/test_plants.py::test_depropanizer_with_economiser_loop
+              ;;
+            plant-ew)
+              run packages/fugacio-sim/tests/test_plants.py::test_ethanol_water_train_recovers_bottoms_heat
+              ;;
+            utility-reliability)
+              run packages/fugacio-sim/tests/test_utility_reliability.py
+              ;;
+            copilot)
               run packages/fugacio-copilot/tests/test_steam_tools.py
               run packages/fugacio-copilot/tests \
                 --ignore=packages/fugacio-copilot/tests/test_steam_tools.py
+              ;;
+            *)
+              echo "Unknown test group: ${{ matrix.group }}" >&2
+              exit 1
               ;;
           esac
 
@@ -151,4 +188,4 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .jax_cache
-          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}
+          key: jax-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.group }}-${{ hashFiles('uv.lock') }}-${{ github.sha }}

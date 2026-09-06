@@ -10,3 +10,11 @@ iteration.
 See the [flowsheeting guide](../../flowsheeting.md) for worked examples.
 
 ::: fugacio.sim.flowsheet
+
+## Continuation
+
+Adaptive continuation reuses accepted states while moving between operating
+conditions. See the [reliability guide](../../reliability.md) for examples and
+the distinction between a converged endpoint and a partially completed path.
+
+::: fugacio.sim.continuation

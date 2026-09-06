@@ -29,6 +29,7 @@ from typing import Any
 
 from fugacio.copilot.llm.base import ChatResponse, LLMProvider, Message, ToolCall
 from fugacio.copilot.tools import ToolSpec, call_tool, default_registry, tool_schemas
+from fugacio.thermo.diagnostics import ConvergenceError
 
 JsonDict = dict[str, Any]
 Planner = Callable[[str, list[JsonDict], list[JsonDict]], JsonDict]
@@ -40,7 +41,9 @@ DEFAULT_SYSTEM_PROMPT = (
     "differentiable thermodynamics and flowsheet engine. Prefer computing with "
     "tools over estimating from memory. Use SI units (kelvin, pascal, mol/s, "
     "watts, dollars). When you have enough information, give a concise, "
-    "quantitative final answer that cites the numbers the tools returned."
+    "quantitative final answer that cites the numbers the tools returned. "
+    "Treat errors and failed convergence reports as failed calculations; explain "
+    "the reported cause and adjust the inputs before using those results."
 )
 
 
@@ -176,6 +179,8 @@ def _safe_call(name: str, arguments: JsonDict, registry: dict[str, ToolSpec]) ->
         return {"error": f"missing required arguments for {name!r}: {missing}"}
     try:
         return call_tool(name, arguments, registry)
+    except ConvergenceError as exc:
+        return {"error": str(exc), "context": exc.context, "report": exc.report.to_dict()}
     except Exception as exc:  # report any tool failure back to the model
         return {"error": f"{type(exc).__name__}: {exc}"}
 

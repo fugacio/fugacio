@@ -46,7 +46,7 @@ no-reboiler configurations.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 from typing import Any, NamedTuple
 
@@ -54,10 +54,13 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.sim.properties import Model, resolve_package
+from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS, PropertyPackage
-from fugacio.thermo.implicit import newton_system
+from fugacio.thermo.activity.models import NRTL
+from fugacio.thermo.diagnostics import SolveReport, SolveResult, SolveStatus, require_converged
+from fugacio.thermo.implicit import implicit_solution, newton_system_with_info
+from fugacio.thermo.package import GammaPhiPackage
 
 ArrayLike = Array | float
 
@@ -239,6 +242,22 @@ class RigorousColumnResult(NamedTuple):
     reflux_ratio: Array
     boilup_ratio: Array
     residual_norm: Array
+    report: SolveReport
+
+    def warm_start(self) -> dict[str, Array]:
+        """Full stage state for ``rigorous_column(..., guess=result.warm_start())``."""
+        return {
+            "liquid": self.liquid_flow[:, None] * self.x,
+            "vapor": self.vapor_flow[:, None] * self.y,
+            "t": self.t,
+            "condenser_duty": self.condenser_duty,
+            "reboiler_duty": self.reboiler_duty,
+        }
+
+    @property
+    def converged(self) -> Array:
+        """Whether the stage balances and specifications converged."""
+        return self.report.converged
 
 
 # --------------------------------------------------------------------------- #
@@ -482,11 +501,12 @@ def _bubble_newton(pkg: PropertyPackage, t: Array, p: Array, x: Array, steps: in
         def g(tt: Array) -> Array:
             return jnp.log(jnp.sum(_k_estimate(pkg, tt, pj, xj) * xj))
 
-        for _ in range(steps):
+        def update(_: int, tj: Array) -> Array:
             val, slope = jax.value_and_grad(g)(tj)
             step = -val / jnp.where(jnp.abs(slope) > 1e-12, slope, 1e-12)
-            tj = tj + jnp.clip(step, -25.0, 25.0)
-        return tj
+            return tj + jnp.clip(step, -25.0, 25.0)
+
+        return jax.lax.fori_loop(0, steps, update, tj)
 
     return jax.vmap(one)(t, p, x)
 
@@ -551,8 +571,8 @@ def _seed(
         bot_t = jnp.asarray(feeds[order[-1]].t, dtype=float)
         t = jnp.linspace(top_t, bot_t, n)
 
-    x = jnp.tile(z, (n, 1))
-    for _ in range(sweeps):
+    def sweep(_: int, state: tuple[Array, Array]) -> tuple[Array, Array]:
+        t, x = state
         k = jax.vmap(lambda tj, pj, xj: _k_estimate(pkg, tj, pj, xj))(t, p, x)
         if st.condenser == "total":
             k = k.at[0].set(jnp.ones(c))
@@ -568,6 +588,11 @@ def _seed(
         x = l_mat / jnp.sum(l_mat, axis=1)[:, None]
         if refine_t:
             t = _bubble_newton(pkg, t, p, x, steps=3)
+        return t, x
+
+    # Keep initialization loops compact: unrolling the nested EOS derivatives
+    # duplicates large graphs and can exhaust a cold CI runner during compilation.
+    t, x = jax.lax.fori_loop(0, sweeps, sweep, (t, jnp.tile(z, (n, 1))))
 
     k = jax.vmap(lambda tj, pj, xj: _k_estimate(pkg, tj, pj, xj))(t, p, x)
     if st.condenser == "total":
@@ -592,7 +617,7 @@ def _seed(
     return _pack(jnp.log(l_mat), jnp.log(v_mat), t, q_c, q_r, st)
 
 
-@partial(jax.jit, static_argnames=("st", "sweeps", "tol", "max_iter"))
+@partial(jax.jit, static_argnames=("st", "sweeps", "tol", "max_iter", "homotopy"))
 def _solve(
     theta: dict[str, Any],
     feeds: list[Stream],
@@ -601,7 +626,8 @@ def _solve(
     sweeps: int,
     tol: float,
     max_iter: int,
-) -> tuple[Array, Array]:
+    homotopy: bool,
+) -> tuple[Array, SolveReport]:
     """Seed and converge the MESH system; compiled once per column *structure*.
 
     Everything that varies between calls (feeds, pressures, spec values, the
@@ -611,14 +637,109 @@ def _solve(
     """
     pkg = theta["pkg"]
     theta_seed = jax.lax.stop_gradient(theta)
-    u0 = jax.lax.stop_gradient(_seed(pkg, st, theta_seed, feeds, hints, sweeps))
+    if "liquid" in hints and "vapor" in hints:
+        u0 = _pack(
+            jnp.log(jnp.maximum(hints["liquid"], 1e-300)),
+            jnp.log(jnp.maximum(hints["vapor"], 1e-300)),
+            hints["t"],
+            hints["condenser_duty"],
+            hints["reboiler_duty"],
+            st,
+        )
+    else:
+        u0 = _seed(pkg, st, theta_seed, feeds, hints, sweeps)
+    u0 = jax.lax.stop_gradient(u0)
 
     def residual(u: Array, th: dict[str, Any]) -> Array:
         return _residuals(u, th, st)
 
-    u_star = newton_system(residual, u0, theta, tol, max_iter)
-    norm = jax.lax.stop_gradient(jnp.max(jnp.abs(residual(u_star, theta))))
-    return u_star, norm
+    lower = jnp.full_like(u0, -jnp.inf).at[: 2 * st.n * st.c].set(-700.0)
+    upper = jnp.full_like(u0, jnp.inf).at[: 2 * st.n * st.c].set(700.0)
+    lower = lower.at[2 * st.n * st.c : 2 * st.n * st.c + st.n].set(50.0 / _T_SCALE)
+    upper = upper.at[2 * st.n * st.c : 2 * st.n * st.c + st.n].set(2000.0 / _T_SCALE)
+
+    def converge(seed: Array, th: dict[str, Any]) -> SolveResult:
+        return newton_system_with_info(residual, seed, th, tol, max_iter, lower=lower, upper=upper)
+
+    if (
+        homotopy
+        and max_iter > 0
+        and isinstance(pkg, GammaPhiPackage)
+        and isinstance(pkg.activity, NRTL)
+    ):
+        feed_seed = jax.lax.stop_gradient(feeds)
+
+        def softened(fraction: Array) -> dict[str, Any]:
+            target = theta_seed["pkg"]
+            activity = jax.tree_util.tree_map(lambda a: fraction * a, target.activity)
+            model = replace(target, activity=activity)
+            hf = jnp.zeros(st.n)
+            for feed, stage in zip(feed_seed, st.feed_stages, strict=True):
+                hf = hf.at[stage].add(feed.total * molar_enthalpy(feed, model=model))
+            return {**theta_seed, "pkg": model, "hf": hf}
+
+        def cond(state: tuple[Array, SolveResult, SolveResult]) -> Array:
+            attempt, direct, _ = state
+            return (attempt == 0) | ((attempt < 6) & ~direct.report.converged)
+
+        def step(
+            state: tuple[Array, SolveResult, SolveResult],
+        ) -> tuple[Array, SolveResult, SolveResult]:
+            attempt, direct, previous = state
+            # Attempt 0 uses the original model. If it fails, restart at ideal
+            # activity, then restore NRTL in four increments through attempt 5.
+            th = jax.lax.cond(
+                attempt == 0,
+                lambda _: theta_seed,
+                lambda _: softened((attempt - 1) / 4.0),
+                None,
+            )
+            seed = jax.lax.cond(
+                attempt == 1,
+                lambda _: _seed(th["pkg"], st, th, feed_seed, jax.lax.stop_gradient(hints), sweeps),
+                lambda _: previous.value,
+                None,
+            )
+            solved = converge(seed, th)
+            solved = solved._replace(
+                report=solved.report._replace(
+                    iterations=previous.report.iterations + solved.report.iterations
+                )
+            )
+            direct = jax.tree_util.tree_map(
+                lambda new, old: jnp.where(attempt == 0, new, old), solved, direct
+            )
+            return attempt + 1, direct, solved
+
+        initial = SolveResult(
+            u0,
+            SolveReport(
+                jnp.asarray(SolveStatus.MAX_ITERATIONS),
+                jnp.asarray(0),
+                jnp.asarray(jnp.inf),
+                jnp.asarray(0.0),
+                jnp.asarray(0),
+            ),
+        )
+        # Share one Newton graph between the direct solve and recovery. A
+        # data-dependent loop also prevents XLA from unrolling five copies of
+        # the nested saturation solvers during cold NRTL compilation.
+        _, direct, recovered = jax.lax.while_loop(cond, step, (jnp.asarray(0), initial, initial))
+        # Recovery always ends at the original model, so only endpoint reports
+        # compete with the direct result, never intermediate activity models.
+        better = recovered.report.converged | (
+            recovered.report.residual_norm < direct.report.residual_norm
+        )
+        result = jax.tree_util.tree_map(
+            lambda good, original: jnp.where(better, good, original), recovered, direct
+        )
+    else:
+        result = converge(u0, theta_seed)
+    report = jax.lax.stop_gradient(result.report)
+    value = implicit_solution(
+        residual, jax.lax.stop_gradient(result.value), theta, report.converged
+    )
+    return value, report
 
 
 # --------------------------------------------------------------------------- #
@@ -647,6 +768,8 @@ def rigorous_column(
     sweeps: int = 4,
     tol: float = 1e-9,
     max_iter: int = 80,
+    check: bool = True,
+    homotopy: bool = True,
 ) -> RigorousColumnResult:
     """Solve a rigorous multistage column by simultaneous correction (MESH).
 
@@ -679,8 +802,11 @@ def rigorous_column(
             (used for the internal-traffic seed) and ``"t"`` (a stage temperature
             profile). Specs of those kinds are used automatically.
         sweeps: Bubble-point sweeps used to seed the Newton solve.
-        tol: Newton convergence tolerance on the scaled step.
-        max_iter: Newton iteration cap.
+        check: Raise for a failed concrete solve; compiled failures return NaNs.
+        tol: Maximum accepted scaled equation residual.
+        max_iter: Iteration cap for each Newton solve, including homotopy increments.
+        homotopy: Retry a failed NRTL solve by gradually restoring activity effects
+            from an ideal-activity solution. The final report checks the original model.
 
     Returns:
         A `RigorousColumnResult` with the products, duties, and stage profiles, all
@@ -753,7 +879,7 @@ def rigorous_column(
     feed_streams = [fd.stream for fd in feeds]
     for stream, j in zip(feed_streams, st.feed_stages, strict=True):
         f = f.at[j].add(stream.n)
-        hf = hf.at[j].add(stream.total * pkg.mixture_enthalpy(stream.t, stream.p, stream.z))
+        hf = hf.at[j].add(stream.total * molar_enthalpy(stream, model=pkg))
     # A component absent from every feed has no finite log-flow; a trace of it
     # (far below any tolerance) keeps the unknowns finite without perturbing the
     # balances of the components that are present.
@@ -804,11 +930,25 @@ def rigorous_column(
             t=jnp.asarray(s.t, dtype=float),
             p=jnp.asarray(s.p, dtype=float),
             components=s.components,
+            vapor_n=jnp.asarray(s.vapor_n, dtype=float),
         )
         for s in feed_streams
     ]
     hints = {k: jnp.asarray(v, dtype=float) for k, v in hints.items()}
-    u_star, norm = _solve(theta, canon, hints, st, sweeps, tol, max_iter)
+    u_star, solve_report = _solve(theta, canon, hints, st, sweeps, tol, max_iter, homotopy)
+    if check:
+        labels = tuple(
+            [f"stage {stage + 1}: material {comp}" for stage in range(n) for comp in components]
+            + [
+                f"stage {stage + 1}: equilibrium {comp}"
+                for stage in range(n)
+                for comp in components
+            ]
+            + [f"stage {stage + 1}: energy" for stage in range(n)]
+            + [f"specification: {sp.kind}" for sp in specs]
+        )
+        require_converged(solve_report, "rigorous column", labels)
+        u_star = jnp.where(solve_report.converged, u_star, jnp.nan)
 
     # Assemble the result.
     un = _unpack(u_star, st)
@@ -819,12 +959,32 @@ def rigorous_column(
     x = liq / big_l[:, None]
     y = v / big_v[:, None]
     k = jax.vmap(lambda tj, pj, xj, yj: pkg.k_values(tj, pj, xj, yj))(un.t, p_prof, x, y)
-    distillate = Stream(n=v[0], t=un.t[0], p=p_prof[0], components=components)
-    bottoms = Stream(n=liq[n - 1], t=un.t[n - 1], p=p_prof[n - 1], components=components)
+    distillate = Stream(
+        n=v[0],
+        t=un.t[0],
+        p=p_prof[0],
+        components=components,
+        vapor_n=jnp.zeros_like(v[0]) if condenser == "total" else v[0],
+    )
+    bottoms = Stream(
+        n=liq[n - 1],
+        t=un.t[n - 1],
+        p=p_prof[n - 1],
+        components=components,
+        vapor_n=jnp.zeros_like(liq[n - 1]),
+    )
     draws = []
     for kdx, j in enumerate(st.draw_stages):
         flows = _product_flows(f"draw:{kdx}", liq, v, s_l, s_v, st)
-        draws.append(Stream(n=flows, t=un.t[j], p=p_prof[j], components=components))
+        draws.append(
+            Stream(
+                n=flows,
+                t=un.t[j],
+                p=p_prof[j],
+                components=components,
+                vapor_n=flows if side_draws[kdx].phase == "vapor" else jnp.zeros_like(flows),
+            )
+        )
     return RigorousColumnResult(
         distillate=distillate,
         bottoms=bottoms,
@@ -840,7 +1000,8 @@ def rigorous_column(
         vapor_flow=(1.0 + s_v) * big_v,
         reflux_ratio=big_l[0] / big_v[0],
         boilup_ratio=big_v[n - 1] / big_l[n - 1],
-        residual_norm=norm,
+        residual_norm=solve_report.residual_norm,
+        report=solve_report,
     )
 
 

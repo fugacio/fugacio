@@ -27,7 +27,7 @@ same interface.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import jax
@@ -47,6 +47,7 @@ from fugacio.thermo import (
     SAFTModel,
     eos_model,
     gamma_phi_model,
+    get,
     helmholtz_package,
     kij_from_database,
     modified_unifac_activity,
@@ -249,7 +250,9 @@ def helmholtz_package_for(component: str) -> HelmholtzPackage:
     The name is resolved through `fugacio.thermo.reference_fluid`, so any of the
     26 vendored multiparameter formulations is accepted.
     """
-    return helmholtz_package(reference_fluid(component))
+    return replace(
+        helmholtz_package(reference_fluid(component)), component_names=(get(component).name,)
+    )
 
 
 def package_for(

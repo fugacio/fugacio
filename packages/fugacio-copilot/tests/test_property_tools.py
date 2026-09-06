@@ -54,6 +54,8 @@ def test_vapor_density_tracks_pressure() -> None:
         {"components": ["nitrogen"], "x": [1.0], "temperature": 300.0, "pressure": 2.0e5},
     )
     assert high["vapor_density_kg_m3"] == pytest.approx(2.0 * low["vapor_density_kg_m3"], rel=0.02)
+    assert low["heat_of_vaporization_j_mol"] == [None]
+    assert "heat_of_vaporization_j_mol" in low["unavailable_properties"]
 
 
 def test_binary_diffusivity_tool() -> None:

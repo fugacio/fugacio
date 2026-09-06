@@ -11,10 +11,9 @@ For a fixed point ``x* = g(x*, theta)`` the sensitivity to the parameters
 
     (I - dg/dx) dx*/dtheta = dg/dtheta
 
-so a single linear solve (here a contraction iteration that reuses ``g``'s own
-vector-Jacobian product) yields exact gradients regardless of how many
-iterations the forward solve took. This is the same trick used by the cubic-root
-`fugacio.thermo.eos.compress_factor`, generalized to vector unknowns.
+so a linear solve of the residual Jacobian yields implicit sensitivities
+regardless of how many iterations the forward solve took. This is the same trick
+used by the cubic-root `fugacio.thermo.eos.compress_factor`, generalized to vector unknowns.
 """
 
 from __future__ import annotations
@@ -26,6 +25,8 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 from jax import Array
+
+from fugacio.thermo.diagnostics import SolveResult, SolveStatus, residual_report
 
 ResidualFn = Callable[[Array, Any], Array]
 
@@ -161,7 +162,173 @@ def _newton_root_jvp(
     return x_star, -r_dot / r_x
 
 
-@partial(jax.custom_vjp, nondiff_argnums=(0, 3, 4))
+@partial(jax.custom_jvp, nondiff_argnums=(0,))
+def implicit_solution(residual: ResidualFn, value: Array, theta: Any, valid: Array) -> Array:
+    """Attach an implicit derivative to a detached, independently solved root.
+
+    The initial guess and iteration history carry no derivative. Both forward
+    and reverse differentiation solve the linearized residual system. A failed
+    primal has a nonfinite sensitivity, preventing optimization from silently
+    consuming derivatives at an unconverged iterate.
+    """
+    return value
+
+
+@implicit_solution.defjvp
+def _implicit_solution_jvp(
+    residual: ResidualFn,
+    primals: tuple[Array, Any, Array],
+    tangents: tuple[Array, Any, Any],
+) -> tuple[Array, Array]:
+    value, theta, valid = primals
+    _, theta_dot, _ = tangents
+    root = implicit_solution(residual, value, theta, valid)
+    jac = jax.jacrev(lambda x: residual(x, theta))(root)
+    _, rhs = jax.jvp(lambda th: residual(root, th), (theta,), (theta_dot,))
+    tangent = jnp.linalg.solve(jnp.reshape(jac, (root.size, root.size)), -jnp.ravel(rhs)).reshape(
+        root.shape
+    )
+    # The gate depends only on primals, so this remains linear in tangents and
+    # JAX can transpose it to obtain the independently solved adjoint.
+    return root, tangent * jnp.where(valid, 1.0, jnp.nan)
+
+
+def _newton_iterations(
+    residual: ResidualFn,
+    x0: Array,
+    theta: Any,
+    tol: float,
+    max_iter: int,
+    scale: Array,
+    residual_scale: Array,
+    lower: Array,
+    upper: Array,
+) -> SolveResult:
+    """Scaled, bounded Newton with an actual residual-decreasing line search."""
+    alphas = jnp.asarray([1.0, 0.5, 0.25, 0.1, 0.03, 0.01, 0.003, 0.001])
+
+    def f(y: Array) -> Array:
+        return residual(y * scale, theta) / residual_scale
+
+    def norm(r: Array) -> Array:
+        return jnp.max(jnp.abs(r), initial=0.0)
+
+    y0 = jnp.clip(jnp.asarray(x0, dtype=float), lower, upper) / scale
+    r0 = f(y0)
+
+    def cond(carry: tuple[Array, Array, Array, Array, Array]) -> Array:
+        _, r, i, _, stalled = carry
+        return (norm(r) > tol) & jnp.all(jnp.isfinite(r)) & (i < max_iter) & ~stalled
+
+    def body(carry: tuple[Array, Array, Array, Array, Array]) -> tuple:
+        y, r, i, _, _ = carry
+        jac = jax.jacrev(f)(y)
+        dy = jnp.linalg.solve(jac, -r)
+
+        def regularized(_: None) -> Array:
+            # A singular Newton matrix can still have a useful descent direction.
+            # This changes the search step, never the equations or their derivative.
+            jt = jac.T
+            damping = 1e-8 * jnp.maximum(jnp.max(jnp.abs(jt @ jac)), 1.0)
+            return jnp.linalg.solve(jt @ jac + damping * jnp.eye(y.size), -(jt @ r))
+
+        dy = jax.lax.cond(jnp.all(jnp.isfinite(dy)), lambda _: dy, regularized, None)
+
+        def trial(alpha: Array) -> tuple[Array, Array, Array]:
+            candidate = jnp.clip((y + alpha * dy) * scale, lower, upper) / scale
+            r_new = f(candidate)
+            merit = jnp.sum(r_new * r_new)
+            merit = jnp.where(jnp.all(jnp.isfinite(r_new)), merit, jnp.inf)
+            return candidate, r_new, merit
+
+        # Sequential trials keep phase-selective residuals selective and avoid
+        # evaluating every expensive flowsheet residual when a full step works.
+        candidate, trial_r, merit = trial(alphas[0])
+
+        def search_cond(state: tuple) -> Array:
+            index, _, _, score = state
+            return (index < alphas.size) & (score > 0.01 * jnp.sum(r * r))
+
+        def search_body(state: tuple) -> tuple:
+            index, best_point, best_values, best_score = state
+            point, values, score = trial(alphas[index])
+            better = score < best_score
+            return (
+                index + 1,
+                jnp.where(better, point, best_point),
+                jnp.where(better, values, best_values),
+                jnp.minimum(score, best_score),
+            )
+
+        _, candidate, trial_r, merit = jax.lax.while_loop(
+            search_cond, search_body, (jnp.asarray(1), candidate, trial_r, merit)
+        )
+        accept = merit < jnp.sum(r * r)
+        y_new = jnp.where(accept, candidate, y)
+        r_new = jnp.where(accept, trial_r, r)
+        step = norm(y_new - y)
+        return y_new, r_new, i + 1, step, ~accept
+
+    y, r, iterations, step, stalled = jax.lax.while_loop(
+        cond, body, (y0, r0, jnp.asarray(0), jnp.asarray(0.0), jnp.asarray(False))
+    )
+    report = residual_report(r, tol, iterations=iterations, step_norm=step)
+    status = jnp.where(stalled & ~report.converged, SolveStatus.STALLED, report.status)
+    return SolveResult(y * scale, report._replace(status=status))
+
+
+def newton_system_with_info(
+    residual: ResidualFn,
+    x0: Array,
+    theta: Any,
+    tol: float = 1e-10,
+    max_iter: int = 50,
+    *,
+    scale: Array | None = None,
+    residual_scale: Array | None = None,
+    lower: Array | None = None,
+    upper: Array | None = None,
+) -> SolveResult:
+    """Solve a square residual system and report convergence independently.
+
+    Args:
+        residual: Vector residual ``F(x, theta)`` with the same shape as ``x``.
+        x0: Starting vector; may be a previously converged solution.
+        theta: Differentiable parameters. Pass all varying quantities here.
+        tol: Maximum scaled residual accepted as converged.
+        max_iter: Maximum number of Newton steps.
+        scale: Positive characteristic variable magnitudes; defaults to one.
+        residual_scale: Positive equation scales; defaults to one.
+        lower: Optional lower bounds used only during initialization and search.
+        upper: Optional upper bounds used only during initialization and search.
+
+    Returns:
+        Best iterate and a :class:`SolveReport`. Bounds and scales are numerical
+        aids, not additional equations. Sensitivities are defined only when the
+        original residual converges to a locally nonsingular root.
+
+    Raises:
+        ValueError: If the tolerance or iteration cap is invalid.
+    """
+    if tol <= 0 or max_iter < 0:
+        raise ValueError("tol must be positive and max_iter must be nonnegative")
+    x0 = jnp.asarray(x0, dtype=float)
+    ones = jnp.ones_like(x0)
+    sc = ones if scale is None else jnp.broadcast_to(jnp.asarray(scale), x0.shape)
+    rs = ones if residual_scale is None else jnp.broadcast_to(jnp.asarray(residual_scale), x0.shape)
+    lo = -jnp.full_like(x0, jnp.inf) if lower is None else jnp.broadcast_to(lower, x0.shape)
+    hi = jnp.full_like(x0, jnp.inf) if upper is None else jnp.broadcast_to(upper, x0.shape)
+    args = jax.lax.stop_gradient((x0, theta, sc, rs, lo, hi))
+    raw = _newton_iterations(residual, args[0], args[1], tol, max_iter, *args[2:])
+    valid_input = jnp.all((sc > 0) & (rs > 0) & jnp.isfinite(sc) & jnp.isfinite(rs) & (lo <= hi))
+    report = raw.report._replace(
+        status=jnp.where(valid_input, raw.report.status, SolveStatus.INVALID_INPUT)
+    )
+    report = jax.lax.stop_gradient(report)
+    value = implicit_solution(residual, jax.lax.stop_gradient(raw.value), theta, report.converged)
+    return SolveResult(value, report)
+
+
 def newton_system(
     residual: ResidualFn,
     x0: Array,
@@ -169,79 +336,51 @@ def newton_system(
     tol: float = 1e-10,
     max_iter: int = 50,
 ) -> Array:
-    """Solve a *vector* root ``residual(x, theta) = 0`` by a damped Newton iteration.
+    """Solve a vector root with implicit forward and reverse derivatives.
 
-    The forward pass takes full Newton steps ``dx = -J^{-1} F`` with the autodiff
-    Jacobian ``J = dF/dx`` (a dense solve, intended for the small systems that
-    multi-reaction equilibrium and multi-phase flashes produce). The converged
-    root is differentiated with respect to the parameter pytree ``theta`` by the
-    implicit function theorem (``dx*/dtheta = -J^{-1} dF/dtheta``), so gradients
-    are exact and independent of the iteration count.
-
-    Args:
-        residual: Vector function ``residual(x, theta) -> r`` with ``r.shape == x.shape``.
-        x0: Initial guess (should be interior to any feasible region).
-        theta: Differentiable parameter pytree forwarded to ``residual``.
-        tol: Convergence tolerance on the max-norm of the Newton step.
-        max_iter: Iteration cap.
-
-    Returns:
-        The converged root ``x*``; differentiable with respect to ``theta``.
+    Returns the best iterate for compatibility. Use :func:`newton_system_with_info`
+    when accepting a result; a finite iterate alone does not prove convergence.
+    Derivatives of an unconverged solution are nonfinite.
     """
-    # Damping candidates for the backtracking line search (full step first).
-    alphas = jnp.array([1.0, 0.5, 0.25, 0.1, 0.03, 0.01])
+    return newton_system_with_info(residual, x0, theta, tol, max_iter).value
 
-    def cond(carry: tuple[Array, Array, Array]) -> Array:
-        _x, i, err = carry
-        return (err > tol) & (i < max_iter)
 
-    def body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
-        x, i, _ = carry
-        f = residual(x, theta)
-        jac = jax.jacobian(lambda xx: residual(xx, theta))(x)
-        dx = jnp.linalg.solve(jac, -f)
+def fixed_point_with_info(
+    g: Callable[[Array, Any], Array],
+    x0: Array,
+    theta: Any,
+    tol: float = 1e-12,
+    max_iter: int = 200,
+) -> SolveResult:
+    """Converge a contraction and solve its derivative as a linear system.
 
-        # Backtracking line search: take the damped step that most reduces the
-        # residual norm. This keeps the Newton iteration from overshooting into
-        # infeasible regions (e.g. negative mole numbers in a log-activity
-        # residual) where a full step would diverge.
-        def norm_at(alpha: Array) -> Array:
-            r = residual(x + alpha * dx, theta)
-            return jnp.sqrt(jnp.sum(r * r))
+    The derivative does not repeat the forward fixed-point iteration, so a
+    slowly converging adjoint cannot silently exhaust a separate iteration cap.
+    """
+    if tol <= 0 or max_iter < 0:
+        raise ValueError("tol must be positive and max_iter must be nonnegative")
+    params = jax.lax.stop_gradient(theta)
+    start = jax.lax.stop_gradient(jnp.asarray(x0, dtype=float))
 
-        norms = jax.vmap(norm_at)(alphas)
-        norms = jnp.where(jnp.isfinite(norms), norms, jnp.inf)
-        step = alphas[jnp.argmin(norms)] * dx
-        return x + step, i + 1, jnp.max(jnp.abs(step))
+    def cond(carry: tuple[Array, Array, Array, Array]) -> Array:
+        _, r, i, _ = carry
+        return (jnp.max(jnp.abs(r)) > tol) & jnp.all(jnp.isfinite(r)) & (i < max_iter)
 
-    x_star, _, _ = jax.lax.while_loop(
-        cond, body, (jnp.asarray(x0, dtype=float), jnp.asarray(0), jnp.asarray(jnp.inf))
+    def body(carry: tuple[Array, Array, Array, Array]) -> tuple:
+        x, r, i, _ = carry
+        x_new = x + r
+        return x_new, g(x_new, params) - x_new, i + 1, jnp.max(jnp.abs(r))
+
+    x, r, iterations, step = jax.lax.while_loop(
+        cond, body, (start, g(start, params) - start, jnp.asarray(0), jnp.asarray(0.0))
     )
-    return x_star
+    report = residual_report(r, tol, iterations=iterations, step_norm=step)
+    value = implicit_solution(
+        lambda x, th: g(x, th) - x, jax.lax.stop_gradient(x), theta, report.converged
+    )
+    return SolveResult(value, report)
 
 
-def _newton_system_fwd(
-    residual: ResidualFn, x0: Array, theta: Any, tol: float, max_iter: int
-) -> tuple[Array, tuple[Array, Any]]:
-    x_star = newton_system(residual, x0, theta, tol, max_iter)
-    return x_star, (x_star, theta)
-
-
-def _newton_system_bwd(
-    residual: ResidualFn, tol: float, max_iter: int, res: tuple[Array, Any], x_bar: Array
-) -> tuple[Array, Any]:
-    x_star, theta = res
-    jac = jax.jacobian(lambda xx: residual(xx, theta))(x_star)
-    w = jnp.linalg.solve(jac.T, x_bar)
-    _, vjp_theta = jax.vjp(lambda th: residual(x_star, th), theta)
-    theta_bar = vjp_theta(-w)[0]
-    return jnp.zeros_like(x_star), theta_bar
-
-
-newton_system.defvjp(_newton_system_fwd, _newton_system_bwd)
-
-
-@partial(jax.custom_vjp, nondiff_argnums=(0, 3, 4))
 def fixed_point(
     g: Callable[[Array, Any], Array],
     x0: Array,
@@ -249,69 +388,105 @@ def fixed_point(
     tol: float = 1e-12,
     max_iter: int = 200,
 ) -> Array:
-    """Solve ``x = g(x, theta)`` and return the fixed point ``x*``.
+    """Return a contraction's fixed point with implicit forward/reverse derivatives.
 
-    Args:
-        g: Update map ``g(x, theta) -> x`` (must be a contraction near ``x*``).
-        x0: Initial guess.
-        theta: Differentiable parameter pytree passed through to ``g``.
-        tol: Convergence tolerance on the max-norm of successive iterates.
-        max_iter: Iteration cap.
-
-    Returns:
-        The converged fixed point. Gradients with respect to ``theta`` are
-        computed by implicit differentiation (see module docstring).
+    Use :func:`fixed_point_with_info` to inspect termination. An unconverged
+    iterate has nonfinite derivatives.
     """
-
-    def cond(carry: tuple[Array, Array, Array]) -> Array:
-        x_prev, x, i = carry
-        return (jnp.max(jnp.abs(x - x_prev)) > tol) & (i < max_iter)
-
-    def body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
-        _, x, i = carry
-        return x, g(x, theta), i + 1
-
-    x1 = g(x0, theta)
-    init = (x0, x1, jnp.asarray(1))
-    _, x_star, _ = jax.lax.while_loop(cond, body, init)
-    return x_star
+    return fixed_point_with_info(g, x0, theta, tol, max_iter).value
 
 
-def _fixed_point_fwd(
-    g: Callable[[Array, Any], Array],
+def bracketed_root_with_info(
+    residual: ResidualFn,
+    params: Any,
+    lo: Array,
+    hi: Array,
+    tol: float = 1e-12,
+    max_iter: int = 200,
+    *,
+    residual_tol: float = 1e-8,
+) -> SolveResult:
+    """Bisect a validated scalar bracket and check the resulting residual.
+
+    ``tol`` limits bracket width; ``residual_tol`` independently limits the
+    function residual in its own units. A sign change across a discontinuity
+    can reduce the width without satisfying the equation and is reported as a
+    failure. Endpoints that already solve the equation take zero iterations.
+
+    Raises:
+        ValueError: If tolerances or the iteration limit are invalid.
+    """
+    if tol <= 0 or residual_tol <= 0 or max_iter < 0:
+        raise ValueError("tolerances must be positive and max_iter nonnegative")
+    lower, upper, theta = jax.lax.stop_gradient(
+        (jnp.asarray(lo, dtype=float), jnp.asarray(hi, dtype=float), params)
+    )
+    fl, fu = residual(lower, theta), residual(upper, theta)
+    valid = (
+        jnp.isfinite(fl)
+        & jnp.isfinite(fu)
+        & (lower <= upper)
+        & ((jnp.sign(fl) != jnp.sign(fu)) | (fl == 0) | (fu == 0))
+    )
+    endpoint = (jnp.abs(fl) <= residual_tol) | (jnp.abs(fu) <= residual_tol)
+
+    def cond(state: tuple) -> Array:
+        left, right, _, _, i = state
+        return valid & ~endpoint & ((right - left) > tol) & (i < max_iter)
+
+    def body(state: tuple) -> tuple:
+        left, right, fleft, _, i = state
+        mid = (left + right) / 2
+        fm = residual(mid, theta)
+        same = jnp.sign(fm) == jnp.sign(fleft)
+        return (
+            jnp.where(same, mid, left),
+            jnp.where(same, right, mid),
+            jnp.where(same, fm, fleft),
+            fm,
+            i + 1,
+        )
+
+    left, right, _, _, iterations = jax.lax.while_loop(
+        cond, body, (lower, upper, fl, fu, jnp.asarray(0))
+    )
+    root = jnp.where(
+        endpoint, jnp.where(jnp.abs(fl) <= residual_tol, lower, upper), (left + right) / 2
+    )
+    report = residual_report(
+        jnp.atleast_1d(residual(root, theta)),
+        residual_tol,
+        iterations=iterations,
+        step_norm=right - left,
+    )
+    report = report._replace(status=jnp.where(valid, report.status, SolveStatus.INVALID_INPUT))
+    value = implicit_solution(
+        lambda x, th: jnp.atleast_1d(residual(x[0], th)),
+        jnp.atleast_1d(root),
+        params,
+        report.converged,
+    )[0]
+    return SolveResult(value, report)
+
+
+def newton_root_with_info(
+    residual: ResidualFn,
+    params: Any,
     x0: Array,
-    theta: Any,
-    tol: float,
-    max_iter: int,
-) -> tuple[Array, tuple[Array, Any]]:
-    x_star = fixed_point(g, x0, theta, tol, max_iter)
-    return x_star, (x_star, theta)
-
-
-def _fixed_point_bwd(
-    g: Callable[[Array, Any], Array],
-    tol: float,
-    max_iter: int,
-    res: tuple[Array, Any],
-    x_bar: Array,
-) -> tuple[Array, Any]:
-    x_star, theta = res
-    _, vjp_x = jax.vjp(lambda x: g(x, theta), x_star)
-
-    def w_cond(carry: tuple[Array, Array, Array]) -> Array:
-        w_prev, w, i = carry
-        return (jnp.max(jnp.abs(w - w_prev)) > tol) & (i < max_iter)
-
-    def w_body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
-        _, w, i = carry
-        return w, x_bar + vjp_x(w)[0], i + 1
-
-    w1 = x_bar + vjp_x(x_bar)[0]
-    _, w_star, _ = jax.lax.while_loop(w_cond, w_body, (x_bar, w1, jnp.asarray(1)))
-
-    _, vjp_theta = jax.vjp(lambda th: g(x_star, th), theta)
-    theta_bar = vjp_theta(w_star)[0]
-    return jnp.zeros_like(x_star), theta_bar
-
-
-fixed_point.defvjp(_fixed_point_fwd, _fixed_point_bwd)
+    tol: float = 1e-10,
+    max_iter: int = 100,
+    *,
+    lower: Array | None = None,
+    upper: Array | None = None,
+) -> SolveResult:
+    """Solve a scalar root with residual-decreasing steps and a checked report."""
+    result = newton_system_with_info(
+        lambda x, th: jnp.atleast_1d(residual(x[0], th)),
+        jnp.atleast_1d(x0),
+        params,
+        tol,
+        max_iter,
+        lower=lower,
+        upper=upper,
+    )
+    return SolveResult(result.value[0], result.report)

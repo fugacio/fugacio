@@ -13,7 +13,7 @@ simulators, far more robust than plain substitution on tight recycles), a
 preferred method for several interacting tears), or a full **Newton** iteration
 on ``g(x) - x`` with the autodiff Jacobian (quadratic convergence for stiff
 recycles, at one Jacobian per step). All three differentiate the *converged*
-solution by the implicit function theorem (a hand-written ``custom_vjp`` that
+solution by the implicit function theorem (a ``custom_jvp`` whose transpose
 solves the small dense adjoint system ``(I - dg/dx)^T w = x_bar``). The forward
 iteration count never appears in the backward pass, so a gradient of any product
 spec with respect to an operating variable costs one adjoint solve, no matter how
@@ -38,10 +38,9 @@ of the loop.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from functools import partial
-from typing import Any
+from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
@@ -49,150 +48,27 @@ from jax import Array
 from jax.flatten_util import ravel_pytree
 
 from fugacio.sim.stream import Stream
+from fugacio.thermo.diagnostics import (
+    ConvergenceError,
+    SolveReport,
+    SolveResult,
+    require_converged,
+    residual_report,
+)
+from fugacio.thermo.implicit import implicit_solution, newton_system_with_info
 
 TEAR_METHODS: tuple[str, ...] = ("wegstein", "broyden", "newton")
 """Recycle convergence methods accepted by `tear_solve` and `Flowsheet.solve`."""
 
 
-def _rel_err(step: Array, x_new: Array, atol: float) -> Array:
-    return jnp.max(jnp.abs(step) / (atol + jnp.abs(x_new)))
+class TearResult(NamedTuple):
+    """Recycle state and the independently checked fixed-point residual."""
+
+    value: Any
+    report: SolveReport
 
 
-def _wegstein_loop(
-    g: Callable[[Array, Any], Array],
-    x0: Array,
-    theta: Any,
-    q_min: float,
-    q_max: float,
-    tol: float,
-    atol: float,
-    max_iter: int,
-) -> Array:
-    """Bounded Wegstein iteration on ``x = g(x, theta)``.
-
-    Wegstein estimates, component-by-component, the secant slope ``s_i`` of the
-    update map between the last two iterates and takes the step ``x_{n+1} =
-    q x_n + (1 - q) g(x_n)`` with ``q = s/(s - 1)`` (``q = 0`` is plain direct
-    substitution). ``q`` is clipped to ``[q_min, q_max]`` for stability. The slope
-    is dimensionless, so no state scaling is needed.
-    """
-
-    def cond(carry: tuple[Array, Array, Array, Array, Array]) -> Array:
-        _, _, _, i, err = carry
-        return (err > tol) & (i < max_iter)
-
-    def body(
-        carry: tuple[Array, Array, Array, Array, Array],
-    ) -> tuple[Array, Array, Array, Array, Array]:
-        x_prev, g_prev, x, i, _ = carry
-        gx = g(x, theta)
-        dx = x - x_prev
-        slope = jnp.where(jnp.abs(dx) > 1e-13, (gx - g_prev) / dx, 0.0)
-        q = jnp.where(jnp.abs(slope - 1.0) > 1e-13, slope / (slope - 1.0), 0.0)
-        q = jnp.clip(q, q_min, q_max)
-        x_new = q * x + (1.0 - q) * gx
-        return x, gx, x_new, i + 1, _rel_err(x_new - x, x_new, atol)
-
-    g0 = g(x0, theta)
-    init = (x0, g0, g0, jnp.asarray(1), jnp.asarray(jnp.inf))
-    _, _, x_star, _, _ = jax.lax.while_loop(cond, body, init)
-    return x_star
-
-
-def _broyden_loop(
-    g: Callable[[Array, Any], Array],
-    x0: Array,
-    theta: Any,
-    tol: float,
-    atol: float,
-    max_iter: int,
-) -> Array:
-    """Broyden's (good) method on ``F(x) = g(x, theta) - x`` in scaled variables.
-
-    The inverse Jacobian starts as ``-I`` (exact when the recycle barely feeds
-    back on itself) and is corrected by rank-one updates from the observed
-    secant pairs, so the cost per iteration is one flowsheet pass and no
-    Jacobian, while the convergence is superlinear once the loop interactions
-    have been learned. Variables are scaled by ``atol + |x0|`` so flows,
-    temperatures, and pressures are treated even-handedly.
-    """
-    scale = atol + jnp.abs(x0)
-
-    def f(s: Array) -> Array:
-        x = s * scale
-        return (g(x, theta) - x) / scale
-
-    n = x0.shape[0]
-
-    def cond(carry: tuple[Array, Array, Array, Array, Array]) -> Array:
-        _, _, _, i, err = carry
-        return (err > tol) & (i < max_iter)
-
-    def body(
-        carry: tuple[Array, Array, Array, Array, Array],
-    ) -> tuple[Array, Array, Array, Array, Array]:
-        s, fs, b_inv, i, _ = carry
-        ds = -b_inv @ fs
-        s_new = s + ds
-        fs_new = f(s_new)
-        df = fs_new - fs
-        b_df = b_inv @ df
-        denom = ds @ b_df
-        update = jnp.outer(ds - b_df, ds @ b_inv) / jnp.where(
-            jnp.abs(denom) > 1e-300, denom, 1e-300
-        )
-        b_new = jnp.where(jnp.abs(denom) > 1e-14 * (1.0 + ds @ ds), b_inv + update, b_inv)
-        return s_new, fs_new, b_new, i + 1, _rel_err(ds * scale, s_new * scale, atol)
-
-    s0 = x0 / scale
-    init = (s0, f(s0), -jnp.eye(n), jnp.asarray(0), jnp.asarray(jnp.inf))
-    s_star, _, _, _, _ = jax.lax.while_loop(cond, body, init)
-    return s_star * scale
-
-
-def _newton_loop(
-    g: Callable[[Array, Any], Array],
-    x0: Array,
-    theta: Any,
-    tol: float,
-    atol: float,
-    max_iter: int,
-) -> Array:
-    """Damped Newton on ``F(x) = g(x, theta) - x`` with the autodiff Jacobian."""
-    scale = atol + jnp.abs(x0)
-    alphas = jnp.array([1.0, 0.5, 0.25, 0.1])
-
-    def f(s: Array) -> Array:
-        x = s * scale
-        return (g(x, theta) - x) / scale
-
-    def cond(carry: tuple[Array, Array, Array]) -> Array:
-        _, i, err = carry
-        return (err > tol) & (i < max_iter)
-
-    def body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
-        s, i, _ = carry
-        fs, jac = f(s), jax.jacobian(f)(s)
-        ds = jnp.linalg.solve(jac, -fs)
-
-        def norm_at(alpha: Array) -> Array:
-            r = f(s + alpha * ds)
-            return jnp.sqrt(jnp.sum(r * r))
-
-        norms = jnp.stack([norm_at(a) for a in alphas])
-        norms = jnp.where(jnp.isfinite(norms), norms, jnp.inf)
-        step = alphas[jnp.argmin(norms)] * ds
-        s_new = s + step
-        return s_new, i + 1, _rel_err(step * scale, s_new * scale, atol)
-
-    s_star, _, _ = jax.lax.while_loop(
-        cond, body, (x0 / scale, jnp.asarray(0), jnp.asarray(jnp.inf))
-    )
-    return s_star * scale
-
-
-@partial(jax.custom_vjp, nondiff_argnums=(0, 3, 4, 5, 6, 7, 8))
-def _tear_root(
+def _tear_iterations(
     g: Callable[[Array, Any], Array],
     x0: Array,
     theta: Any,
@@ -202,79 +78,139 @@ def _tear_root(
     tol: float,
     atol: float,
     max_iter: int,
-) -> Array:
-    """Solve the flat fixed point ``x = g(x, theta)`` with the chosen tear method."""
-    if method == "wegstein":
-        return _wegstein_loop(g, x0, theta, q_min, q_max, tol, atol, max_iter)
-    if method == "broyden":
-        return _broyden_loop(g, x0, theta, tol, atol, max_iter)
+) -> SolveResult:
+    """Converge a recycle while retaining iterations and a residual check."""
+    scale = jnp.maximum(jnp.abs(x0), 1.0)
+
+    def residual(y: Array, th: Any) -> Array:
+        x = y * scale
+        return (g(x, th) - x) / scale
+
     if method == "newton":
-        return _newton_loop(g, x0, theta, tol, atol, max_iter)
-    raise ValueError(f"unknown tear method {method!r}; choose from {TEAR_METHODS}")
+        result = newton_system_with_info(residual, x0 / scale, theta, tol, max_iter)
+        return SolveResult(result.value * scale, result.report)
+
+    def error(x: Array, r: Array) -> Array:
+        return jnp.max(jnp.abs(r) / (atol + jnp.maximum(jnp.abs(x), 1.0)))
+
+    gx0 = g(x0, theta)
+    n = x0.size
+
+    def cond(carry: tuple) -> Array:
+        x, gx, _, _, _, i, _, _ = carry
+        return (error(x, gx - x) > tol) & jnp.all(jnp.isfinite(gx)) & (i < max_iter)
+
+    def body(carry: tuple) -> tuple:
+        x, gx, prev_x, prev_g, inverse, i, _, _ = carry
+        if method == "wegstein":
+            dx = x - prev_x
+            slope = (gx - prev_g) / jnp.where(jnp.abs(dx) > 1e-13, dx, 1.0)
+            slope = jnp.where((i > 0) & (jnp.abs(dx) > 1e-13), slope, 0.0)
+            denominator = slope - 1.0
+            q = slope / jnp.where(jnp.abs(denominator) > 1e-13, denominator, 1.0)
+            q = jnp.where(jnp.abs(denominator) > 1e-13, q, 0.0)
+            q = jnp.clip(q, q_min, q_max)
+            x_new = q * x + (1.0 - q) * gx
+        else:
+            r = (gx - x) / scale
+            ds = -inverse @ r
+            x_new = x + ds * scale
+        g_new = g(x_new, theta)
+        if method == "broyden":
+            direction = x_new - x
+            old_error = error(x, gx - x)
+
+            def search_cond(state: tuple) -> Array:
+                alpha, point, mapped = state
+                score = error(point, mapped - point)
+                return (alpha > 1 / 128) & (~jnp.isfinite(score) | (score > old_error))
+
+            def search_body(state: tuple) -> tuple:
+                alpha, _, _ = state
+                alpha = alpha / 2
+                point = x + alpha * direction
+                return alpha, point, g(point, theta)
+
+            _, x_new, g_new = jax.lax.while_loop(
+                search_cond, search_body, (jnp.asarray(1.0), x_new, g_new)
+            )
+            ds = (x_new - x) / scale
+            df = ((g_new - x_new) - (gx - x)) / scale
+            bdf = inverse @ df
+            denominator = ds @ bdf
+            update = jnp.outer(ds - bdf, ds @ inverse) / jnp.where(
+                jnp.abs(denominator) > 1e-30, denominator, 1.0
+            )
+            inverse = jnp.where(
+                (jnp.abs(denominator) > 1e-14) & jnp.all(jnp.isfinite(update)),
+                inverse + update,
+                -jnp.eye(n),
+            )
+        step = error(x_new, x_new - x)
+        return x_new, g_new, x, gx, inverse, i + 1, step, error(x_new, g_new - x_new)
+
+    initial = (x0, gx0, x0, gx0, -jnp.eye(n), jnp.asarray(0), jnp.asarray(0.0), error(x0, gx0 - x0))
+    x, gx, _, _, _, iterations, step, _ = jax.lax.while_loop(cond, body, initial)
+    r = (gx - x) / (atol + jnp.maximum(jnp.abs(x), 1.0))
+    return SolveResult(x, residual_report(r, tol, iterations=iterations, step_norm=step))
 
 
-def _tear_root_fwd(
-    g: Callable[[Array, Any], Array],
-    x0: Array,
-    theta: Any,
-    method: str,
-    q_min: float,
-    q_max: float,
-    tol: float,
-    atol: float,
-    max_iter: int,
-) -> tuple[Array, tuple[Array, Any]]:
-    x_star = _tear_root(g, x0, theta, method, q_min, q_max, tol, atol, max_iter)
-    return x_star, (x_star, theta)
+def tear_solve_with_info(
+    g: Callable[[Any, Any], Any],
+    tear0: Any,
+    theta: Any = None,
+    *,
+    method: str = "wegstein",
+    q_min: float = -5.0,
+    q_max: float = 0.0,
+    tol: float = 1e-10,
+    atol: float = 1e-12,
+    max_iter: int = 200,
+) -> TearResult:
+    """Solve a recycle, reporting its actual fixed-point residual.
 
+    ``g(tear, theta)`` and ``tear0`` must have identical pytree structures.
+    Both JVPs and VJPs solve the linearized fixed-point equations independently
+    of the forward acceleration. An unconverged iterate has nonfinite
+    sensitivities. ``q_max`` may be raised toward one to damp oscillatory maps.
 
-def _tear_root_bwd(
-    g: Callable[[Array, Any], Array],
-    method: str,
-    q_min: float,
-    q_max: float,
-    tol: float,
-    atol: float,
-    max_iter: int,
-    res: tuple[Array, Any],
-    x_bar: Array,
-) -> tuple[Array, Any]:
-    """Implicit-function-theorem adjoint: ``(I - dg/dx)^T w = x_bar``, then ``(dg/dtheta)^T w``.
+    Args:
+        g: One flowsheet pass.
+        tear0: Starting recycle state, as any floating-point pytree.
+        theta: Differentiable operating parameters and upstream streams.
+        method: Wegstein, Broyden, or Newton.
+        q_min: Minimum Wegstein acceleration factor.
+        q_max: Maximum Wegstein acceleration factor.
+        tol: Scaled fixed-point residual tolerance.
+        atol: Absolute floor added to the per-variable scaling.
+        max_iter: Forward iteration cap.
 
-    For the Wegstein method the recycle map is a contraction near the solution
-    (that is why direct substitution converges), so the transposed system is
-    solved by the same contraction using only vector-Jacobian products of ``g``,
-    which scales to the long tear vectors of stage-by-stage column models. The
-    Newton and Broyden methods also converge recycles that are *not*
-    contractions, so their adjoint forms the (small, dense) Jacobian and solves
-    the system directly.
+    Returns:
+        The best recycle state and its solve report.
+
+    Raises:
+        ValueError: For an unknown method or invalid numerical options.
     """
-    x_star, theta = res
-    _, vjp_x = jax.vjp(lambda x: g(x, theta), x_star)
+    if method not in TEAR_METHODS:
+        raise ValueError(f"unknown tear method {method!r}; choose from {TEAR_METHODS}")
+    if tol <= 0 or atol <= 0 or max_iter < 0 or q_min > q_max:
+        raise ValueError("invalid tear solver tolerances, iteration cap, or acceleration bounds")
+    flat0, unravel = ravel_pytree(tear0)
 
-    if method == "wegstein":
+    def g_flat(x: Array, th: Any) -> Array:
+        out = g(unravel(x), th)
+        return ravel_pytree(out)[0]
 
-        def w_cond(carry: tuple[Array, Array, Array]) -> Array:
-            w_prev, w, i = carry
-            return (_rel_err(w - w_prev, w, atol) > tol) & (i < max_iter)
-
-        def w_body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
-            _, w, i = carry
-            return w, x_bar + vjp_x(w)[0], i + 1
-
-        w1 = x_bar + vjp_x(x_bar)[0]
-        _, w_star, _ = jax.lax.while_loop(w_cond, w_body, (x_bar, w1, jnp.asarray(1)))
-    else:
-        jac = jax.jacobian(lambda x: g(x, theta))(x_star)
-        n = x_star.shape[0]
-        w_star = jnp.linalg.solve((jnp.eye(n) - jac).T, x_bar)
-
-    _, vjp_theta = jax.vjp(lambda th: g(x_star, th), theta)
-    theta_bar = vjp_theta(w_star)[0]
-    return jnp.zeros_like(x_star), theta_bar
-
-
-_tear_root.defvjp(_tear_root_fwd, _tear_root_bwd)
+    start, params = jax.lax.stop_gradient((flat0, theta))
+    raw = _tear_iterations(g_flat, start, params, method, q_min, q_max, tol, atol, max_iter)
+    report = jax.lax.stop_gradient(raw.report)
+    value = implicit_solution(
+        lambda x, th: g_flat(x, th) - x,
+        jax.lax.stop_gradient(raw.value),
+        theta,
+        report.converged,
+    )
+    return TearResult(unravel(value), report)
 
 
 def tear_solve(
@@ -288,46 +224,35 @@ def tear_solve(
     tol: float = 1e-10,
     atol: float = 1e-12,
     max_iter: int = 200,
+    check: bool = True,
 ) -> Any:
-    """Converge a recycle by solving the tear fixed point ``tear = g(tear, theta)``.
+    """Return a converged recycle, with implicit forward and reverse derivatives.
 
-    Args:
-        g: One sequential-modular pass of the flowsheet. Given a tear-stream guess
-            (any pytree) and the parameter pytree ``theta``, it runs the units and
-            returns the recomputed tear stream(s) in the *same* pytree structure.
-        tear0: Initial guess for the torn stream(s).
-        theta: Differentiable parameter pytree (operating conditions, specs, feed).
-            Pass the quantities you want to differentiate through here; gradients
-            flow to ``theta`` by implicit differentiation. Closed-over constants are
-            fine but are treated as non-differentiable.
-        method: ``"wegstein"`` (default), ``"broyden"``, or ``"newton"``; see the
-            module docstring for when each is preferable.
-        q_min: Lower bound on the Wegstein acceleration factor.
-        q_max: Upper bound on the Wegstein acceleration factor. The default
-            ``[-5, 0]`` accelerates without over-damping; widen ``q_max`` toward
-            ``1`` to damp oscillatory recycles.
-        tol: Relative tolerance for the convergence norm.
-        atol: Absolute floor for the convergence norm.
-        max_iter: Iteration cap for the forward solve.
-
-    Returns:
-        The converged tear stream(s), in the structure of ``tear0``. Differentiable
-        with respect to ``theta``.
+    Eager calls raise on failure by default. Under JAX transforms the failed
+    value is nonfinite; use :func:`tear_solve_with_info` to retain diagnostics
+    and the best iterate. ``check=False`` also returns that best iterate.
 
     Raises:
-        ValueError: for an unknown ``method``.
+        ConvergenceError: If an eager calculation does not converge.
+        ValueError: If numerical options are invalid.
     """
-    if method not in TEAR_METHODS:
-        raise ValueError(f"unknown tear method {method!r}; choose from {TEAR_METHODS}")
-    flat0, unravel = ravel_pytree(tear0)
-
-    def g_flat(x: Array, theta: Any) -> Array:
-        out = g(unravel(x), theta)
-        y, _ = ravel_pytree(out)
-        return y
-
-    x_star = _tear_root(g_flat, flat0, theta, method, q_min, q_max, tol, atol, max_iter)
-    return unravel(x_star)
+    result = tear_solve_with_info(
+        g,
+        tear0,
+        theta,
+        method=method,
+        q_min=q_min,
+        q_max=q_max,
+        tol=tol,
+        atol=atol,
+        max_iter=max_iter,
+    )
+    if check:
+        require_converged(result.report, "recycle")
+        return jax.tree_util.tree_map(
+            lambda x: jnp.where(result.report.converged, x, jnp.nan), result.value
+        )
+    return result.value
 
 
 UnitFn = Callable[..., Any]
@@ -491,6 +416,42 @@ def _select_tears(
     return tuple(tears)
 
 
+@dataclass(frozen=True)
+class FlowsheetResult:
+    """Named streams with per-block convergence and physical-state checks.
+
+    Attributes:
+        streams: All feeds and computed streams.
+        reports: Solve reports keyed by unit or recycle-block name.
+    """
+
+    streams: dict[str, Stream]
+    reports: dict[str, SolveReport]
+
+    @property
+    def converged(self) -> Array:
+        """Whether every block and physical-state check succeeded."""
+        return jnp.all(jnp.asarray([r.converged for r in self.reports.values()]))
+
+    @property
+    def report(self) -> SolveReport:
+        """The first failed block report, or the largest converged residual."""
+        reports = tuple(self.reports.values())
+        if not reports:
+            return residual_report(jnp.zeros(0))
+        scores = jnp.array([jnp.where(r.converged, r.residual_norm, jnp.inf) for r in reports])
+        index = jnp.argmax(scores)
+        return jax.tree_util.tree_map(lambda *values: jnp.stack(values)[index], *reports)
+
+    def __getitem__(self, name: str) -> Stream:
+        return self.streams[name]
+
+    def check(self) -> None:
+        """Raise with the responsible block's name if any calculation failed."""
+        for name, report in self.reports.items():
+            require_converged(report, name)
+
+
 @dataclass
 class Flowsheet:
     """A declarative flowsheet: named streams produced by connected units.
@@ -524,6 +485,8 @@ class Flowsheet:
 
     def feed(self, name: str, stream: Stream) -> Flowsheet:
         """Register a fresh feed stream by name. Returns ``self`` for chaining."""
+        if name in self.feeds:
+            raise ValueError(f"duplicate feed name {name!r}")
         self.feeds[name] = stream
         return self
 
@@ -541,6 +504,8 @@ class Flowsheet:
         ``theta`` pytree, and returns either a single `Stream` (for one
         output name) or a tuple/list of streams aligned with ``outputs``.
         """
+        if any(u.name == name for u in self.units):
+            raise ValueError(f"duplicate unit name {name!r}")
         self.units.append(_Unit(name, fn, tuple(inputs), tuple(outputs)))
         return self
 
@@ -617,7 +582,10 @@ class Flowsheet:
         for name in names:
             u = by_name[name]
             args = [streams[s] for s in u.inputs]
-            result = u.fn(*args, theta)
+            try:
+                result = u.fn(*args, theta)
+            except ConvergenceError as exc:
+                raise ConvergenceError(exc.report, f"unit {u.name}: {exc.context}") from exc
             produced = result if isinstance(result, list | tuple) else (result,)
             if len(produced) != len(u.outputs):
                 raise ValueError(
@@ -659,30 +627,86 @@ class Flowsheet:
         streams: dict[str, Stream] = {**self.feeds, **tears}
         return self._run_units([u.name for u in self.units], streams, theta)
 
-    def solve(self, theta: Any = None, **tear_solve_kwargs: Any) -> dict[str, Stream]:
-        """Solve the flowsheet (closing every recycle) and return all named streams.
+    def solve_with_info(
+        self,
+        theta: Any = None,
+        *,
+        guess: Mapping[str, Stream] | None = None,
+        **tear_solve_kwargs: Any,
+    ) -> FlowsheetResult:
+        """Solve every block and retain convergence reports alongside streams.
 
-        The blocks from `partition` are evaluated in order; each cyclic block is
-        converged with `tear_solve` on its tear streams (keyword arguments such as
-        ``method="broyden"`` are forwarded). ``theta`` is the differentiable
-        parameter pytree passed to every unit; every output stream is
-        differentiable with respect to it.
+        Failed blocks retain their best iterates for diagnosis. Use ``result.check()``
+        at an application boundary, or inspect ``result.converged`` inside JIT.
         """
         streams: dict[str, Stream] = dict(self.feeds)
+        reports: dict[str, SolveReport] = {}
         for block in self.partition():
             if not block.cyclic:
                 self._run_units(block.units, streams, theta)
-                continue
-            guesses = self._seed_tears(block, streams, theta)
-            # The upstream streams travel inside the parameter pytree (not as
-            # closed-over values) so the implicit adjoint differentiates through
-            # them and no tracer leaks into the custom-VJP solver.
-            converged = tear_solve(
-                self._block_map(block), guesses, (theta, dict(streams)), **tear_solve_kwargs
-            )
-            streams.update(zip(block.tears, converged, strict=True))
-            self._run_units(block.units, streams, theta)
-        return streams
+            else:
+                if guess is not None and all(name in guess for name in block.tears):
+                    guesses = tuple(jax.lax.stop_gradient(guess[name]) for name in block.tears)
+                else:
+                    guesses = self._seed_tears(block, streams, theta)
+                if guess is not None:
+                    guesses = tuple(
+                        jax.lax.stop_gradient(guess.get(name, seed))
+                        for name, seed in zip(block.tears, guesses, strict=True)
+                    )
+                converged = tear_solve_with_info(
+                    self._block_map(block), guesses, (theta, dict(streams)), **tear_solve_kwargs
+                )
+                reports["recycle:" + ",".join(block.units)] = converged.report
+                streams.update(zip(block.tears, converged.value, strict=True))
+                self._run_units(block.units, streams, theta)
+        for name, stream in streams.items():
+            reports["stream:" + name] = stream.report
+        return FlowsheetResult(streams, reports)
+
+    def solve(
+        self, theta: Any = None, *, check: bool = True, **tear_solve_kwargs: Any
+    ) -> dict[str, Stream]:
+        """Return named streams after checked recycle convergence.
+
+        Eager failures identify the responsible block. Compiled failures produce
+        nonfinite streams; :meth:`solve_with_info` retains the reports and best
+        iterates for inspection. Set ``check=False`` to return best iterates.
+
+        Raises:
+            ConvergenceError: If an eager block or stream check fails.
+        """
+        result = self.solve_with_info(theta, **tear_solve_kwargs)
+        if not check:
+            return result.streams
+        result.check()
+        return jax.tree_util.tree_map(
+            lambda x: jnp.where(result.converged, x, jnp.nan), result.streams
+        )
+
+    def solve_path(
+        self,
+        start: Any,
+        target: Any,
+        *,
+        solve_options: Mapping[str, Any] | None = None,
+        **options: Any,
+    ) -> Any:
+        """Continue between operating conditions with accepted recycle warm starts.
+
+        ``options`` are forwarded to :func:`continuation_solve`. Configure the
+        recycle method and tolerances through ``solve_options``.
+        """
+        from fugacio.sim.continuation import continuation_solve
+
+        def solve(params: Any, previous: Any) -> tuple[FlowsheetResult, SolveReport]:
+            settings = dict(solve_options or {})
+            if previous is not None:
+                settings["guess"] = previous.streams
+            result = self.solve_with_info(params, **settings)
+            return result, result.report
+
+        return continuation_solve(solve, start, target, **options)
 
     def _block_map(
         self, block: Partition
@@ -701,4 +725,16 @@ class Flowsheet:
         return g
 
 
-__all__ = ["TEAR_METHODS", "Flowsheet", "Partition", "tear_solve"]
+jax.tree_util.register_dataclass(
+    FlowsheetResult, data_fields=["streams", "reports"], meta_fields=[]
+)
+
+__all__ = [
+    "TEAR_METHODS",
+    "Flowsheet",
+    "FlowsheetResult",
+    "Partition",
+    "TearResult",
+    "tear_solve",
+    "tear_solve_with_info",
+]
