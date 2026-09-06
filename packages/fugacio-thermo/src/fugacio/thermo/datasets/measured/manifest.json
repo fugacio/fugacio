@@ -1,0 +1,331 @@
+{
+  "archive": "NIST ThermoML Archive",
+  "identities": {
+    "AFABGHUZZDYHJO-UHFFFAOYSA-N": {
+      "cas": "107-83-5",
+      "inchi": "InChI=1S/C6H14/c1-4-5-6(2)3/h6H,4-5H2,1-3H3",
+      "name": "2-methylpentane"
+    },
+    "AMQJEAYHLZJPGS-UHFFFAOYSA-N": {
+      "cas": "71-41-0",
+      "inchi": "InChI=1S/C5H12O/c1-2-3-4-5-6/h6H,2-5H2,1H3",
+      "name": "1-pentanol"
+    },
+    "ATHHXGZTWNVVOU-UHFFFAOYSA-N": {
+      "cas": "123-39-7",
+      "inchi": "InChI=1S/C2H5NO/c1-3-2-4/h2H,1H3,(H,3,4)",
+      "name": "n-methylformamide"
+    },
+    "BDERNNFJNOPAEC-UHFFFAOYSA-N": {
+      "cas": "71-23-8",
+      "inchi": "InChI=1S/C3H8O/c1-2-3-4/h4H,2-3H2,1H3",
+      "name": "1-propanol"
+    },
+    "BKIMMITUMNQMOS-UHFFFAOYSA-N": {
+      "cas": "111-84-2",
+      "inchi": "InChI=1S/C9H20/c1-3-5-7-9-8-6-4-2/h3-9H2,1-2H3",
+      "name": "n-nonane"
+    },
+    "CTQNGGLPUBDAKN-UHFFFAOYSA-N": {
+      "cas": "95-47-6",
+      "inchi": "InChI=1S/C8H10/c1-7-5-3-4-6-8(7)2/h3-6H,1-2H3",
+      "name": "o-xylene"
+    },
+    "HNRMPXKDFBEGFZ-UHFFFAOYSA-N": {
+      "cas": "75-83-2",
+      "inchi": "InChI=1S/C6H14/c1-5-6(2,3)4/h5H2,1-4H3",
+      "name": "2,2-dimethylbutane"
+    },
+    "HXJUTPCZVOIRIF-UHFFFAOYSA-N": {
+      "cas": "126-33-0",
+      "inchi": "InChI=1S/C4H8O2S/c5-7(6)3-1-2-4-7/h1-4H2",
+      "name": "sulfolane"
+    },
+    "IMNFDUFMRHMDMM-UHFFFAOYSA-N": {
+      "cas": "142-82-5",
+      "inchi": "InChI=1S/C7H16/c1-3-5-7-6-4-2/h3-7H2,1-2H3",
+      "name": "n-heptane"
+    },
+    "IVSZLXZYQVIEFR-UHFFFAOYSA-N": {
+      "cas": "108-38-3",
+      "inchi": "InChI=1S/C8H10/c1-7-4-3-5-8(2)6-7/h3-6H,1-2H3",
+      "name": "m-xylene"
+    },
+    "LFQSCWFLJHTTHZ-UHFFFAOYSA-N": {
+      "cas": "64-17-5",
+      "inchi": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
+      "name": "ethanol"
+    },
+    "LRHPLDYGYMQRHN-UHFFFAOYSA-N": {
+      "cas": "71-36-3",
+      "inchi": "InChI=1S/C4H10O/c1-2-3-4-5/h5H,2-4H2,1H3",
+      "name": "1-butanol"
+    },
+    "NTIZESTWPVYFNL-UHFFFAOYSA-N": {
+      "cas": "108-10-1",
+      "inchi": "InChI=1S/C6H12O/c1-5(2)4-6(3)7/h5H,4H2,1-3H3",
+      "name": "mibk"
+    },
+    "OKKJLVBELUTLKV-UHFFFAOYSA-N": {
+      "cas": "67-56-1",
+      "inchi": "InChI=1S/CH4O/c1-2/h2H,1H3",
+      "name": "methanol"
+    },
+    "PFEOZHBOMNWTJB-UHFFFAOYSA-N": {
+      "cas": "96-14-0",
+      "inchi": "InChI=1S/C6H14/c1-4-6(3)5-2/h6H,4-5H2,1-3H3",
+      "name": "3-methylpentane"
+    },
+    "SECXISVLQFMRJM-UHFFFAOYSA-N": {
+      "cas": "872-50-4",
+      "inchi": "InChI=1S/C5H9NO/c1-6-4-2-3-5(6)7/h2-4H2,1H3",
+      "name": "nmp"
+    },
+    "UHOVQNZJYSORNB-UHFFFAOYSA-N": {
+      "cas": "71-43-2",
+      "inchi": "InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H",
+      "name": "benzene"
+    },
+    "VLKZOEOYAKHREP-UHFFFAOYSA-N": {
+      "cas": "110-54-3",
+      "inchi": "InChI=1S/C6H14/c1-3-5-6-4-2/h3-6H2,1-2H3",
+      "name": "n-hexane"
+    },
+    "XDTMQSROBMDMFD-UHFFFAOYSA-N": {
+      "cas": "110-82-7",
+      "inchi": "InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2",
+      "name": "cyclohexane"
+    },
+    "XLYOFNOQVPJJNP-UHFFFAOYSA-N": {
+      "cas": "7732-18-5",
+      "inchi": "InChI=1S/H2O/h1H2",
+      "name": "water"
+    },
+    "YXFVVABEGXRONW-UHFFFAOYSA-N": {
+      "cas": "108-88-3",
+      "inchi": "InChI=1S/C7H8/c1-7-5-3-2-4-6-7/h2-6H,1H3",
+      "name": "toluene"
+    },
+    "ZFFMLCVRJBZUDZ-UHFFFAOYSA-N": {
+      "cas": "79-29-8",
+      "inchi": "InChI=1S/C6H14/c1-5(2)6(3)4/h5-6H,1-4H3",
+      "name": "2,3-dimethylbutane"
+    },
+    "ZSIAUFGUXNUGDI-UHFFFAOYSA-N": {
+      "cas": "111-27-3",
+      "inchi": "InChI=1S/C6H14O/c1-2-3-4-5-6-7/h7H,2-6H2,1H3",
+      "name": "1-hexanol"
+    }
+  },
+  "identity_method": "Standard InChIKey resolved to CAS with chemicals; checked against Fugacio CAS registry. Names are display labels only.",
+  "schema_version": 1,
+  "sources": [
+    {
+      "authors": [
+        "Voutsas, E. C.[Epaminondas C.]",
+        "Pamouktsis, C.[Christos]",
+        "Argyris, D.[Dimitrios]",
+        "Pappa, G. D.[Georgia D.]"
+      ],
+      "doi": "10.1016/j.fluid.2011.06.009",
+      "evidence": "measured",
+      "excluded_datasets": {},
+      "file": "j.fluid.2011.06.009.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        1,
+        2
+      ],
+      "sha256": "288bc73f24c1c1e54f8f5685a6b1353d92378f093fd15271a27337b3a32e899d",
+      "title": "Measurements and thermodynamic modeling of the ethanol-water system with emphasis to the azeotropic region",
+      "url": "https://trc.nist.gov/ThermoML/10.1016/j.fluid.2011.06.009.xml"
+    },
+    {
+      "authors": [
+        "Cristino, A. F.",
+        "Rosa, S.",
+        "Morgado, P.",
+        "Galindo, A.",
+        "Filipe, E. J. M.",
+        "Palavra, A. M. F.",
+        "Nieto de Castro, C. A."
+      ],
+      "doi": "10.1016/j.fluid.2012.12.014",
+      "evidence": "measured",
+      "excluded_datasets": {
+        "1": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus."
+      },
+      "excluded_rows": {
+        "2": {
+          "20": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously.",
+          "22": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously.",
+          "35": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously.",
+          "36": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously."
+        },
+        "3": {
+          "20": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously.",
+          "22": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously.",
+          "35": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously.",
+          "36": "Rounded T/P conditions are duplicated; complementary liquid/vapor tables cannot be joined unambiguously."
+        }
+      },
+      "file": "j.fluid.2012.12.014.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        2,
+        3
+      ],
+      "sha256": "cb6925095fa52756bbacd13b7a0152e0e7e34df00fcb83a83be46258d555459c",
+      "title": "High-temperature vapour liquid equilibrium for the water alcohol systems and  modeling with SAFT-VR: 1. Water ethanol",
+      "url": "https://trc.nist.gov/ThermoML/10.1016/j.fluid.2012.12.014.xml"
+    },
+    {
+      "authors": [
+        "Lee, K.-J.[Kun-Jung]",
+        "Chen, W.-K.[Wei-Kuan]",
+        "Lee, L.-S.[Liang-Sun]",
+        "Chang, C.-M. J.[Chieh-Ming J.]",
+        "Ko, J.-W.[Jing-Wei]"
+      ],
+      "doi": "10.1016/j.fluid.2009.03.012",
+      "evidence": "measured",
+      "excluded_datasets": {
+        "10": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "11": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "12": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "2": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "3": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "4": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "5": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "6": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "8": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "9": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus."
+      },
+      "file": "j.fluid.2009.03.012.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        1,
+        7
+      ],
+      "sha256": "c343b21482c9693b87a00823b5af2ad5e73eb724d5254f6133ca4c58aaef0dd8",
+      "title": "Isothermal vapor liquid equilibria for binary mixtures of benzene, toluene, m-xylene, and N-methylformamide at 333.15K and 353.15K",
+      "url": "https://trc.nist.gov/ThermoML/10.1016/j.fluid.2009.03.012.xml"
+    },
+    {
+      "authors": [
+        "Horstmann, S.[Sven]",
+        "Fischer, K.[Kai]",
+        "Gmehling, J."
+      ],
+      "doi": "10.1021/je034254m",
+      "evidence": "measured",
+      "excluded_datasets": {},
+      "file": "je034254m.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha256": "4197ef2aa9f24ab716b3cebb919107b9c537dfe5dbdbbf4afb4e6a98965a5043",
+      "title": "Isothermal Vapor-Liquid Equilibrium and Excess Enthalpy Data for the Binary Systems Water + Sulfolane and Methanol + N-Methyl-2-pyrrolidone (NMP)",
+      "url": "https://trc.nist.gov/ThermoML/10.1021/je034254m.xml"
+    },
+    {
+      "authors": [
+        "Zarei, H. A.",
+        "Iloukhani, H.[Hossein]"
+      ],
+      "doi": "10.1016/j.tca.2004.09.012",
+      "evidence": "measured",
+      "excluded_datasets": {
+        "1": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "2": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "3": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "4": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "5": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "6": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "7": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus."
+      },
+      "file": "j.tca.2004.09.012.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "sha256": "c6ce4779d1ff3cfa467159d357d977c478d2147625a6ca1b924456965fb74014",
+      "title": "Excess molar enthalpies of methyl isobutyl ketone (MIBK) with alkan-1-ols (C1-C6) and their correlations at 298.15 K",
+      "url": "https://trc.nist.gov/ThermoML/10.1016/j.tca.2004.09.012.xml"
+    },
+    {
+      "authors": [
+        "Trejo, A.[Arturo]",
+        "Yanez, P.[Patricia]",
+        "Eustaquio-Rincon, R.[Rafael]"
+      ],
+      "doi": "10.1021/je0505321",
+      "evidence": "measured",
+      "excluded_datasets": {
+        "6": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus."
+      },
+      "file": "je0505321.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "sha256": "73a3d81517f625386a2f4b8dfadba145db7865f3cb1490c208a8e5d6188c671d",
+      "title": "Liquid-Liquid Coexistence Curves for Binary Systems: Methanol + Cyclohexane and + Several Isomers of Hexane",
+      "url": "https://trc.nist.gov/ThermoML/10.1021/je0505321.xml"
+    },
+    {
+      "authors": [
+        "Gupta, B. S.[Bhupender S.]",
+        "Lee, M.-J.[Ming-Jer]"
+      ],
+      "doi": "10.1016/j.fluid.2013.05.016",
+      "evidence": "measured",
+      "excluded_datasets": {
+        "1": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "10": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "11": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "12": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "13": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "14": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "15": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "2": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "3": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "4": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "5": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "6": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "7": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "8": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus.",
+        "9": "Outside the selected binary VLE, excess-enthalpy, and cloud-point corpus."
+      },
+      "file": "j.fluid.2013.05.016.xml",
+      "retrieved": "2026-09-06",
+      "selected_datasets": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "sha256": "69c038c024b6aad74ec319ce22dd0c9fee1fb16db43ed87f57a51036170b3f17",
+      "title": "Isobaric vapor-liquid equilibrium for binary systemsof toluene + o-xylene, benzene + o-xylene, nonane + benzene and nonane + heptane at 101.3 kPa",
+      "url": "https://trc.nist.gov/ThermoML/10.1016/j.fluid.2013.05.016.xml"
+    }
+  ],
+  "terms_url": "https://www.nist.gov/mml/acmd/trc/thermoml/thermoml-archive"
+}

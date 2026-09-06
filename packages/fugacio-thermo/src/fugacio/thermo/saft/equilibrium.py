@@ -24,12 +24,13 @@ from jax import Array
 from fugacio.thermo.constants import R
 from fugacio.thermo.equilibrium import (
     FlashResult,
+    FlashSolveResult,
     StabilityResult,
     classify_trivial,
     rachford_rice,
     wilson_k,
 )
-from fugacio.thermo.implicit import fixed_point
+from fugacio.thermo.implicit import fixed_point, fixed_point_with_info
 from fugacio.thermo.saft.parameters import SaftParameters
 from fugacio.thermo.saft.properties import ln_fugacity_coefficients, molar_density
 
@@ -48,6 +49,22 @@ def flash_pt_saft(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashResult:
+    """Isothermal flash value; use flash_pt_saft_with_info for numerical status."""
+    return flash_pt_saft_with_info(params, t, p, z, tc, pc, omega, tol=tol, max_iter=max_iter).value
+
+
+def flash_pt_saft_with_info(
+    params: SaftParameters,
+    t: ArrayLike,
+    p: ArrayLike,
+    z: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    *,
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> FlashSolveResult:
     """Isothermal-isobaric two-phase flash on PC-SAFT by accelerated substitution.
 
     Solves the equal-fugacity conditions ``phi_i^L x_i = phi_i^V y_i`` with the
@@ -78,7 +95,8 @@ def flash_pt_saft(
         ln_phi_v = ln_fugacity_coefficients(params_, t_, p_, y, phase="vapor")
         return ln_phi_l - ln_phi_v
 
-    ln_k_star = fixed_point(g, jnp.log(k0), theta, tol, max_iter)
+    solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
+    ln_k_star = solved.value
     k = jnp.exp(ln_k_star)
     beta = rachford_rice(z, k)
     t_arr, p_arr = theta[1], theta[2]
@@ -87,7 +105,7 @@ def flash_pt_saft(
     denom = 1.0 + beta * (k - 1.0)
     x = z / denom
     y = k * x
-    return FlashResult(beta=beta, x=x, y=y, k=k)
+    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), solved.report)
 
 
 def bubble_pressure_saft(

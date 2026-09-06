@@ -47,7 +47,6 @@ from fugacio.sim import (
     flash_drum,
     heat_exchanger,
     heat_exchanger_area,
-    heater,
     lmtd,
     npv,
     nrtl_model_for,
@@ -245,8 +244,8 @@ def _bubble_pressure(components: list[str], x: list[float], temperature: float) 
 
 def _package(components: list[str], method: str | None) -> Any:
     """Property package for ``method`` (``None`` keeps the Peng-Robinson default)."""
-    if method is None or method.lower() == "pr":
-        return None
+    if method is None:
+        method = "pr"
     if method.lower() not in METHODS:
         raise ValueError(f"unknown thermodynamic method {method!r}; choose from {METHODS}")
     return package_for(components, method.lower())
@@ -260,12 +259,18 @@ def _flash(
     pressure: float,
     method: str | None = None,
 ) -> JsonDict:
-    feed = Stream.from_fractions(tuple(components), jnp.asarray(z), flow, temperature, pressure)
-    vapor, liquid = flash_drum(feed, temperature, pressure, model=_package(components, method))
+    from fugacio.copilot.evidence_tools import checked_flash
+
+    if flow <= 0:
+        raise ValueError("flash flow must be positive")
+    checked = checked_flash(components, z, temperature, pressure, method or "pr")
+    beta = checked["vapor_fraction"]
     return {
-        "vapor_fraction": float(vapor.total / feed.total),
-        "vapor": {"flow_mol_s": float(vapor.total), "composition": [float(v) for v in vapor.z]},
-        "liquid": {"flow_mol_s": float(liquid.total), "composition": [float(v) for v in liquid.z]},
+        "vapor_fraction": beta,
+        "vapor": {"flow_mol_s": flow * beta, "composition": checked["vapor_composition"]},
+        "liquid": {"flow_mol_s": flow * (1 - beta), "composition": checked["liquid_composition"]},
+        "physical_acceptance": checked["physical_acceptance"],
+        "parameter_evidence": checked["parameter_evidence"],
     }
 
 
@@ -284,11 +289,16 @@ def _heat_exchanger(
     method: str | None = None,
 ) -> JsonDict:
     feed = _stream(components, z, flow, temperature, pressure)
-    res = heater(feed, t_out=t_out, duty=duty, model=_package(components, method))
+    from fugacio.sim.acceptance import heater_checked
+
+    checked = heater_checked(feed, t_out=t_out, duty=duty, model=_package(components, method))
+    checked.check()
+    res = checked.value
     return {
         "outlet_temperature_k": float(res.outlet.t),
         "duty_w": float(res.duty),
         "outlet_pressure_pa": float(res.outlet.p),
+        "physical_acceptance": checked.to_dict(),
     }
 
 
@@ -583,10 +593,15 @@ def _optimize_flash_temperature(
         return result.beta
 
     t_opt = _safeguarded_newton(lambda t: beta_of_t(t) - target_vapor_fraction, t_min, t_max)
+    from fugacio.copilot.evidence_tools import checked_flash
+
+    checked = checked_flash(components, z, t_opt, pressure)
     return {
         "temperature_k": t_opt,
         "achieved_vapor_fraction": float(beta_of_t(t_opt)),
         "target_vapor_fraction": target_vapor_fraction,
+        "physical_acceptance": checked["physical_acceptance"],
+        "parameter_evidence": checked["parameter_evidence"],
     }
 
 
@@ -633,10 +648,14 @@ _ACTIVITY_METHODS = ("nrtl", "uniquac", "unifac", "dortmund")
 def _gamma_phi(components: list[str], method: str) -> Any:
     """Build a gamma-phi model for ``components`` by activity ``method`` name."""
     key = method.lower()
+    if key == "modified_unifac":
+        key = "dortmund"
+    if key in _ACTIVITY_METHODS:
+        package_for(components, key)  # Validate curated/group parameter coverage.
     if key == "nrtl":
-        return nrtl_model_for(components)
+        return nrtl_model_for(components, strict=True)
     if key == "uniquac":
-        return uniquac_model_for(components)
+        return uniquac_model_for(components, strict=True)
     if key == "unifac":
         return unifac_model_for(components)
     if key in ("dortmund", "modified_unifac"):
@@ -899,6 +918,8 @@ def _fit_activity_parameters(
         "b21": float(model.b[1, 0]),
         "final_cost": float(cost),
         "rmse_pa": rmse_pa,
+        "evidence": "user_supplied_data_fit",
+        "empirical_qualification": "not_checked",
     }
 
 
@@ -2329,6 +2350,9 @@ def default_registry() -> dict[str, ToolSpec]:
     specs.extend(integration_tool_specs())
     specs.extend(mpc_tool_specs())
     specs.extend(saft_tool_specs())
+    from fugacio.copilot.evidence_tools import evidence_tool_specs
+
+    specs.extend(evidence_tool_specs())
     return {spec.name: spec for spec in specs}
 
 
@@ -2358,5 +2382,51 @@ def call_tool(
     # model or report renderer can present a failed calculation as a result.
     json.dumps(arguments, allow_nan=False)
     result = registry[name].run(**arguments)
+    # Only annotate known package-backed tools. Custom registries and ideal-gas
+    # reactor/transport tools must not inherit an unrelated PR evidence claim.
+    evidence_tools = {
+        "flash_drum",
+        "heat_exchanger",
+        "compressor",
+        "pump",
+        "valve",
+        "turbine",
+        "activity_coefficients",
+        "vle_diagram",
+        "find_azeotrope",
+        "residue_curve_map",
+        "liquid_liquid_split",
+        "three_phase_flash",
+        "rigorous_distillation",
+        "absorber",
+        "optimize_column_reflux",
+        "two_sided_heat_exchanger",
+        "optimize_flash_temperature",
+    }
+    if (
+        name in evidence_tools
+        and registry[name].run.__module__ == __name__
+        and "components" in arguments
+    ):
+        method = arguments.get("method") or (
+            "unifac"
+            if name == "activity_coefficients"
+            else "nrtl"
+            if name
+            in (
+                "vle_diagram",
+                "find_azeotrope",
+                "residue_curve_map",
+                "liquid_liquid_split",
+                "three_phase_flash",
+            )
+            else "pr"
+        )
+        if method == "modified_unifac":
+            method = "dortmund"
+        pkg = _package(arguments["components"], method)
+        result.setdefault("parameter_evidence", pkg.evidence.to_dict())
+        result.setdefault("physical_acceptance", "not_checked")
+        result.setdefault("empirical_qualification", "not_checked")
     json.dumps(result, allow_nan=False)
     return result

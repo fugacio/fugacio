@@ -13,6 +13,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      - name: Rebuild measured holdout, process acceptance, and coverage matrix
+        run: uv run --no-sync python scripts/qualify.py --output artifacts/qualification
+      - name: Preserve qualification evidence, including failed and unsupported cases
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thermodynamic-qualification
+          path: artifacts/qualification
+          if-no-files-found: error
+
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 15

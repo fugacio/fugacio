@@ -103,10 +103,22 @@ def default_package(
     components: Sequence[str], *, eos: CubicEOS = PR, kij: Array | None = None
 ) -> CubicPackage:
     """The cubic-EOS package a stream falls back to when no ``model`` is given."""
+    from fugacio.thermo.provenance import database_evidence
+
     tc, pc, omega, _, cp = _resolve(tuple(components))
     return replace(
         cubic_package(tc, pc, omega, cp, kij=kij, eos=eos),
         component_names=tuple(get(c).name for c in components),
+        evidence=database_evidence(
+            tuple(components),
+            {
+                "Peng-Robinson": "pr",
+                "Soave-Redlich-Kwong": "srk",
+                "Redlich-Kwong": "rk",
+                "van der Waals": "vdw",
+            }.get(eos.name, "custom"),
+            explicit_kij=kij is not None,
+        ),
     )
 
 

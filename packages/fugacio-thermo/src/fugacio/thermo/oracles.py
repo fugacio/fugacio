@@ -165,8 +165,9 @@ def clapeyron_gamma(
     component *names* in Clapeyron's database; ``pressure`` is accepted only for API
     symmetry since activity models are pressure-independent.
 
-    This oracle is intentionally never exercised by the default suite (no Julia in
-    CI); its companion test skips unless ``juliacall`` is importable.
+    This bridge isn't exercised by the default suite; its companion test skips
+    unless ``juliacall`` is importable. The dedicated CI Julia job uses the
+    separately pinned subprocess oracle in ``scripts/julia``.
     """
     _require("juliacall (with Clapeyron.jl)", HAVE_CLAPEYRON)
     from juliacall import Main as jl

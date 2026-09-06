@@ -77,6 +77,7 @@ class FittedBinary:
     n_points: int
     rmse: float
     source: str
+    evidence: str = "unspecified"
 
     def nrtl(self) -> NRTL:
         """The fitted model as a ready-to-evaluate two-component NRTL."""
@@ -150,6 +151,7 @@ def fit_vle_dataset(
         n_points=m,
         rmse=math.sqrt(2.0 * float(cost) / m),
         source=source,
+        evidence="synthetic" if data.source_type == "synthetic" else "unspecified",
     )
 
 
@@ -230,6 +232,7 @@ class ParameterBank:
             n_points=entry.n_points,
             rmse=entry.rmse,
             source=entry.source,
+            evidence=entry.evidence,
         )
 
     def nrtl(self, component_1: str, component_2: str) -> NRTL:

@@ -104,11 +104,40 @@ def _efficiency(value: ArrayLike, context: str) -> Array:
 
 
 def _energy_outlet(
-    outlet: Stream, target: Array, pkg: Any, context: str
+    outlet: Stream, target: Array, pkg: Any, context: str, *, allow_extrapolation: bool = False
 ) -> tuple[Stream, SolveReport]:
     """Independently verify energy closure before handing a state downstream."""
+    from fugacio.thermo.acceptance import AcceptancePolicy, assess_flash
+    from fugacio.thermo.equilibrium import FlashResult
+
     error = (molar_enthalpy(outlet, model=pkg) - target) / jnp.maximum(jnp.abs(target), 1e4)
-    report = residual_report(jnp.atleast_1d(jnp.where(outlet.total > 0, error, 0.0)), tol=1e-7)
+    vapor_n = jnp.asarray(outlet.vapor_n)
+    beta = jnp.sum(vapor_n) / jnp.maximum(outlet.total, 1e-300)
+    x, y = _composition(outlet.n - vapor_n), _composition(vapor_n)
+    state = FlashResult(beta, x, y, y / jnp.maximum(x, 1e-300))
+    physical = assess_flash(
+        pkg,
+        outlet.t,
+        outlet.p,
+        _composition(outlet.n),
+        state,
+        policy=AcceptancePolicy(check_stability=False),
+    )
+    errors = jnp.array(
+        [
+            error,
+            physical.equilibrium_error,
+            physical.phase_error,
+            jnp.where(
+                physical.applicability.parameters_available
+                if allow_extrapolation
+                else physical.applicability.accepted,
+                0.0,
+                1.0,
+            ),
+        ]
+    )
+    report = residual_report(jnp.where(outlet.total > 0, errors, 0.0), tol=1e-7)
     report = report._replace(
         status=jnp.where(outlet.report.converged, report.status, SolveStatus.INVALID_INPUT)
     )
@@ -191,6 +220,7 @@ def heater(
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
+    allow_extrapolation: bool = False,
 ) -> HeaterResult:
     """Heat or cool a stream on either a temperature or a duty specification.
 
@@ -225,7 +255,9 @@ def heater(
     outlet = Stream(
         n=feed.n, t=r.t, p=p_out, components=feed.components, vapor_n=r.beta * feed.total * r.y
     )
-    outlet, report = _energy_outlet(outlet, h_spec, pkg, "heater")
+    outlet, report = _energy_outlet(
+        outlet, h_spec, pkg, "heater", allow_extrapolation=allow_extrapolation
+    )
     feasible = (feed.total > 0) | (jnp.asarray(duty) == 0)
     report = report._replace(status=jnp.where(feasible, report.status, SolveStatus.INFEASIBLE))
     require_converged(report, "heater: duty on an empty stream")
@@ -241,6 +273,7 @@ def valve(
     eos: CubicEOS = PR,
     kij: Array | None = None,
     t_init: float = 300.0,
+    allow_extrapolation: bool = False,
 ) -> Stream:
     """Isenthalpic (Joule-Thomson) pressure letdown to ``p_out``.
 
@@ -259,7 +292,7 @@ def valve(
         components=feed.components,
         vapor_n=r.beta * feed.total * r.y,
     )
-    return _energy_outlet(outlet, h_spec, pkg, "valve")[0]
+    return _energy_outlet(outlet, h_spec, pkg, "valve", allow_extrapolation=allow_extrapolation)[0]
 
 
 def pump(

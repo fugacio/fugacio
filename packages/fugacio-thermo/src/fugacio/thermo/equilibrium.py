@@ -27,8 +27,9 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
+from fugacio.thermo.diagnostics import SolveReport
 from fugacio.thermo.eos import CubicEOS, ln_phi_mixture, ln_phi_pure
-from fugacio.thermo.implicit import fixed_point
+from fugacio.thermo.implicit import fixed_point, fixed_point_with_info
 
 ArrayLike = Array | float
 
@@ -47,6 +48,13 @@ class FlashResult(NamedTuple):
     x: Array
     y: Array
     k: Array
+
+
+class FlashSolveResult(NamedTuple):
+    """PT flash and the actual fixed-point iteration report."""
+
+    value: FlashResult
+    report: SolveReport
 
 
 class StabilityResult(NamedTuple):
@@ -165,6 +173,25 @@ def flash_pt(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashResult:
+    """Isothermal flash value; use flash_pt_with_info for numerical status."""
+    return flash_pt_with_info(
+        eos, t, p, z, tc, pc, omega, kij=kij, tol=tol, max_iter=max_iter
+    ).value
+
+
+def flash_pt_with_info(
+    eos: CubicEOS,
+    t: ArrayLike,
+    p: ArrayLike,
+    z: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    *,
+    kij: Array | None = None,
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> FlashSolveResult:
     """Isothermal-isobaric two-phase flash by accelerated successive substitution.
 
     Solves the equal-fugacity conditions ``phi_i^L x_i = phi_i^V y_i`` together
@@ -193,7 +220,8 @@ def flash_pt(
         ln_phi_v, _ = ln_phi_mixture(eos, t_, p_, y, tc_, pc_, omega_, phase="vapor", kij=kij_)
         return ln_phi_l - ln_phi_v
 
-    ln_k_star = fixed_point(g, jnp.log(k0), theta, tol, max_iter)
+    solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
+    ln_k_star = solved.value
     k = jnp.exp(ln_k_star)
     beta = rachford_rice(z, k)
     _, z_single = ln_phi_mixture(eos, t, p, z, tc, pc, omega, phase="vapor", kij=kij_arr)
@@ -201,7 +229,7 @@ def flash_pt(
     denom = 1.0 + beta * (k - 1.0)
     x = z / denom
     y = k * x
-    return FlashResult(beta=beta, x=x, y=y, k=k)
+    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), solved.report)
 
 
 def _psat_residual(

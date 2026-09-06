@@ -48,6 +48,22 @@ reports, and streams preserve resolved phase inventories through energy-balanced
 units. See [reliability and diagnostics](docs/reliability.md) for checked solves,
 component ordering, warm starts, continuation, and derivative limits.
 
+The [measured qualification workflow](docs/qualification.md) now checks 447
+experimental conditions across 20 binary systems from seven NIST ThermoML
+records. It separates measured evidence, curated parameters, predictive methods,
+and explicit zero-interaction assumptions. Missing NRTL/UNIQUAC pairs raise in
+`package_for` unless the caller explicitly permits them. Checked flashes and
+process audits expose material, energy, equifugacity, stability, and applicability
+results alongside numerical convergence.
+
+Run `just qualify` to rebuild the measured-data matrix and the complete
+ethanol-water example: fit one publication, validate against a second, build the
+fitted property package, and verify an energy-balanced heater. The initial matrix
+contains two qualified property cases, two unqualified LLE cases, and 18 cases
+without curated NRTL parameters. These results describe specific systems and
+properties; they don't qualify every model family. The older bundled parameter
+bank remains explicitly synthetic demonstration data.
+
 ## Quickstart
 
 ```bash
@@ -324,6 +340,8 @@ just check   # lint + types + import boundaries + tests (exactly what CI runs)
 | Import boundaries | `just imports` |
 | Tests | `just test` |
 | Oracle differential tests (opt-in) | `just oracles` |
+| Measured qualification and process demo | `just qualify` |
+| Pinned Julia/Clapeyron comparison | `just clapeyron-oracles` |
 | Docs preview (live reload) | `just docs-serve` |
 | Docs build (strict, as CI) | `just docs-build` |
 
@@ -338,6 +356,8 @@ reaction equilibrium) are marked `oracle` and excluded from the default run; ins
 optional packages and run them explicitly with `just oracles`. CI runs the same
 oracle suite on every pull request, on pushes to `main`, and on a weekly
 schedule (`.github/workflows/oracles.yml`).
+The Julia job uses Julia 1.10.10, Clapeyron 0.6.25, and a committed dependency
+manifest. It checks matched PC-SAFT parameters without optional skips.
 
 ## Documentation
 

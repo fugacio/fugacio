@@ -44,7 +44,7 @@ balance.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, NamedTuple, Protocol, runtime_checkable
 
 import jax
@@ -88,6 +88,7 @@ from fugacio.thermo.ideal import (
     entropy_ig_mixture,
 )
 from fugacio.thermo.implicit import bracketed_root, newton_system_with_info
+from fugacio.thermo.provenance import PackageEvidence
 from fugacio.thermo.reference import (
     liquid_reference_fugacity,
     pure_liquid_volumes,
@@ -604,6 +605,7 @@ class CubicPackage(_PackageBase):
     eos: CubicEOS = PR
 
     component_names: tuple[str, ...] = ()
+    evidence: PackageEvidence = field(default_factory=PackageEvidence)
 
     @property
     def n_components(self) -> int:
@@ -671,7 +673,7 @@ class CubicPackage(_PackageBase):
 jax.tree_util.register_dataclass(
     CubicPackage,
     data_fields=["tc", "pc", "omega", "cp", "kij"],
-    meta_fields=["eos", "component_names"],
+    meta_fields=["eos", "component_names", "evidence"],
 )
 
 
@@ -775,6 +777,7 @@ class GammaPhiPackage(_PackageBase):
     phi_saturation: bool = False
 
     component_names: tuple[str, ...] = ()
+    evidence: PackageEvidence = field(default_factory=PackageEvidence)
 
     @property
     def n_components(self) -> int:
@@ -961,7 +964,7 @@ class GammaPhiPackage(_PackageBase):
 jax.tree_util.register_dataclass(
     GammaPhiPackage,
     data_fields=["activity", "tc", "pc", "omega", "cp", "kij"],
-    meta_fields=["eos", "vapor", "poynting", "phi_saturation", "component_names"],
+    meta_fields=["eos", "vapor", "poynting", "phi_saturation", "component_names", "evidence"],
 )
 
 
@@ -993,6 +996,7 @@ class SAFTPackage(_PackageBase):
     cp: CpCoeffs
 
     component_names: tuple[str, ...] = ()
+    evidence: PackageEvidence = field(default_factory=PackageEvidence)
 
     @property
     def n_components(self) -> int:
@@ -1041,7 +1045,9 @@ class SAFTPackage(_PackageBase):
 
 
 jax.tree_util.register_dataclass(
-    SAFTPackage, data_fields=["params", "tc", "pc", "omega", "cp"], meta_fields=["component_names"]
+    SAFTPackage,
+    data_fields=["params", "tc", "pc", "omega", "cp"],
+    meta_fields=["component_names", "evidence"],
 )
 
 
@@ -1072,6 +1078,7 @@ class HelmholtzPackage(_PackageBase):
     fluid: HelmholtzFluid
 
     component_names: tuple[str, ...] = ()
+    evidence: PackageEvidence = field(default_factory=PackageEvidence)
 
     @property
     def n_components(self) -> int:
@@ -1170,7 +1177,7 @@ class HelmholtzPackage(_PackageBase):
 
 
 jax.tree_util.register_dataclass(
-    HelmholtzPackage, data_fields=["fluid"], meta_fields=["component_names"]
+    HelmholtzPackage, data_fields=["fluid"], meta_fields=["component_names", "evidence"]
 )
 
 
@@ -1296,9 +1303,20 @@ def energy_flash_report(
         index, [liquid, lambda _: (1 - beta) * liquid(None) + beta * vapor(None), vapor], None
     )
     scale = jnp.maximum(jnp.abs(target), 1e4 if prop == "enthalpy" else 10.0)
+    from fugacio.thermo.acceptance import equilibrium_residual
+    from fugacio.thermo.equilibrium import FlashResult
+
+    equilibrium = equilibrium_residual(
+        pkg,
+        result.t,
+        p,
+        FlashResult(beta, result.x, result.y, result.y / jnp.maximum(result.x, 1e-300)),
+        z,
+    )
     errors = jnp.concatenate(
         [
             (1 - beta) * result.x + beta * result.y - z,
+            equilibrium,
             jnp.array(
                 [
                     (value - target) / scale,
@@ -1309,6 +1327,41 @@ def energy_flash_report(
         ]
     )
     return residual_report(errors, tol)
+
+
+def flash_pt_with_info(
+    pkg: PropertyPackage,
+    t: ArrayLike,
+    p: ArrayLike,
+    z: Array,
+    **options: Any,
+) -> Any:
+    """PT flash and its actual iteration report for cubic, gamma-phi, and PC-SAFT.
+
+    Reference-fluid and custom packages use independent state verification with
+    zero reported iterations. Physical stability and applicability are assessed
+    by ``fugacio.thermo.acceptance.flash_pt_checked``.
+    """
+    from fugacio.thermo.equilibrium import FlashSolveResult
+    from fugacio.thermo.equilibrium import flash_pt_with_info as cubic_solve
+    from fugacio.thermo.gammaphi import flash_pt_gamma_with_info
+    from fugacio.thermo.saft.equilibrium import flash_pt_saft_with_info
+
+    if isinstance(pkg, CubicPackage):
+        return cubic_solve(pkg.eos, t, p, z, pkg.tc, pkg.pc, pkg.omega, kij=pkg.kij, **options)
+    if isinstance(pkg, GammaPhiPackage):
+        return flash_pt_gamma_with_info(
+            pkg.activity, t, p, z, pkg.tc, pkg.pc, pkg.omega, **pkg._kw(), **options
+        )
+    if isinstance(pkg, SAFTPackage):
+        return flash_pt_saft_with_info(pkg.params, t, p, z, pkg.tc, pkg.pc, pkg.omega, **options)
+    if options:
+        raise ValueError("custom/reference package doesn't expose PT iteration options")
+    result = pkg.flash_pt(t, p, z)
+    from fugacio.thermo.acceptance import AcceptancePolicy, assess_flash
+
+    report = assess_flash(pkg, t, p, z, result, policy=AcceptancePolicy(check_stability=False))
+    return FlashSolveResult(result, report.numerical)
 
 
 def flash_ph_with_info(
