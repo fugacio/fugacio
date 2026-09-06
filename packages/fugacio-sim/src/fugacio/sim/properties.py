@@ -94,9 +94,12 @@ Model = PropertyPackage | EOSModel | GammaPhiModel | SAFTModel | None
 @cache
 def _resolve(components: tuple[str, ...]) -> tuple[Array, Array, Array, Array, CpCoeffs]:
     """Resolve component names to ``(tc, pc, omega, mw, cp)`` array constants (cached)."""
-    arr = component_arrays(list(components))
-    cp = ideal_gas_coeffs([get(c) for c in components])
-    return arr["tc"], arr["pc"], arr["omega"], arr["mw"], cp
+    # The first lookup may happen while a flowsheet is being traced. Keep
+    # cached constants concrete so no tracer escapes into later evaluations.
+    with jax.ensure_compile_time_eval():
+        arr = component_arrays(list(components))
+        cp = ideal_gas_coeffs([get(c) for c in components])
+        return arr["tc"], arr["pc"], arr["omega"], arr["mw"], cp
 
 
 def default_package(

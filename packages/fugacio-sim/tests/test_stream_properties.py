@@ -21,6 +21,28 @@ from fugacio.sim import (
 from fugacio.thermo.constants import R
 
 
+def test_component_cache_is_safe_when_first_used_inside_jit() -> None:
+    from fugacio.sim.properties import _resolve, default_package
+
+    components = ("nitrogen", "oxygen")
+    _resolve.cache_clear()
+    try:
+
+        def enthalpy(t):
+            return default_package(components).enthalpy(
+                t, 1e5, jnp.array([0.79, 0.21]), phase="vapor"
+            )
+
+        with jax.checking_leaks():
+            compiled = jax.jit(enthalpy)(300.0)
+        # A cache entry created by that trace must also work in eager code
+        # and in a later, independent derivative trace.
+        assert compiled == pytest.approx(float(enthalpy(300.0)), rel=1e-12)
+        assert jnp.isfinite(jax.jit(jax.grad(enthalpy))(310.0))
+    finally:
+        _resolve.cache_clear()
+
+
 def _water_liquid() -> Stream:
     return Stream.from_fractions(("water",), jnp.array([1.0]), 10.0, 298.15, 1.0e5)
 

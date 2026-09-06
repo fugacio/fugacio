@@ -93,12 +93,11 @@ def _bracketed_root_jvp(
     params, lo, hi = primals
     params_dot, _, _ = tangents
     root = bracketed_root(residual, params, lo, hi, tol, max_iter)
-    r_root = jax.grad(lambda xx: residual(xx, params))(root)
-    grad_params = jax.grad(lambda pp: residual(root, pp))(params)
-    leaves = jax.tree_util.tree_leaves(
-        jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
-    )
-    r_dot = sum(leaves, jnp.asarray(0.0))
+    # Compute only the requested directions. Building a full reverse-mode
+    # parameter gradient here and then contracting it duplicates nested
+    # adjoint graphs in energy flashes and heat-integrated plant solves.
+    _, r_root = jax.jvp(lambda xx: residual(xx, params), (root,), (jnp.ones_like(root),))
+    _, r_dot = jax.jvp(lambda pp: residual(root, pp), (params,), (params_dot,))
     return root, -r_dot / r_root
 
 
@@ -153,12 +152,8 @@ def _newton_root_jvp(
     params, x0 = primals
     params_dot, _ = tangents
     x_star = newton_root(residual, params, x0, tol, max_iter, damping)
-    r_x = jax.grad(lambda xx: residual(xx, params))(x_star)
-    grad_params = jax.grad(lambda pp: residual(x_star, pp))(params)
-    leaves = jax.tree_util.tree_leaves(
-        jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
-    )
-    r_dot = sum(leaves, jnp.asarray(0.0))
+    _, r_x = jax.jvp(lambda xx: residual(xx, params), (x_star,), (jnp.ones_like(x_star),))
+    _, r_dot = jax.jvp(lambda pp: residual(x_star, pp), (params,), (params_dot,))
     return x_star, -r_dot / r_x
 
 
