@@ -58,7 +58,7 @@ from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS, PropertyPackage
 from fugacio.thermo.activity.models import NRTL
-from fugacio.thermo.diagnostics import SolveReport, SolveResult, require_converged
+from fugacio.thermo.diagnostics import SolveReport, SolveResult, SolveStatus, require_converged
 from fugacio.thermo.implicit import implicit_solution, newton_system_with_info
 from fugacio.thermo.package import GammaPhiPackage
 
@@ -657,9 +657,10 @@ def _solve(
     upper = jnp.full_like(u0, jnp.inf).at[: 2 * st.n * st.c].set(700.0)
     lower = lower.at[2 * st.n * st.c : 2 * st.n * st.c + st.n].set(50.0 / _T_SCALE)
     upper = upper.at[2 * st.n * st.c : 2 * st.n * st.c + st.n].set(2000.0 / _T_SCALE)
-    result = newton_system_with_info(
-        residual, u0, theta_seed, tol, max_iter, lower=lower, upper=upper
-    )
+
+    def converge(seed: Array, th: dict[str, Any]) -> SolveResult:
+        return newton_system_with_info(residual, seed, th, tol, max_iter, lower=lower, upper=upper)
+
     if (
         homotopy
         and max_iter > 0
@@ -677,36 +678,63 @@ def _solve(
                 hf = hf.at[stage].add(feed.total * molar_enthalpy(feed, model=model))
             return {**theta_seed, "pkg": model, "hf": hf}
 
-        def recover(_: None) -> SolveResult:
-            # Strong activity effects can put the direct seed in a poor basin.
-            # Start at ideal activity and restore the requested NRTL parameters
-            # in four increments. Every increment closes its own stage balances.
-            ideal = softened(jnp.asarray(0.0))
-            seed = _seed(ideal["pkg"], st, ideal, feed_seed, jax.lax.stop_gradient(hints), sweeps)
+        def cond(state: tuple[Array, SolveResult, SolveResult]) -> Array:
+            attempt, direct, _ = state
+            return (attempt == 0) | ((attempt < 6) & ~direct.report.converged)
 
-            def step(i: int, carry: SolveResult) -> SolveResult:
-                th = softened(jnp.asarray(i / 4.0))
-                solved = newton_system_with_info(
-                    residual, carry.value, th, tol, max_iter, lower=lower, upper=upper
-                )
-                return solved._replace(
-                    report=solved.report._replace(
-                        iterations=carry.report.iterations + solved.report.iterations
-                    )
-                )
-
-            initial = result._replace(value=seed)
-            recovered = jax.lax.fori_loop(0, 5, step, initial)
-            # The last increment is the original model, so this is an actual
-            # endpoint report, never an intermediate point labeled as success.
-            better = recovered.report.converged | (
-                recovered.report.residual_norm < result.report.residual_norm
+        def step(
+            state: tuple[Array, SolveResult, SolveResult],
+        ) -> tuple[Array, SolveResult, SolveResult]:
+            attempt, direct, previous = state
+            # Attempt 0 uses the original model. If it fails, restart at ideal
+            # activity, then restore NRTL in four increments through attempt 5.
+            th = jax.lax.cond(
+                attempt == 0,
+                lambda _: theta_seed,
+                lambda _: softened((attempt - 1) / 4.0),
+                None,
             )
-            return jax.tree_util.tree_map(
-                lambda good, original: jnp.where(better, good, original), recovered, result
+            seed = jax.lax.cond(
+                attempt == 1,
+                lambda _: _seed(th["pkg"], st, th, feed_seed, jax.lax.stop_gradient(hints), sweeps),
+                lambda _: previous.value,
+                None,
             )
+            solved = converge(seed, th)
+            solved = solved._replace(
+                report=solved.report._replace(
+                    iterations=previous.report.iterations + solved.report.iterations
+                )
+            )
+            direct = jax.tree_util.tree_map(
+                lambda new, old: jnp.where(attempt == 0, new, old), solved, direct
+            )
+            return attempt + 1, direct, solved
 
-        result = jax.lax.cond(result.report.converged, lambda _: result, recover, None)
+        initial = SolveResult(
+            u0,
+            SolveReport(
+                jnp.asarray(SolveStatus.MAX_ITERATIONS),
+                jnp.asarray(0),
+                jnp.asarray(jnp.inf),
+                jnp.asarray(0.0),
+                jnp.asarray(0),
+            ),
+        )
+        # Share one Newton graph between the direct solve and recovery. A
+        # data-dependent loop also prevents XLA from unrolling five copies of
+        # the nested saturation solvers during cold NRTL compilation.
+        _, direct, recovered = jax.lax.while_loop(cond, step, (jnp.asarray(0), initial, initial))
+        # Recovery always ends at the original model, so only endpoint reports
+        # compete with the direct result, never intermediate activity models.
+        better = recovered.report.converged | (
+            recovered.report.residual_norm < direct.report.residual_norm
+        )
+        result = jax.tree_util.tree_map(
+            lambda good, original: jnp.where(better, good, original), recovered, direct
+        )
+    else:
+        result = converge(u0, theta_seed)
     report = jax.lax.stop_gradient(result.report)
     value = implicit_solution(
         residual, jax.lax.stop_gradient(result.value), theta, report.converged

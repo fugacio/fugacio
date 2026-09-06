@@ -237,18 +237,18 @@ def psat_eos(
     t = jnp.asarray(t)
     p0 = pc * jnp.exp(5.373 * (1.0 + omega) * (1.0 - tc / t))
 
-    def cond(carry: tuple[Array, Array]) -> Array:
-        p, i = carry
-        return (jnp.abs(_psat_residual(eos, t, p, tc, pc, omega)) > tol) & (i < max_iter)
-
-    def body(carry: tuple[Array, Array]) -> tuple[Array, Array]:
-        p, i = carry
-        r = _psat_residual(eos, t, p, tc, pc, omega)
-        dr_dp = jax.grad(lambda pp: _psat_residual(eos, t, pp, tc, pc, omega))(p)
+    def body(_: int, carry: tuple[Array, Array]) -> tuple[Array, Array]:
+        p, active = carry
+        r, dr_dp = jax.value_and_grad(lambda pp: _psat_residual(eos, t, pp, tc, pc, omega))(p)
+        active = active & (jnp.abs(r) > tol)
         ln_p_new = jnp.log(p) - r / (p * dr_dp)
-        return jnp.exp(ln_p_new), i + 1
+        return jnp.where(active, jnp.exp(ln_p_new), p), active
 
-    p_star, _ = jax.lax.while_loop(cond, body, (p0, jnp.asarray(0)))
+    # A vmapped while predicate is evaluated both for loop control and for
+    # masking each lane's updates. Near the tolerance, different rounding in
+    # those evaluations can leave the loop active with a frozen lane counter.
+    # A fixed trip count guarantees termination; converged pressures stay frozen.
+    p_star, _ = jax.lax.fori_loop(0, max_iter, body, (p0, jnp.asarray(True)))
     return p_star
 
 

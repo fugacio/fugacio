@@ -9,6 +9,7 @@ from fugacio.thermo import equilibrium as eq
 from fugacio.thermo.consistency import equifugacity_residual
 from fugacio.thermo.constants import ATM
 from fugacio.thermo.eos import PR
+from fugacio.thermo.reference import saturation_pressures
 
 PR_SATURATION = ["propane", "n-butane", "n-pentane", "n-hexane", "benzene", "toluene"]
 
@@ -27,6 +28,52 @@ def test_saturation_pressure_dpdt_matches_finite_difference() -> None:
     ad = float(jax.grad(f)(300.0))
     fd = float((f(300.1) - f(299.9)) / 0.2)
     assert ad == pytest.approx(fd, rel=1e-4)
+
+
+def test_batched_saturation_pressures_terminate_for_extreme_column_trials() -> None:
+    # This NRTL column line-search trial hung under nested vmap on Linux JAX:
+    # every temperature completed individually, but the batch never returned.
+    # Keep the full precision and batch shape that triggered the stalled loop.
+    temperatures = jnp.array(
+        [
+            350.90210698251536,
+            350.914248095387,
+            350.9263528772387,
+            350.940243580431,
+            350.9634965179927,
+            351.0094085986309,
+            350.9411184835624,
+            350.4645363076113,
+            348.7283459475676,
+            340.31203957044636,
+            286.9646981146145,
+            170.92111042008364,
+            199.4483352613907,
+            311.5104022551129,
+            358.4089841627552,
+            370.8165379299441,
+            373.7457892893207,
+            374.4191750206445,
+            374.57303241168177,
+            374.6081372532009,
+        ]
+    )
+    arr = comp.component_arrays(["ethanol", "water"])
+
+    def pressures(t: jax.Array, tc: jax.Array, pc: jax.Array, omega: jax.Array) -> jax.Array:
+        return saturation_pressures(PR, t, tc, pc, omega)
+
+    individual = jax.jit(pressures)
+    # Subfreezing trial states still need to terminate, but the liquid-vapor
+    # EOS isn't reliable there. Compare pressures in the liquid-vapor range.
+    liquid_vapor = temperatures > 273.15
+    expected = jnp.stack(
+        [individual(t, arr["tc"], arr["pc"], arr["omega"]) for t in temperatures[liquid_vapor]]
+    )
+    batch = jax.jit(jax.vmap(pressures, in_axes=(0, None, None, None)))
+    actual = batch(temperatures, arr["tc"], arr["pc"], arr["omega"])
+    assert bool(jnp.all(jnp.isfinite(actual) & (actual > 0.0)))
+    assert actual[liquid_vapor] == pytest.approx(expected, rel=1e-6)
 
 
 def test_rachford_rice_residual_is_zero() -> None:
