@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.4.0 (2026-09-06)
+
+### Features
+
+- Improve solver reliability and preserve phase states
+  ([#19](https://github.com/fugacio/fugacio/pull/19),
+  [`0660111`](https://github.com/fugacio/fugacio/commit/0660111e1bd5c92aa7df78101ed3b080fe09af7c))
+
+
 ## v0.3.0 (2026-09-04)
 
 ### Features
