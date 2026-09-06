@@ -18,7 +18,7 @@
         <link rel="prev" href="../flowsheeting/">
       
       
-        <link rel="next" href="../dynamics/">
+        <link rel="next" href="../reliability/">
       
       
         
@@ -392,6 +392,8 @@
   
     
     
+      
+        
       
         
       
@@ -889,6 +891,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reliability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dynamics/" class="md-nav__link">
         
   
@@ -1085,6 +1115,8 @@
       
         
       
+        
+      
     
     
     
@@ -1184,6 +1216,34 @@
     
   
     Equations of state
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/thermo/solvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solvers and diagnostics
   
 
     
@@ -2464,9 +2524,10 @@ solve took:</p>
 </span></code></pre></div>
 <h2 id="degrees-of-freedom">Degrees of freedom<a class="headerlink" href="#degrees-of-freedom" title="Permanent link">&para;</a></h2>
 <p><code>degrees_of_freedom</code> reports the unknown/equation balance, the EO analogue of a
-specification check. A square system (<code>degrees_of_freedom == 0</code>) is exactly
-specified and solvable; a positive count is under-specified (add a spec), and a
-negative one is over-specified. <code>solve</code> runs this check by default and raises a
+specification check. A square system (<code>degrees_of_freedom == 0</code>) has balanced
+equation counts; its Jacobian can still be singular. Use <code>diagnose</code> to inspect
+local rank and <code>solve().report</code> to check convergence. A positive count is
+under-specified (add a spec), and a negative one is over-specified. <code>solve</code> runs this check by default and raises a
 descriptive error when the flowsheet isn't square.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">eos</span><span class="o">=</span><span class="n">PR</span><span class="p">)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
@@ -2586,6 +2647,8 @@ plan is then cached on the flowsheet, so repeated solves, the forward sweeps of 
 finite-difference check, and the inner solves of an optimization all reuse one
 compilation.
 ```</p>
+<p>See <a href="../reliability/">reliability and diagnostics</a> for phase-preserving streams,
+checked failures, warm starts, continuation, and derivative limits.</p>
 
 
 

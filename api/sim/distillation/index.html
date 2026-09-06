@@ -417,6 +417,8 @@
       
         
       
+        
+      
     
     
     
@@ -751,6 +753,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../reliability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../dynamics/" class="md-nav__link">
         
   
@@ -950,6 +980,8 @@
       
         
       
+        
+      
     
     
     
@@ -1052,6 +1084,34 @@
     
   
     Equations of state
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/solvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solvers and diagnostics
   
 
     
@@ -1754,6 +1814,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label=" RigorousColumnResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.distillation.RigorousColumnResult.converged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;converged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.distillation.RigorousColumnResult.warm_start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;warm_start
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2453,6 +2541,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label=" RigorousColumnResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.distillation.RigorousColumnResult.converged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;converged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.distillation.RigorousColumnResult.warm_start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;warm_start
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -3600,6 +3716,27 @@ partial condenser, the overhead vapour for an absorber).</p>
 
 
 
+<p><span class="doc-section-title">Methods:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;warm_start&lt;/span&gt; (&lt;code&gt;fugacio.sim.distillation.RigorousColumnResult.warm_start&lt;/code&gt;)" href="#fugacio.sim.distillation.RigorousColumnResult.warm_start">warm_start</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Full stage state for <code>rigorous_column(..., guess=result.warm_start())</code>.</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -3612,8 +3749,52 @@ partial condenser, the overhead vapour for an absorber).</p>
 
 
 
+<div class="doc doc-object doc-attribute">
 
 
+
+<h4 id="fugacio.sim.distillation.RigorousColumnResult.converged" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">converged</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#fugacio.sim.distillation.RigorousColumnResult.converged" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">converged</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether the stage balances and specifications converged.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="fugacio.sim.distillation.RigorousColumnResult.warm_start" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">warm_start</span>
+
+
+<a href="#fugacio.sim.distillation.RigorousColumnResult.warm_start" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">warm_start</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Full stage state for <code>rigorous_column(..., guess=result.warm_start())</code>.</p>
+
+
+    </div>
+
+</div>
 
 
 
@@ -3961,7 +4142,9 @@ partial condenser, the overhead vapour for an absorber).</p>
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">sweeps</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-09</span><span class="p">,</span>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">80</span><span class="p">,</span>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RigorousColumnResult&lt;/span&gt; (&lt;code&gt;fugacio.sim.distillation.RigorousColumnResult&lt;/code&gt;)" href="#fugacio.sim.distillation.RigorousColumnResult">RigorousColumnResult</a></span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">check</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="n">homotopy</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RigorousColumnResult&lt;/span&gt; (&lt;code&gt;fugacio.sim.distillation.RigorousColumnResult&lt;/code&gt;)" href="#fugacio.sim.distillation.RigorousColumnResult">RigorousColumnResult</a></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4290,6 +4473,22 @@ profile). Specs of those kinds are used automatically.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>check</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Raise for a failed concrete solve; compiled failures return NaNs.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>tol</code>
             </td>
             <td>
@@ -4297,7 +4496,7 @@ profile). Specs of those kinds are used automatically.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Newton convergence tolerance on the scaled step.</p>
+                <p>Maximum accepted scaled equation residual.</p>
               </div>
             </td>
             <td>
@@ -4313,11 +4512,28 @@ profile). Specs of those kinds are used automatically.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Newton iteration cap.</p>
+                <p>Iteration cap for each Newton solve, including homotopy increments.</p>
               </div>
             </td>
             <td>
                   <code>80</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>homotopy</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Retry a failed NRTL solve by gradually restoring activity effects
+from an ideal-activity solution. The final report checks the original model.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
             </td>
           </tr>
       </tbody>

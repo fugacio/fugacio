@@ -417,6 +417,8 @@
       
         
       
+        
+      
     
     
     
@@ -751,6 +753,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../reliability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../dynamics/" class="md-nav__link">
         
   
@@ -950,6 +980,8 @@
       
         
       
+        
+      
     
     
     
@@ -1052,6 +1084,34 @@
     
   
     Equations of state
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/solvers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solvers and diagnostics
   
 
     
@@ -3101,9 +3161,10 @@ isothermal equilibrium; adiabatic operation uses the ideal-gas basis.</p>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">conversion</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.reactors.ArrayLike">ArrayLike</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">t_out</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.reactors.ArrayLike">ArrayLike</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">adiabatic</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">t_lo</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">200.0</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">t_hi</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">6000.0</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ReactorResult&lt;/span&gt; (&lt;code&gt;fugacio.sim.reactors.ReactorResult&lt;/code&gt;)" href="#fugacio.sim.reactors.ReactorResult">ReactorResult</a></span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">model</span><span class="p">:</span> <span class="n"><span title="fugacio.sim.properties.Model">Model</span></span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">t_lo</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">200.0</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">t_hi</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">6000.0</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ReactorResult&lt;/span&gt; (&lt;code&gt;fugacio.sim.reactors.ReactorResult&lt;/code&gt;)" href="#fugacio.sim.reactors.ReactorResult">ReactorResult</a></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3113,6 +3174,10 @@ isothermal equilibrium; adiabatic operation uses the ideal-gas basis.</p>
 single-reaction fractional conversion of its limiting reactant). The outlet is
 <code>n = n_feed + extent @ nu</code>; the energy balance is the same isothermal-duty /
 adiabatic-temperature treatment as <code>equilibrium_reactor</code>.</p>
+<p>Pass <code>model</code> to use the flowsheet package's sensible and residual
+enthalpies plus ideal-gas formation enthalpies. With no model, the historical
+ideal-gas energy basis is retained. Reference-fluid packages have a different
+energy reference and aren't supported for reaction thermochemistry.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
