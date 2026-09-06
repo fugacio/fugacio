@@ -143,13 +143,30 @@ def test_reactive_flash_esterification() -> None:
             "n": [1.0, 1.0, 1e-3, 1e-3],
             "temperature": 355.0,
             "pressure": 101325.0,
-            "method": "nrtl",
+            # The curated NRTL table lacks two acetic-acid pairs. UNIFAC
+            # covers all groups and interactions in this reacting mixture.
+            "method": "unifac",
         },
     )
     assert res["extent"][0] > 0.1
     assert 0.0 <= res["vapor_fraction"] <= 1.0
     total = res["vapor"]["flow_mol_s"] + res["liquid"]["flow_mol_s"]
     assert total == pytest.approx(2.002, rel=1e-6)  # equimolar reaction conserves moles
+
+
+def test_reactive_flash_rejects_missing_nrtl_parameters() -> None:
+    with pytest.raises(KeyError, match="no curated NRTL parameters"):
+        call_tool(
+            "reactive_flash",
+            {
+                "components": ["acetic acid", "ethanol", "ethyl acetate", "water"],
+                "equation": "acetic acid + ethanol = ethyl acetate + water",
+                "n": [1.0, 1.0, 1e-3, 1e-3],
+                "temperature": 355.0,
+                "pressure": 101325.0,
+                "method": "nrtl",
+            },
+        )
 
 
 def test_fit_kinetics_recovers_arrhenius() -> None:

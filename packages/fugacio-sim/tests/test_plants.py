@@ -212,7 +212,7 @@ def _c3_column(feed: Stream) -> tuple[Stream, Stream]:
     return res.distillate, res.bottoms
 
 
-def test_depropanizer_with_economiser_loop() -> None:
+def _c3_flowsheet() -> tuple[Flowsheet, Stream]:
     cold_feed = Stream.from_fractions(C3, jnp.array([0.40, 0.35, 0.25]), 100.0, 300.0, 16e5)
 
     fs = Flowsheet()
@@ -229,6 +229,11 @@ def test_depropanizer_with_economiser_loop() -> None:
         inputs=("preheated",),
         outputs=("distillate", "bottoms"),
     )
+    return fs, cold_feed
+
+
+def test_depropanizer_with_economiser_loop() -> None:
+    fs, cold_feed = _c3_flowsheet()
     (block,) = fs.partition()
     assert block.cyclic and block.tears in (("bottoms",), ("preheated",))
 
@@ -268,6 +273,13 @@ def test_depropanizer_with_economiser_loop() -> None:
     col0 = rigorous_column([ColumnFeed(cold_feed, 8)], 16, p=16e5, specs=_C3_SPECS)
     saving = float(col0.reboiler_duty - col.reboiler_duty)
     assert 0.5 * float(hx.duty) < saving < 1.5 * float(hx.duty)
+
+
+def test_depropanizer_economiser_sensitivity() -> None:
+    # CI runs this in a fresh process so the plant and column verification
+    # executables aren't retained while compiling the full plant derivative.
+    fs, cold_feed = _c3_flowsheet()
+    s = fs.solve({"dt": 15.0}, method="broyden", tol=1e-8)
 
     # A sensitivity of the converged, heat-integrated train agrees with an
     # independent operating-condition perturbation through both units.
