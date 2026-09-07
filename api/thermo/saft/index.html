@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://fugacio.com/api/thermo/saft/">
       
       
-        <link rel="prev" href="../solvers/">
+        <link rel="prev" href="../acceptance/">
       
       
         <link rel="next" href="../equilibrium/">
@@ -419,6 +419,8 @@
       
         
       
+        
+      
     
     
     
@@ -781,6 +783,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../qualification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Measured qualification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../dynamics/" class="md-nav__link">
         
   
@@ -984,6 +1014,8 @@
       
         
       
+        
+      
     
     
     
@@ -1112,6 +1144,34 @@
     
   
     Solvers and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical acceptance & provenance
   
 
     
@@ -1884,6 +1944,8 @@
       
         
       
+        
+      
     
     
     
@@ -2014,6 +2076,34 @@
     
   
     Flowsheet & recycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sim/acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process acceptance
   
 
     
@@ -3247,7 +3337,7 @@ site-fraction solve, is differentiable in both state and parameters.</p>
               <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_pt_saft&lt;/span&gt; (&lt;code&gt;fugacio.thermo.saft.flash_pt_saft&lt;/code&gt;)" href="#fugacio.thermo.saft.flash_pt_saft">flash_pt_saft</a></code></td>
               <td>
                 <div class="doc-md-description">
-                  <p>Isothermal-isobaric two-phase flash on PC-SAFT by accelerated substitution.</p>
+                  <p>Isothermal flash value; use flash_pt_saft_with_info for numerical status.</p>
                 </div>
               </td>
             </tr>
@@ -4465,11 +4555,7 @@ differentiable in temperature, composition, and the PC-SAFT parameters.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Isothermal-isobaric two-phase flash on PC-SAFT by accelerated substitution.</p>
-<p>Solves the equal-fugacity conditions <code>phi_i^L x_i = phi_i^V y_i</code> with the
-Rachford-Rice material balance, seeded from Wilson K-values. The converged
-<code>(beta, x, y)</code> is differentiable in <code>(T, P, z)</code> and the PC-SAFT
-parameters through implicit differentiation of the fixed point.</p>
+        <p>Isothermal flash value; use flash_pt_saft_with_info for numerical status.</p>
 
 
     </div>

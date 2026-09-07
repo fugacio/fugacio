@@ -419,6 +419,8 @@
       
         
       
+        
+      
     
     
     
@@ -781,6 +783,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../qualification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Measured qualification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../dynamics/" class="md-nav__link">
         
   
@@ -982,6 +1012,8 @@
       
         
       
+        
+      
     
     
     
@@ -1112,6 +1144,34 @@
     
   
     Solvers and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../thermo/acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical acceptance & provenance
   
 
     
@@ -1458,6 +1518,8 @@
       
         
       
+        
+      
     
     
     
@@ -1586,6 +1648,34 @@
     
   
     Flowsheet & recycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process acceptance
   
 
     
@@ -2823,7 +2913,7 @@ same interface.</p>
               <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;package_for&lt;/span&gt; (&lt;code&gt;fugacio.sim.models.package_for&lt;/code&gt;)" href="#fugacio.sim.models.package_for">package_for</a></code></td>
               <td>
                 <div class="doc-md-description">
-                  <p>Build the property package for named <code>components</code> by <code>method</code>.</p>
+                  <p>Build a package with explicit parameter provenance and model assumptions.</p>
                 </div>
               </td>
             </tr>
@@ -3403,138 +3493,24 @@ group interactions; otherwise classic UNIFAC is used.</p>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">package_for</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">components</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;collections.abc.Sequence&lt;/code&gt;" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">],</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">method</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;pr&quot;</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;PropertyPackage&lt;/span&gt; (&lt;code&gt;fugacio.thermo.PropertyPackage&lt;/code&gt;)" href="../../thermo/packages/#fugacio.thermo.package.PropertyPackage">PropertyPackage</a></span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">parameter_policy</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;strict&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">measured_fit</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;PropertyPackage&lt;/span&gt; (&lt;code&gt;fugacio.thermo.PropertyPackage&lt;/code&gt;)" href="../../thermo/packages/#fugacio.thermo.package.PropertyPackage">PropertyPackage</a></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Build the property package for named <code>components</code> by <code>method</code>.</p>
-<p>This is the constructor a flowsheet author reaches for. Every energy-balanced
-unit (<code>fugacio.sim.units</code>), the rigorous column
-(<code>fugacio.sim.distillation</code>), the two-sided heat exchanger, and the
-equation-oriented engine take its result through their <code>model</code> argument.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>components</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="&lt;code&gt;collections.abc.Sequence&lt;/code&gt;" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Component names (from the curated database).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>method</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>One of <code>METHODS</code>:</p>
-<ul>
-<li><code>"pr"</code> / <code>"srk"</code> / <code>"rk"</code> / <code>"vdw"</code>: phi-phi cubic package
-  (options: <code>kij</code>, <code>use_database_kij</code>);</li>
-<li><code>"nrtl"</code> / <code>"uniquac"</code>: gamma-phi package with the curated
-  binary parameters (options: <code>vapor</code>, <code>poynting</code>,
-  <code>phi_saturation</code>, <code>strict</code>, <code>eos</code>, <code>kij</code>, and
-  <code>alpha_default</code> for NRTL);</li>
-<li><code>"unifac"</code> / <code>"dortmund"</code>: gamma-phi package with predictive
-  (modified) UNIFAC (same options);</li>
-<li><code>"pcsaft"</code>: PC-SAFT package (options: <code>kij</code>, <code>use_database_kij</code>);</li>
-<li><code>"iapws"</code>: a single reference fluid (one component only).</li>
-</ul>
-              </div>
-            </td>
-            <td>
-                  <code>&#39;pr&#39;</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>**options</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Forwarded to the underlying model factory as listed above.</p>
-              </div>
-            </td>
-            <td>
-                  <code>{}</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;PropertyPackage&lt;/span&gt; (&lt;code&gt;fugacio.thermo.PropertyPackage&lt;/code&gt;)" href="../../thermo/packages/#fugacio.thermo.package.PropertyPackage">PropertyPackage</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A <code>fugacio.thermo.PropertyPackage</code> over <code>components</code>.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>for an unknown <code>method</code> or a multi-component <code>"iapws"</code>.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+        <p>Build a package with explicit parameter provenance and model assumptions.</p>
+<p>Missing NRTL/UNIQUAC interactions raise by default. Pass
+<code>parameter_policy='allow_ideal'</code> to explicitly permit zero interactions,
+or choose a predictive method. The legacy explicit <code>strict=False</code> is an
+equivalent opt-in. Cubic zero-kij assumptions remain visible in evidence.</p>
+<p>A <code>measured_fit</code> is a converged MeasuredFit for binary NRTL. Its observed
+bounds travel with the package; checked calculations reject extrapolation
+unless their acceptance policy explicitly permits it. Curated tables have
+unknown validation bounds, which are reported as unknown.</p>
 
 
     </div>
