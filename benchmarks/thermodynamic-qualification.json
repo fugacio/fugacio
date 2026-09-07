@@ -1,0 +1,475 @@
+{
+  "cases": [
+    {
+      "components": [
+        "2-methylpentane",
+        "methanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "2-methylpentane/methanol/cloud_point",
+      "model": "curated_nrtl",
+      "observations": 11,
+      "property": "cloud_point",
+      "reason": "\"no curated NRTL parameters for pairs: [('2-methylpentane', 'methanol')]\"",
+      "sources": [
+        "10.1021/je0505321"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        291.88,
+        305.76
+      ]
+    },
+    {
+      "components": [
+        "benzene",
+        "o-xylene"
+      ],
+      "evidence": "measured_comparison",
+      "id": "benzene/o-xylene/vle",
+      "model": "curated_nrtl",
+      "observations": 19,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('benzene', 'o-xylene')]\"",
+      "sources": [
+        "10.1016/j.fluid.2013.05.016"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        353.3,
+        417.5
+      ]
+    },
+    {
+      "components": [
+        "cyclohexane",
+        "methanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "cyclohexane/methanol/cloud_point",
+      "limits": {
+        "cloud_composition_rmse": 0.05
+      },
+      "metrics": {
+        "cloud_composition_rmse": 0.15689468312245325
+      },
+      "model": "curated_nrtl",
+      "nontrivial_binodal": true,
+      "observations": 11,
+      "property": "cloud_point",
+      "sources": [
+        "10.1021/je0505321"
+      ],
+      "status": "unqualified",
+      "temperature_range_k": [
+        306.28,
+        322.22
+      ]
+    },
+    {
+      "components": [
+        "ethanol",
+        "water"
+      ],
+      "evidence": "measured_comparison",
+      "id": "ethanol/water/vle",
+      "limits": {
+        "pressure_relative_rmse": 0.05,
+        "vapor_fraction_rmse": 0.05
+      },
+      "metrics": {
+        "pressure_relative_rmse": 0.019123887653470575,
+        "vapor_fraction_rmse": 0.03416645195900152
+      },
+      "model": "curated_nrtl",
+      "observations": 117,
+      "property": "vle",
+      "sources": [
+        "10.1016/j.fluid.2011.06.009",
+        "10.1016/j.fluid.2012.12.014"
+      ],
+      "status": "qualified",
+      "temperature_range_k": [
+        307.44,
+        423.7
+      ]
+    },
+    {
+      "components": [
+        "m-xylene",
+        "toluene"
+      ],
+      "evidence": "measured_comparison",
+      "id": "m-xylene/toluene/vle",
+      "model": "curated_nrtl",
+      "observations": 22,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('m-xylene', 'toluene')]\"",
+      "sources": [
+        "10.1016/j.fluid.2009.03.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        333.15,
+        353.15
+      ]
+    },
+    {
+      "components": [
+        "methanol",
+        "2,2-dimethylbutane"
+      ],
+      "evidence": "measured_comparison",
+      "id": "methanol/2,2-dimethylbutane/cloud_point",
+      "model": "curated_nrtl",
+      "observations": 12,
+      "property": "cloud_point",
+      "reason": "\"no curated NRTL parameters for pairs: [('methanol', '2,2-dimethylbutane')]\"",
+      "sources": [
+        "10.1021/je0505321"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        274.7,
+        295.8
+      ]
+    },
+    {
+      "components": [
+        "methanol",
+        "2,3-dimethylbutane"
+      ],
+      "evidence": "measured_comparison",
+      "id": "methanol/2,3-dimethylbutane/cloud_point",
+      "model": "curated_nrtl",
+      "observations": 12,
+      "property": "cloud_point",
+      "reason": "\"no curated NRTL parameters for pairs: [('methanol', '2,3-dimethylbutane')]\"",
+      "sources": [
+        "10.1021/je0505321"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        283.42,
+        298.89
+      ]
+    },
+    {
+      "components": [
+        "methanol",
+        "nmp"
+      ],
+      "evidence": "measured_comparison",
+      "id": "methanol/nmp/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 21,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('methanol', 'nmp')]\"",
+      "sources": [
+        "10.1021/je034254m"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        393.15,
+        393.15
+      ]
+    },
+    {
+      "components": [
+        "methanol",
+        "nmp"
+      ],
+      "evidence": "measured_comparison",
+      "id": "methanol/nmp/vle",
+      "model": "curated_nrtl",
+      "observations": 21,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('methanol', 'nmp')]\"",
+      "sources": [
+        "10.1021/je034254m"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        393.19,
+        393.19
+      ]
+    },
+    {
+      "components": [
+        "mibk",
+        "1-butanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "mibk/1-butanol/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 10,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('mibk', '1-butanol')]\"",
+      "sources": [
+        "10.1016/j.tca.2004.09.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        298.15,
+        298.15
+      ]
+    },
+    {
+      "components": [
+        "mibk",
+        "1-hexanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "mibk/1-hexanol/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 10,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('mibk', '1-hexanol')]\"",
+      "sources": [
+        "10.1016/j.tca.2004.09.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        298.15,
+        298.15
+      ]
+    },
+    {
+      "components": [
+        "mibk",
+        "1-pentanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "mibk/1-pentanol/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 11,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('mibk', '1-pentanol')]\"",
+      "sources": [
+        "10.1016/j.tca.2004.09.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        298.15,
+        298.15
+      ]
+    },
+    {
+      "components": [
+        "mibk",
+        "1-propanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "mibk/1-propanol/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 10,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('mibk', '1-propanol')]\"",
+      "sources": [
+        "10.1016/j.tca.2004.09.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        298.15,
+        298.15
+      ]
+    },
+    {
+      "components": [
+        "mibk",
+        "ethanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "mibk/ethanol/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 10,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('mibk', 'ethanol')]\"",
+      "sources": [
+        "10.1016/j.tca.2004.09.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        298.15,
+        298.15
+      ]
+    },
+    {
+      "components": [
+        "mibk",
+        "methanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "mibk/methanol/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 12,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('mibk', 'methanol')]\"",
+      "sources": [
+        "10.1016/j.tca.2004.09.012"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        298.15,
+        298.15
+      ]
+    },
+    {
+      "components": [
+        "n-hexane",
+        "methanol"
+      ],
+      "evidence": "measured_comparison",
+      "id": "n-hexane/methanol/cloud_point",
+      "limits": {
+        "cloud_composition_rmse": 0.05
+      },
+      "metrics": {
+        "cloud_composition_rmse": 0.16762325102772221
+      },
+      "model": "curated_nrtl",
+      "nontrivial_binodal": false,
+      "observations": 14,
+      "property": "cloud_point",
+      "sources": [
+        "10.1021/je0505321"
+      ],
+      "status": "unqualified",
+      "temperature_range_k": [
+        294.39,
+        314.86
+      ]
+    },
+    {
+      "components": [
+        "n-nonane",
+        "benzene"
+      ],
+      "evidence": "measured_comparison",
+      "id": "n-nonane/benzene/vle",
+      "model": "curated_nrtl",
+      "observations": 17,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('n-nonane', 'benzene')]\"",
+      "sources": [
+        "10.1016/j.fluid.2013.05.016"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        353.3,
+        423.8
+      ]
+    },
+    {
+      "components": [
+        "n-nonane",
+        "n-heptane"
+      ],
+      "evidence": "measured_comparison",
+      "id": "n-nonane/n-heptane/vle",
+      "model": "curated_nrtl",
+      "observations": 16,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('n-nonane', 'n-heptane')]\"",
+      "sources": [
+        "10.1016/j.fluid.2013.05.016"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        371.4,
+        423.8
+      ]
+    },
+    {
+      "components": [
+        "sulfolane",
+        "water"
+      ],
+      "evidence": "measured_comparison",
+      "id": "sulfolane/water/excess_enthalpy",
+      "model": "curated_nrtl",
+      "observations": 20,
+      "property": "excess_enthalpy",
+      "reason": "\"no curated NRTL parameters for pairs: [('sulfolane', 'water')]\"",
+      "sources": [
+        "10.1021/je034254m"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        413.15,
+        413.15
+      ]
+    },
+    {
+      "components": [
+        "sulfolane",
+        "water"
+      ],
+      "evidence": "measured_comparison",
+      "id": "sulfolane/water/vle",
+      "model": "curated_nrtl",
+      "observations": 32,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('sulfolane', 'water')]\"",
+      "sources": [
+        "10.1021/je034254m"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        413.18,
+        413.18
+      ]
+    },
+    {
+      "components": [
+        "toluene",
+        "benzene"
+      ],
+      "evidence": "measured_comparison",
+      "id": "toluene/benzene/vle",
+      "limits": {
+        "pressure_relative_rmse": 0.05
+      },
+      "metrics": {
+        "pressure_relative_rmse": 0.02130623784070762
+      },
+      "model": "curated_nrtl",
+      "observations": 22,
+      "property": "vle",
+      "sources": [
+        "10.1016/j.fluid.2009.03.012"
+      ],
+      "status": "qualified",
+      "temperature_range_k": [
+        333.15,
+        353.15
+      ]
+    },
+    {
+      "components": [
+        "toluene",
+        "o-xylene"
+      ],
+      "evidence": "measured_comparison",
+      "id": "toluene/o-xylene/vle",
+      "model": "curated_nrtl",
+      "observations": 17,
+      "property": "vle",
+      "reason": "\"no curated NRTL parameters for pairs: [('toluene', 'o-xylene')]\"",
+      "sources": [
+        "10.1016/j.fluid.2013.05.016"
+      ],
+      "status": "unsupported",
+      "temperature_range_k": [
+        383.4,
+        417.5
+      ]
+    }
+  ],
+  "description": "Initial measured qualification. Previously qualified cases must continue passing the fixed physical limits. Gaps remain unqualified or unsupported until evidence improves.",
+  "required_qualified": [
+    "ethanol/water/vle",
+    "toluene/benzene/vle"
+  ],
+  "schema_version": 1
+}

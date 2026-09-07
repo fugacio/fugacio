@@ -12,7 +12,8 @@ Gross-Sadowski 2001 parameters are standard, and keep a modest tolerance bounded
 by that provenance, not by the math.
 
 The whole module is skipped unless ``juliacall`` (and a working Clapeyron.jl) is
-importable, matching the project's other Julia oracles; it never runs in CI.
+importable, matching the project's other Python-to-Julia bridges. A separate,
+mandatory CI job runs the pinned subprocess oracle in scripts/julia.
 """
 
 import jax.numpy as jnp

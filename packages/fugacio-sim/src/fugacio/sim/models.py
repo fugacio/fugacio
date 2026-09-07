@@ -255,7 +255,7 @@ def helmholtz_package_for(component: str) -> HelmholtzPackage:
     )
 
 
-def package_for(
+def _package_for_unchecked(
     components: Sequence[str],
     method: str = "pr",
     **options: Any,
@@ -309,6 +309,95 @@ def package_for(
             raise ValueError("the reference-fluid package describes exactly one pure component")
         return helmholtz_package_for(comps[0])
     raise ValueError(f"unknown thermodynamic method {method!r}; choose one of {METHODS}")
+
+
+def package_for(
+    components: Sequence[str],
+    method: str = "pr",
+    *,
+    parameter_policy: str = "strict",
+    measured_fit: Any = None,
+    **options: Any,
+) -> PropertyPackage:
+    """Build a package with explicit parameter provenance and model assumptions.
+
+    Missing NRTL/UNIQUAC interactions raise by default. Pass
+    ``parameter_policy='allow_ideal'`` to explicitly permit zero interactions,
+    or choose a predictive method. The legacy explicit ``strict=False`` is an
+    equivalent opt-in. Cubic zero-kij assumptions remain visible in evidence.
+
+    A ``measured_fit`` is a converged MeasuredFit for binary NRTL. Its observed
+    bounds travel with the package; checked calculations reject extrapolation
+    unless their acceptance policy explicitly permits it. Curated tables have
+    unknown validation bounds, which are reported as unknown.
+    """
+    from fugacio.thermo.measured_regression import MeasuredFit
+    from fugacio.thermo.provenance import PackageEvidence, PairEvidence, database_evidence
+
+    if parameter_policy not in ("strict", "allow_ideal"):
+        raise ValueError("parameter_policy must be strict or allow_ideal")
+    names = tuple(get(c).name for c in components)
+    if len(set(names)) != len(names) or not names:
+        raise ValueError("package needs distinct components")
+    key = method.lower()
+    allow = parameter_policy == "allow_ideal" or options.get("strict") is False
+    if measured_fit is not None:
+        if key != "nrtl" or not isinstance(measured_fit, MeasuredFit) or len(names) != 2:
+            raise ValueError("measured_fit requires a binary NRTL package")
+        if not measured_fit.diagnostics.converged:
+            raise ValueError("unconverged or unidentifiable measured fit")
+        if options:
+            raise ValueError(
+                "measured fits retain the exact ideal-vapor PR reference used in fitting"
+            )
+        activity = measured_fit.model((names[0], names[1]))
+        tc, pc, omega, _, _ = _resolve(names)
+        pkg = as_package(gamma_phi_model(activity, tc, pc, omega), names)
+        xr = measured_fit.composition_range
+        if names != measured_fit.components:
+            xr = (1 - xr[1], 1 - xr[0])
+        evidence = PackageEvidence(
+            "nrtl",
+            names,
+            (PairEvidence((names[0], names[1]), "measured_fit", "NIST ThermoML regression"),),
+            (
+                "Ideal vapor; PR saturation pressure; no Poynting or saturation-phi correction.",
+                "Observed training bounds; independent qualification must be inspected separately.",
+            ),
+            measured_fit.sources,
+            measured_fit.temperature_range,
+            measured_fit.pressure_range,
+            xr,
+        )
+        return replace(pkg, evidence=evidence)  # type: ignore[type-var]
+    if key in ("nrtl", "uniquac"):
+        options.setdefault("strict", not allow)
+    pkg = _package_for_unchecked(names, key, **options)
+    evidence = database_evidence(
+        names,
+        key,
+        allow_ideal=allow,
+        use_database_kij=options.get("use_database_kij", key == "pcsaft"),
+        explicit_kij=options.get("kij") is not None,
+    )
+    if key in ("unifac", "dortmund") and (
+        evidence.missing_components or any(pair.kind == "missing" for pair in evidence.pairs)
+    ):
+        raise KeyError(
+            "predictive method lacks group assignments or interaction parameters; inspect evidence"
+        )
+    if key in ("nrtl", "uniquac", "unifac", "dortmund"):
+        evidence = replace(
+            evidence,
+            assumptions=(
+                *evidence.assumptions,
+                f"Vapor model: {options.get('vapor', 'ideal')}; "
+                "PR saturation reference unless eos overridden.",
+                f"Poynting correction: {bool(options.get('poynting', False))}; "
+                f"saturation fugacity correction: {bool(options.get('phi_saturation', False))}.",
+            ),
+        )
+    return replace(pkg, evidence=evidence)  # type: ignore[type-var]
 
 
 __all__ = [

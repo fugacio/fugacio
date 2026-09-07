@@ -4,9 +4,8 @@ name: Oracles
 # chemicals, Cantera). The reference packages are pinned in uv.lock and nothing
 # touches the network at test time, so the suite is deterministic and fast
 # enough to run on every pull request alongside the unit suite. The weekly
-# schedule is a canary for environment drift on quiet periods. Clapeyron.jl
-# checks are skipped here (they need a Julia install); run them locally with
-# `just oracles` when Julia is present.
+# schedule is a canary for environment drift on quiet periods. The separate
+# Julia job uses pinned Julia/Clapeyron versions and a committed Manifest.toml.
 
 on:
   push:
@@ -24,6 +23,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  clapeyron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UV_PYTHON: "3.12"
+      JULIA_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.10.10"
+      - uses: julia-actions/cache@v2
+      - name: Instantiate the locked Clapeyron environment
+        run: julia --project=scripts/julia -e 'using Pkg; Pkg.instantiate()'
+      - name: Generate matched-parameter PC-SAFT cases
+        run: uv run --no-sync python scripts/clapeyron_oracle.py generate oracle-input.json
+      - name: Evaluate the independent Julia implementation
+        run: julia --project=scripts/julia scripts/julia/oracle.jl oracle-input.json oracle-output.json
+      - name: Require complete results and compare kernels
+        run: uv run --no-sync python scripts/clapeyron_oracle.py verify oracle-output.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clapeyron-oracle
+          path: oracle-*.json
+          if-no-files-found: error
+
   oracles:
     runs-on: ubuntu-latest
     env:

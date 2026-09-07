@@ -13,6 +13,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      - name: Rebuild measured holdout, process acceptance, and coverage matrix
+        run: uv run --no-sync python scripts/qualify.py --output artifacts/qualification
+      - name: Preserve qualification evidence, including failed and unsupported cases
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thermodynamic-qualification
+          path: artifacts/qualification
+          if-no-files-found: error
+
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -164,7 +185,13 @@ jobs:
               run packages/fugacio-sim/tests/test_plants.py::test_hda_lite_plant_closes_and_meets_specs
               ;;
             plant-c3)
-              run packages/fugacio-sim/tests/test_plants.py::test_depropanizer_with_economiser_loop
+              # Release the balance/specification executables before compiling
+              # the full plant derivative. Report peak memory and signal exits
+              # to distinguish resource failures from solver/test failures.
+              for test in test_depropanizer_with_economiser_loop test_depropanizer_economiser_sensitivity; do
+                /usr/bin/time -v uv run --no-sync pytest -vv --durations=10 \
+                  "packages/fugacio-sim/tests/test_plants.py::$test"
+              done
               ;;
             plant-ew)
               run packages/fugacio-sim/tests/test_plants.py::test_ethanol_water_train_recovers_bottoms_heat

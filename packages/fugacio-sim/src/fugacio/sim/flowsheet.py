@@ -197,6 +197,10 @@ def tear_solve_with_info(
         raise ValueError("invalid tear solver tolerances, iteration cap, or acceleration bounds")
     flat0, unravel = ravel_pytree(tear0)
 
+    # Reuse one staged flowsheet map in the initial evaluation, iteration,
+    # line search, and implicit derivative. Inlining the units at each call
+    # duplicates large nested column/exchanger traces and their adjoints.
+    @jax.jit
     def g_flat(x: Array, th: Any) -> Array:
         out = g(unravel(x), th)
         return ravel_pytree(out)[0]

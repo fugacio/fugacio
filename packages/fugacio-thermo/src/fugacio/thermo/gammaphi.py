@@ -42,8 +42,8 @@ from jax import Array
 
 from fugacio.thermo.activity.models import ActivityModel
 from fugacio.thermo.eos import PR, CubicEOS, ln_phi_mixture
-from fugacio.thermo.equilibrium import FlashResult, rachford_rice
-from fugacio.thermo.implicit import bracketed_root, fixed_point
+from fugacio.thermo.equilibrium import FlashResult, FlashSolveResult, rachford_rice
+from fugacio.thermo.implicit import bracketed_root, fixed_point, fixed_point_with_info
 from fugacio.thermo.reference import liquid_reference_fugacity, saturation_pressures
 
 ArrayLike = Array | float
@@ -435,6 +435,42 @@ def flash_pt_gamma(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashResult:
+    """Isothermal flash value; use flash_pt_gamma_with_info for numerical status."""
+    return flash_pt_gamma_with_info(
+        model,
+        t,
+        p,
+        z,
+        tc,
+        pc,
+        omega,
+        eos=eos,
+        kij=kij,
+        vapor=vapor,
+        poynting=poynting,
+        phi_saturation=phi_saturation,
+        tol=tol,
+        max_iter=max_iter,
+    ).value
+
+
+def flash_pt_gamma_with_info(
+    model: ActivityModel,
+    t: ArrayLike,
+    p: ArrayLike,
+    z: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    *,
+    eos: CubicEOS = PR,
+    kij: Array | None = None,
+    vapor: str = "ideal",
+    poynting: bool = False,
+    phi_saturation: bool = False,
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> FlashSolveResult:
     """Isothermal-isobaric gamma-phi flash by accelerated successive substitution.
 
     Iterates the gamma-phi K-values to a fixed point in ``ln K`` with the
@@ -472,10 +508,11 @@ def flash_pt_gamma(
         )
         return jnp.log(k_new)
 
-    ln_k_star = fixed_point(g, jnp.log(k0), theta, tol, max_iter)
+    solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
+    ln_k_star = solved.value
     k = jnp.exp(ln_k_star)
     beta = rachford_rice(z, k)
     denom = 1.0 + beta * (k - 1.0)
     x = z / denom
     y = k * x
-    return FlashResult(beta=beta, x=x, y=y, k=k)
+    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), solved.report)

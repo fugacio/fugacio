@@ -27,7 +27,9 @@ def test_residue_curve_map_tool_ternary() -> None:
         {
             "components": ["n-pentane", "n-hexane", "n-heptane"],
             "pressure": 101325.0,
-            "method": "nrtl",
+            # These pairs have no curated NRTL parameters. Choose the
+            # predictive method explicitly instead of relying on zero fallback.
+            "method": "unifac",
             "starts": [[0.34, 0.33, 0.33]],
             "steps": 120,
             "t_min": 250.0,

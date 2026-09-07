@@ -177,9 +177,11 @@ def _safe_call(name: str, arguments: JsonDict, registry: dict[str, ToolSpec]) ->
     missing = _missing_required(registry[name], arguments)
     if missing:
         return {"error": f"missing required arguments for {name!r}: {missing}"}
+    from fugacio.thermo.acceptance import PhysicalAcceptanceError
+
     try:
         return call_tool(name, arguments, registry)
-    except ConvergenceError as exc:
+    except (ConvergenceError, PhysicalAcceptanceError) as exc:
         return {"error": str(exc), "context": exc.context, "report": exc.report.to_dict()}
     except Exception as exc:  # report any tool failure back to the model
         return {"error": f"{type(exc).__name__}: {exc}"}

@@ -17,6 +17,9 @@ venv/
 .import_linter_cache/
 .jax_cache/
 .coverage
+artifacts/
+oracle-input.json
+oracle-output.json
 coverage.xml
 htmlcov/
 

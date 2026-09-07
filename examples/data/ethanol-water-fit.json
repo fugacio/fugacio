@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "evidence": "measured_fit",
+  "components": [
+    "ethanol",
+    "water"
+  ],
+  "alpha": 0.3,
+  "reference_temperature": 317.23422222222223,
+  "theta": [
+    -0.12994146323934735,
+    1.994727035531267,
+    -0.08952347026612546,
+    2.652291937260446
+  ],
+  "training_ids": [
+    "01675f52a12919126e6b",
+    "041e9a84a8b8d3fd03a3",
+    "079e3e334eec6d7d6b61",
+    "082eefa259471b793a9d",
+    "08ba009088d26568abf8",
+    "09c460e8b81296162c63",
+    "0a2260f766885c159f42",
+    "123dc1fed252ab850b68",
+    "209ec504b0333b34b2a0",
+    "20e7353f4f7410f74fae",
+    "2849de3402ad0e0c493b",
+    "2cef85772579997d0729",
+    "313542d42774b5ff9e63",
+    "350a960ab07b33ef92c7",
+    "36006198a40b7b547eb6",
+    "365d03a6886f7135e56e",
+    "3a4fe81c78484353024d",
+    "3b366e2c370b1742fa83",
+    "5497546cafaa5d0e0b48",
+    "55dfc02f231dfbc59846",
+    "5824ca2d6782c795a494",
+    "596be5ca56229c4477e5",
+    "598d12ba6b163aa30ac0",
+    "5b771d5a7bca2749cdab",
+    "66a65796fc8252c9637f",
+    "6d0f82e64e4c84520c44",
+    "6f4966470dd2897740af",
+    "737df7512f12429671ce",
+    "84d4dcb45db3ea001419",
+    "a5f1ea2d30fba20fde07",
+    "b662a982b69d90e695f4",
+    "bd31df773f2391e0f1e2",
+    "c0b3d2cb9b8562e62b29",
+    "c0f2f860efe06db177a1",
+    "c6cbb6eaec52b6435fb9",
+    "cee84b3fcdd389d77898",
+    "cf3dc9537249b73b0a47",
+    "d3f2cdb1b5134c585a2f",
+    "e3086834031fca1fb0db",
+    "ea4d83055341761f4085",
+    "f3bafd4f2a3464d5fe50",
+    "fa9c4d5c65f7065ccf2b",
+    "fad2c430eafa2499f05c",
+    "fb1cbf541987ae8a343c",
+    "fb7390db396287392a93"
+  ],
+  "sources": [
+    [
+      "10.1016/j.fluid.2011.06.009",
+      "288bc73f24c1c1e54f8f5685a6b1353d92378f093fd15271a27337b3a32e899d"
+    ]
+  ],
+  "temperature_range": [
+    307.44,
+    335.16
+  ],
+  "pressure_range": [
+    13150.0,
+    32860.0
+  ],
+  "composition_range": [
+    0.063,
+    0.971
+  ],
+  "diagnostics": {
+    "converged": true,
+    "reason": "objective_tolerance",
+    "iterations": 6,
+    "weighted_rmse": 1.2247472149037812,
+    "gradient_norm": 1.4107796602047529e-05,
+    "jacobian_rank": 4,
+    "condition_number": 278.0311901691952,
+    "degrees_of_freedom": 86,
+    "covariance": [
+      [
+        0.0024008597593971237,
+        -0.004953077400794936,
+        0.0015480207466713164,
+        -0.03142444116121088
+      ],
+      [
+        -0.004953077400794961,
+        0.011735433876751064,
+        -0.0214852943463304,
+        0.12356689433065303
+      ],
+      [
+        0.0015480207466705058,
+        -0.021485294346328825,
+        3.2274302660154417,
+        -5.541698398959336
+      ],
+      [
+        -0.03142444116121125,
+        0.12356689433065385,
+        -5.541698398959336,
+        11.16374357195884
+      ]
+    ],
+    "standard_errors": [
+      0.048998568952543134,
+      0.10833020759119344,
+      1.7965050141915668,
+      3.341218875194925
+    ],
+    "uncertainty_note": "Local linearized covariance, scaled by residual variance; conditional on exact inputs and declared residual weights. Not a model-error bound."
+  },
+  "weights": {
+    "pressure_relative": 0.02,
+    "vapor_fraction": 0.02,
+    "excess_enthalpy": 100.0
+  }
+}

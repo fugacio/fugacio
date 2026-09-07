@@ -15,3 +15,15 @@ ThermoML archive reader.
 ## ThermoML reader
 
 ::: fugacio.thermo.thermoml
+
+## Measured corpus
+
+::: fugacio.thermo.experimental
+
+## Measured regression and validation
+
+::: fugacio.thermo.measured_regression
+
+## Qualification matrix
+
+::: fugacio.thermo.qualification

@@ -22,6 +22,8 @@ implicit solvers); they are marked ``plant`` so they can be selected or
 deselected explicitly.
 """
 
+import gc
+
 import jax
 import jax.numpy as jnp
 import pytest
@@ -212,7 +214,7 @@ def _c3_column(feed: Stream) -> tuple[Stream, Stream]:
     return res.distillate, res.bottoms
 
 
-def test_depropanizer_with_economiser_loop() -> None:
+def _c3_flowsheet() -> tuple[Flowsheet, Stream]:
     cold_feed = Stream.from_fractions(C3, jnp.array([0.40, 0.35, 0.25]), 100.0, 300.0, 16e5)
 
     fs = Flowsheet()
@@ -229,6 +231,11 @@ def test_depropanizer_with_economiser_loop() -> None:
         inputs=("preheated",),
         outputs=("distillate", "bottoms"),
     )
+    return fs, cold_feed
+
+
+def test_depropanizer_with_economiser_loop() -> None:
+    fs, cold_feed = _c3_flowsheet()
     (block,) = fs.partition()
     assert block.cyclic and block.tears in (("bottoms",), ("preheated",))
 
@@ -269,13 +276,28 @@ def test_depropanizer_with_economiser_loop() -> None:
     saving = float(col0.reboiler_duty - col.reboiler_duty)
     assert 0.5 * float(hx.duty) < saving < 1.5 * float(hx.duty)
 
+
+def test_depropanizer_economiser_sensitivity() -> None:
+    # CI runs this in a fresh process so the plant and column verification
+    # executables aren't retained while compiling the full plant derivative.
+    fs, cold_feed = _c3_flowsheet()
+    s = fs.solve({"dt": 15.0}, method="broyden", tol=1e-8)
+    jax.block_until_ready(s)
+    # The seed solve, adjoint, and finite-difference evaluations compile
+    # different graphs. Retaining all three sets exhausts CI runner memory.
+    # Only release in-memory caches; the persistent compilation cache remains.
+    jax.clear_caches()
+    gc.collect()
+
     # A sensitivity of the converged, heat-integrated train agrees with an
     # independent operating-condition perturbation through both units.
     def recovered_heat(approach):
         result = fs.solve({"dt": approach}, method="broyden", tol=1e-9, guess=s)
         return enthalpy_flow(result["preheated"]) - enthalpy_flow(cold_feed)
 
-    derivative = jax.grad(recovered_heat)(jnp.asarray(15.0))
+    derivative = float(jax.grad(recovered_heat)(jnp.asarray(15.0)))
+    jax.clear_caches()
+    gc.collect()
     finite_difference = (recovered_heat(15.01) - recovered_heat(14.99)) / 0.02
     assert jnp.isfinite(derivative)
     assert float(derivative) == pytest.approx(float(finite_difference), rel=5e-3, abs=1e-2)

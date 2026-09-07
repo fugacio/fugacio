@@ -37,8 +37,19 @@ test-fast:
 oracles:
     uv run --group oracles pytest -m oracle
 
-# Everything CI runs, in order.
-check: lint types imports test
+# Reconstruct measured evidence and verify held-out predictions and process closure.
+qualify:
+    uv run python scripts/qualify.py
+
+# Requires Julia 1.10.10 on PATH; the Julia package environment is fully pinned.
+clapeyron-oracles:
+    julia --project=scripts/julia -e 'using Pkg; Pkg.instantiate()'
+    uv run python scripts/clapeyron_oracle.py generate /tmp/fugacio-oracle-input.json
+    julia --project=scripts/julia scripts/julia/oracle.jl /tmp/fugacio-oracle-input.json /tmp/fugacio-oracle-output.json
+    uv run python scripts/clapeyron_oracle.py verify /tmp/fugacio-oracle-output.json
+
+# Default checks plus measured qualification (foreign oracles have their own tasks).
+check: lint types imports test qualify
 
 # Serve the docs site locally with live reload (http://127.0.0.1:8000).
 # Social cards are CI-only, so no Cairo/Pango is needed for a local preview.

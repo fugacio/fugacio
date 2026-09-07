@@ -94,19 +94,34 @@ Model = PropertyPackage | EOSModel | GammaPhiModel | SAFTModel | None
 @cache
 def _resolve(components: tuple[str, ...]) -> tuple[Array, Array, Array, Array, CpCoeffs]:
     """Resolve component names to ``(tc, pc, omega, mw, cp)`` array constants (cached)."""
-    arr = component_arrays(list(components))
-    cp = ideal_gas_coeffs([get(c) for c in components])
-    return arr["tc"], arr["pc"], arr["omega"], arr["mw"], cp
+    # The first lookup may happen while a flowsheet is being traced. Keep
+    # cached constants concrete so no tracer escapes into later evaluations.
+    with jax.ensure_compile_time_eval():
+        arr = component_arrays(list(components))
+        cp = ideal_gas_coeffs([get(c) for c in components])
+        return arr["tc"], arr["pc"], arr["omega"], arr["mw"], cp
 
 
 def default_package(
     components: Sequence[str], *, eos: CubicEOS = PR, kij: Array | None = None
 ) -> CubicPackage:
     """The cubic-EOS package a stream falls back to when no ``model`` is given."""
+    from fugacio.thermo.provenance import database_evidence
+
     tc, pc, omega, _, cp = _resolve(tuple(components))
     return replace(
         cubic_package(tc, pc, omega, cp, kij=kij, eos=eos),
         component_names=tuple(get(c).name for c in components),
+        evidence=database_evidence(
+            tuple(components),
+            {
+                "Peng-Robinson": "pr",
+                "Soave-Redlich-Kwong": "srk",
+                "Redlich-Kwong": "rk",
+                "van der Waals": "vdw",
+            }.get(eos.name, "custom"),
+            explicit_kij=kij is not None,
+        ),
     )
 
 

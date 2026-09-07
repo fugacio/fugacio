@@ -1,0 +1,8 @@
+[deps]
+Clapeyron = "7c7805af-46cc-48c9-995b-ed0ed2dc909a"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+
+[compat]
+Clapeyron = "=0.6.25"
+JSON = "=0.21.4"
+julia = "=1.10.10"

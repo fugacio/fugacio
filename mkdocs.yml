@@ -76,6 +76,7 @@ nav:
     - Flowsheeting, tears & exchangers: flowsheeting.md
     - Equation-oriented flowsheeting: equation-oriented.md
     - Reliability and diagnostics: reliability.md
+    - Measured qualification: qualification.md
     - Dynamics & process control: dynamics.md
     - Advanced control (MPC & estimation): advanced-control.md
     - Heat integration & pinch analysis: heat-integration.md
@@ -86,6 +87,7 @@ nav:
       - Components & data: api/thermo/data.md
       - Equations of state: api/thermo/eos.md
       - Solvers and diagnostics: api/thermo/solvers.md
+      - Physical acceptance & provenance: api/thermo/acceptance.md
       - PC-SAFT (molecular SAFT): api/thermo/saft.md
       - Phase equilibrium: api/thermo/equilibrium.md
       - Liquid-liquid & VLLE: api/thermo/lle.md
@@ -101,6 +103,7 @@ nav:
       - Streams & properties: api/sim/streams.md
       - Unit operations: api/sim/units.md
       - Flowsheet & recycle: api/sim/flowsheet.md
+      - Process acceptance: api/sim/acceptance.md
       - Two-sided heat exchanger: api/sim/heat_exchanger.md
       - Equation-oriented flowsheeting: api/sim/eo.md
       - Thermodynamic models: api/sim/models.md

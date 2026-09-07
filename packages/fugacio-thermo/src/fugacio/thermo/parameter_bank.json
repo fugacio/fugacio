@@ -15,7 +15,8 @@
       "t_max": 353.15,
       "n_points": 11,
       "rmse": 3.0661686287737756e-07,
-      "source": "isopropanol_water_vle_353K"
+      "source": "isopropanol_water_vle_353K",
+      "evidence": "synthetic"
     },
     {
       "components": [
@@ -30,7 +31,8 @@
       "t_max": 318.15,
       "n_points": 11,
       "rmse": 4.1593109117063397e-07,
-      "source": "acetone_chloroform_vle_318K"
+      "source": "acetone_chloroform_vle_318K",
+      "evidence": "synthetic"
     },
     {
       "components": [
@@ -45,7 +47,8 @@
       "t_max": 363.15,
       "n_points": 11,
       "rmse": 2.8616344031743354e-07,
-      "source": "benzene_toluene_vle_363K"
+      "source": "benzene_toluene_vle_363K",
+      "evidence": "synthetic"
     },
     {
       "components": [
@@ -60,7 +63,8 @@
       "t_max": 323.15,
       "n_points": 11,
       "rmse": 8.089867964269556e-07,
-      "source": "ethanol_water_vle_323K"
+      "source": "ethanol_water_vle_323K",
+      "evidence": "synthetic"
     },
     {
       "components": [
@@ -75,7 +79,8 @@
       "t_max": 338.15,
       "n_points": 11,
       "rmse": 2.9118562659374624e-07,
-      "source": "methanol_water_vle_338K"
+      "source": "methanol_water_vle_338K",
+      "evidence": "synthetic"
     }
   ]
 }
