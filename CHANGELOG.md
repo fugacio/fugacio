@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.5.0 (2026-09-07)
+
+### Features
+
+- Add measured thermodynamic qualification ([#20](https://github.com/fugacio/fugacio/pull/20),
+  [`93a0b26`](https://github.com/fugacio/fugacio/commit/93a0b2605b3672dbaa1f0b12bf348a996da592cc))
+
+
 ## v0.4.0 (2026-09-06)
 
 ### Features
