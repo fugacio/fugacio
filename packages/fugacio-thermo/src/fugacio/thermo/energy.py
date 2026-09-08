@@ -38,6 +38,7 @@ from jax import Array
 from fugacio.thermo.constants import P_REF, T_REF
 from fugacio.thermo.eos import CubicEOS
 from fugacio.thermo.equilibrium import flash_pt
+from fugacio.thermo.implicit import _parameter_direction
 from fugacio.thermo.properties import CpCoeffs, molar_enthalpy, molar_entropy
 
 ArrayLike = Array | float
@@ -176,7 +177,7 @@ def _implicit_temperature(
     return t_star
 
 
-@_implicit_temperature.defjvp
+@partial(_implicit_temperature.defjvp, symbolic_zeros=True)
 def _implicit_temperature_jvp(
     residual: Callable[[Array, Any], Array],
     t_min: float,
@@ -189,12 +190,8 @@ def _implicit_temperature_jvp(
     params, t_init = primals
     params_dot, _ = tangents
     t_star = _implicit_temperature(residual, params, t_init, t_min, t_max, tol, max_iter)
-    r_t = jax.grad(lambda tt: residual(tt, params))(t_star)
-    grad_params = jax.grad(lambda pp: residual(t_star, pp))(params)
-    leaves = jax.tree_util.tree_leaves(
-        jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
-    )
-    r_dot = sum(leaves, jnp.asarray(0.0))
+    _, r_t = jax.jvp(lambda tt: residual(tt, params), (t_star,), (jnp.ones_like(t_star),))
+    r_dot = _parameter_direction(residual, t_star, params, params_dot)
     error = jnp.abs(residual(t_star, params))
     valid = jnp.isfinite(error) & (error <= jnp.maximum(4 * tol * jnp.abs(r_t), 1e-6))
     t_dot = (-r_dot / r_t) * jnp.where(valid, 1.0, jnp.nan)

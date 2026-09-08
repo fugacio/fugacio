@@ -100,6 +100,10 @@ jobs:
           - plant-ew
           - utility-reliability
           - copilot
+          - cases
+          - case-plant
+          - case-gradient
+          - case-optimization
     env:
       # Pin every uv invocation (sync + run) to the matrix interpreter. Otherwise
       # `.python-version` (3.12) wins on the `uv run` steps, which rebuilds .venv
@@ -164,6 +168,11 @@ jobs:
                 packages/fugacio-sim/tests/test_flowsheet.py
                 packages/fugacio-sim/tests/test_heat_exchanger.py
                 packages/fugacio-sim/tests/test_plants.py
+                packages/fugacio-sim/tests/test_cases_schema.py
+                packages/fugacio-sim/tests/test_cases_runtime.py
+                packages/fugacio-sim/tests/test_cases_studies.py
+                packages/fugacio-sim/tests/test_cases_evidence.py
+                packages/fugacio-sim/tests/test_cases_plant.py
               )
               run packages/fugacio-sim/tests/test_utilities.py
               run packages/fugacio-sim/tests \
@@ -203,6 +212,21 @@ jobs:
               run packages/fugacio-copilot/tests/test_steam_tools.py
               run packages/fugacio-copilot/tests \
                 --ignore=packages/fugacio-copilot/tests/test_steam_tools.py
+              ;;
+            cases)
+              run packages/fugacio-sim/tests/test_cases_schema.py
+              run packages/fugacio-sim/tests/test_cases_runtime.py
+              run packages/fugacio-sim/tests/test_cases_studies.py
+              run packages/fugacio-sim/tests/test_cases_evidence.py
+              ;;
+            case-plant)
+              run packages/fugacio-sim/tests/test_cases_plant.py::test_saved_depropanizer_meets_specs_balances_and_stability
+              ;;
+            case-gradient)
+              run packages/fugacio-sim/tests/test_cases_plant.py::test_depropanizer_study_gradient
+              ;;
+            case-optimization)
+              run packages/fugacio-sim/tests/test_cases_plant.py::test_depropanizer_bounded_optimization
               ;;
             *)
               echo "Unknown test group: ${{ matrix.group }}" >&2

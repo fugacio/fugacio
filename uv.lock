@@ -676,12 +676,14 @@ dependencies = [
     { name = "fugacio-thermo" },
     { name = "jax", version = "0.4.38", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "jax", version = "0.10.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "scipy" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fugacio-thermo", editable = "packages/fugacio-thermo" },
     { name = "jax", specifier = ">=0.4.34" },
+    { name = "scipy", specifier = ">=1.12" },
 ]
 
 [[package]]

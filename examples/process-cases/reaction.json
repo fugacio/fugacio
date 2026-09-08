@@ -1,0 +1,114 @@
+{
+  "components": [
+    "hydrogen",
+    "toluene",
+    "benzene",
+    "methane"
+  ],
+  "description": "Isothermal toluene hydrodealkylation with explicit component generation and standard formation enthalpies.",
+  "economics": {
+    "cooling_price": {
+      "unit": "USD/GJ",
+      "value": 0.4
+    },
+    "electricity_price": {
+      "unit": "USD/kWh",
+      "value": 0.12
+    },
+    "heating_price": {
+      "unit": "USD/GJ",
+      "value": 8
+    },
+    "operating_time": {
+      "unit": "h",
+      "value": 8000
+    }
+  },
+  "feeds": {
+    "feed": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 10
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 20
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 850
+      },
+      "z": [
+        0.7,
+        0.3,
+        0,
+        0
+      ]
+    }
+  },
+  "metrics": {
+    "annual_cost": {
+      "expression": {
+        "plant": "annual_cost"
+      },
+      "unit": "USD/yr"
+    },
+    "benzene_production": {
+      "expression": {
+        "component": "benzene",
+        "property": "component_flow",
+        "stream": "product"
+      },
+      "unit": "mol/s"
+    },
+    "duty": {
+      "expression": {
+        "property": "heat",
+        "unit": "reactor"
+      },
+      "unit": "kW"
+    }
+  },
+  "name": "reaction",
+  "parameters": {
+    "conversion": {
+      "lower": 0.1,
+      "unit": "1",
+      "upper": 0.9,
+      "value": 0.6
+    }
+  },
+  "property_package": {
+    "method": "pr"
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "feed"
+      ],
+      "kind": "stoichiometric_reactor",
+      "name": "reactor",
+      "outlets": [
+        "product"
+      ],
+      "settings": {
+        "conversion": {
+          "parameter": "conversion"
+        },
+        "key": "toluene",
+        "nu": [
+          -1,
+          -1,
+          1,
+          1
+        ],
+        "t_out": {
+          "unit": "K",
+          "value": 850
+        }
+      }
+    }
+  ]
+}

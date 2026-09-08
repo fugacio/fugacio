@@ -26,6 +26,8 @@ from fugacio.copilot.agent import (
     run_agent,
     run_llm_agent,
 )
+from fugacio.copilot.case_tools import DesignSession
+from fugacio.copilot.design_agent import DesignAgentResult, run_design_agent
 from fugacio.copilot.llm import (
     AnthropicProvider,
     ChatResponse,
@@ -58,6 +60,8 @@ __all__ = [
     "AgentResult",
     "AnthropicProvider",
     "ChatResponse",
+    "DesignAgentResult",
+    "DesignSession",
     "LLMProvider",
     "Message",
     "MockProvider",
@@ -70,6 +74,7 @@ __all__ = [
     "heuristic_planner",
     "llm_planner",
     "run_agent",
+    "run_design_agent",
     "run_llm_agent",
     "stream_table",
     "summarize_bubble_point",

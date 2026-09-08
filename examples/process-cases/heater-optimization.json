@@ -1,0 +1,11 @@
+{
+  "variables": ["temperature"],
+  "objective": "annual_cost",
+  "constraints": [
+    {
+      "metric": "product_temperature",
+      "lower": {"value": 360, "unit": "K"},
+      "tolerance": {"value": 0.00001, "unit": "delta_K"}
+    }
+  ]
+}

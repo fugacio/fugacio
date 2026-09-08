@@ -2353,6 +2353,9 @@ def default_registry() -> dict[str, ToolSpec]:
     from fugacio.copilot.evidence_tools import evidence_tool_specs
 
     specs.extend(evidence_tool_specs())
+    from fugacio.copilot.case_tools import case_tool_specs
+
+    specs.extend(case_tool_specs())
     return {spec.name: spec for spec in specs}
 
 

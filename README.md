@@ -69,6 +69,22 @@ Equilibrium and recycle solvers use implicit differentiation of converged
 solutions. The [reliability guide](docs/reliability.md) explains solve reports,
 phase inventories, warm starts, continuation, and derivative limits.
 
+### Saved process workflow
+
+For a saved process workflow, export an example, solve it, and keep an audited
+run and engineering report:
+
+```bash
+uv run fugacio example heater heater.json
+uv run fugacio run heater.json --output run.json --report report.md
+```
+
+The [process cases guide](docs/process-cases.md) covers case revisions, both
+flowsheet backends, bounded design specifications, sweeps, constrained
+optimization, gradient checks, and copilot submissions tied to computed runs.
+It includes a rigorous depropanizer with heat recovery and a measured NRTL
+heater whose independent holdout is reevaluated when the case is loaded.
+
 ## Packages
 
 The [uv workspace](pyproject.toml) contains three computational layers and an
@@ -118,6 +134,9 @@ API reference generated from package docstrings.
   calculations across the stack through a multi-turn
   [agent loop](docs/api/copilot/agent.md), with OpenAI, Anthropic, and mock
   [providers](docs/api/copilot/providers.md).
+  The [accountable design loop](docs/process-cases.md#accountable-copilot)
+  requires an accepted current-case run and generates its final report from
+  recorded metrics.
 
 ## Validation and qualification
 

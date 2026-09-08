@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import lru_cache, partial
 from typing import Any, NamedTuple
 
 import jax
@@ -68,6 +69,7 @@ class TearResult(NamedTuple):
     report: SolveReport
 
 
+@partial(jax.jit, static_argnames=("g", "method", "q_min", "q_max", "tol", "atol", "max_iter"))
 def _tear_iterations(
     g: Callable[[Array, Any], Array],
     x0: Array,
@@ -155,6 +157,16 @@ def _tear_iterations(
     return SolveResult(x, residual_report(r, tol, iterations=iterations, step_norm=step))
 
 
+def _make_flat_map(g: Callable[..., Any], unravel: Callable[..., Any]) -> Callable[..., Any]:
+    def flat_map(x: Array, theta: Any) -> Array:
+        return ravel_pytree(g(unravel(x), theta))[0]
+
+    return flat_map
+
+
+_cached_flat_map = lru_cache(maxsize=32)(_make_flat_map)
+
+
 def tear_solve_with_info(
     g: Callable[[Any, Any], Any],
     tear0: Any,
@@ -197,13 +209,18 @@ def tear_solve_with_info(
         raise ValueError("invalid tear solver tolerances, iteration cap, or acceleration bounds")
     flat0, unravel = ravel_pytree(tear0)
 
-    # Reuse one staged flowsheet map in the initial evaluation, iteration,
-    # line search, and implicit derivative. Inlining the units at each call
-    # duplicates large nested column/exchanger traces and their adjoints.
-    @jax.jit
-    def g_flat(x: Array, th: Any) -> Array:
-        out = g(unravel(x), th)
-        return ravel_pytree(out)[0]
+    # The iteration kernel stages this map for the forward solve. Leave the
+    # map itself unstaged so implicit linearization can call the individual
+    # unit kernels without compiling a combined column/exchanger derivative.
+    # Stable callback identities let the forward kernel reuse its executable.
+    try:
+        hash((g, unravel))
+    except TypeError:
+        # Arbitrary callable objects remain supported even if they can't be
+        # cache keys. JAX's ordinary ravel inverse is hashable by tree/shape.
+        g_flat = _make_flat_map(g, unravel)
+    else:
+        g_flat = _cached_flat_map(g, unravel)
 
     start, params = jax.lax.stop_gradient((flat0, theta))
     raw = _tear_iterations(g_flat, start, params, method, q_min, q_max, tol, atol, max_iter)

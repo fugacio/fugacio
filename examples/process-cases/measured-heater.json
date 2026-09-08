@@ -1,0 +1,303 @@
+{
+  "components": [
+    "ethanol",
+    "water"
+  ],
+  "description": "Ethanol-water heater with a measured NRTL fit and an independently reevaluated publication holdout.",
+  "economics": {
+    "cooling_price": {
+      "unit": "USD/GJ",
+      "value": 0.4
+    },
+    "electricity_price": {
+      "unit": "USD/kWh",
+      "value": 0.12
+    },
+    "heating_price": {
+      "unit": "USD/GJ",
+      "value": 8
+    },
+    "operating_time": {
+      "unit": "h",
+      "value": 8000
+    }
+  },
+  "feeds": {
+    "feed": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 10
+      },
+      "pressure": {
+        "unit": "Pa",
+        "value": 20000
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 330
+      },
+      "z": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "metrics": {
+    "annual_cost": {
+      "expression": {
+        "plant": "annual_cost"
+      },
+      "unit": "USD/yr"
+    },
+    "duty": {
+      "expression": {
+        "property": "heat",
+        "unit": "heater"
+      },
+      "unit": "kW"
+    },
+    "product_temperature": {
+      "expression": {
+        "property": "temperature",
+        "stream": "product"
+      },
+      "unit": "K"
+    }
+  },
+  "name": "measured-heater",
+  "parameters": {
+    "temperature": {
+      "lower": 331,
+      "unit": "K",
+      "upper": 335.1,
+      "value": 335
+    }
+  },
+  "property_package": {
+    "measured_fit": {
+      "alpha": 0.3,
+      "components": [
+        "ethanol",
+        "water"
+      ],
+      "composition_range": [
+        0.063,
+        0.971
+      ],
+      "diagnostics": {
+        "condition_number": 278.0311901691952,
+        "converged": true,
+        "covariance": [
+          [
+            0.0024008597593971237,
+            -0.004953077400794936,
+            0.0015480207466713164,
+            -0.03142444116121088
+          ],
+          [
+            -0.004953077400794961,
+            0.011735433876751064,
+            -0.0214852943463304,
+            0.12356689433065303
+          ],
+          [
+            0.0015480207466705058,
+            -0.021485294346328825,
+            3.2274302660154417,
+            -5.541698398959336
+          ],
+          [
+            -0.03142444116121125,
+            0.12356689433065385,
+            -5.541698398959336,
+            11.16374357195884
+          ]
+        ],
+        "degrees_of_freedom": 86,
+        "gradient_norm": 1.4107796602047529e-05,
+        "iterations": 6,
+        "jacobian_rank": 4,
+        "reason": "objective_tolerance",
+        "standard_errors": [
+          0.048998568952543134,
+          0.10833020759119344,
+          1.7965050141915668,
+          3.341218875194925
+        ],
+        "uncertainty_note": "Local linearized covariance, scaled by residual variance; conditional on exact inputs and declared residual weights. Not a model-error bound.",
+        "weighted_rmse": 1.2247472149037812
+      },
+      "evidence": "measured_fit",
+      "pressure_range": [
+        13150.0,
+        32860.0
+      ],
+      "reference_temperature": 317.23422222222223,
+      "schema_version": 1,
+      "sources": [
+        [
+          "10.1016/j.fluid.2011.06.009",
+          "288bc73f24c1c1e54f8f5685a6b1353d92378f093fd15271a27337b3a32e899d"
+        ]
+      ],
+      "temperature_range": [
+        307.44,
+        335.16
+      ],
+      "theta": [
+        -0.12994146323934735,
+        1.994727035531267,
+        -0.08952347026612546,
+        2.652291937260446
+      ],
+      "training_ids": [
+        "01675f52a12919126e6b",
+        "041e9a84a8b8d3fd03a3",
+        "079e3e334eec6d7d6b61",
+        "082eefa259471b793a9d",
+        "08ba009088d26568abf8",
+        "09c460e8b81296162c63",
+        "0a2260f766885c159f42",
+        "123dc1fed252ab850b68",
+        "209ec504b0333b34b2a0",
+        "20e7353f4f7410f74fae",
+        "2849de3402ad0e0c493b",
+        "2cef85772579997d0729",
+        "313542d42774b5ff9e63",
+        "350a960ab07b33ef92c7",
+        "36006198a40b7b547eb6",
+        "365d03a6886f7135e56e",
+        "3a4fe81c78484353024d",
+        "3b366e2c370b1742fa83",
+        "5497546cafaa5d0e0b48",
+        "55dfc02f231dfbc59846",
+        "5824ca2d6782c795a494",
+        "596be5ca56229c4477e5",
+        "598d12ba6b163aa30ac0",
+        "5b771d5a7bca2749cdab",
+        "66a65796fc8252c9637f",
+        "6d0f82e64e4c84520c44",
+        "6f4966470dd2897740af",
+        "737df7512f12429671ce",
+        "84d4dcb45db3ea001419",
+        "a5f1ea2d30fba20fde07",
+        "b662a982b69d90e695f4",
+        "bd31df773f2391e0f1e2",
+        "c0b3d2cb9b8562e62b29",
+        "c0f2f860efe06db177a1",
+        "c6cbb6eaec52b6435fb9",
+        "cee84b3fcdd389d77898",
+        "cf3dc9537249b73b0a47",
+        "d3f2cdb1b5134c585a2f",
+        "e3086834031fca1fb0db",
+        "ea4d83055341761f4085",
+        "f3bafd4f2a3464d5fe50",
+        "fa9c4d5c65f7065ccf2b",
+        "fad2c430eafa2499f05c",
+        "fb1cbf541987ae8a343c",
+        "fb7390db396287392a93"
+      ],
+      "weights": {
+        "excess_enthalpy": 100.0,
+        "pressure_relative": 0.02,
+        "vapor_fraction": 0.02
+      }
+    },
+    "method": "nrtl",
+    "qualification": {
+      "holdout_ids": [
+        "006d2fd4035a38767079",
+        "045240963d4722881dba",
+        "04fd9cf9185971256e44",
+        "1748e27e046a3a023d2e",
+        "175bcb5dcfa61bf582ac",
+        "1bcf87625c0ddcf8756f",
+        "1ca9d608291f52e26be5",
+        "1ce56e39fc375537b4f9",
+        "1f99d1add982f237aa44",
+        "2a9420ecb89e8f5f4aa7",
+        "30c2245fe150c092ae1a",
+        "37e89d852913b0393221",
+        "38f04c1eea5889094090",
+        "3f9dccf3497ad08c8d89",
+        "41b3409b3b063ad1fc6b",
+        "43ba2bf03cd3cf4a8717",
+        "49932a5e26249361db1c",
+        "51f4672a1c06c149ad30",
+        "543c873589842557a747",
+        "557a092f33f9065787af",
+        "55926821eda2cc37e9e8",
+        "592694994583294723a0",
+        "5988f075c488f7bc9adc",
+        "5f30a4b7aa24ec151896",
+        "609d382760085ec82243",
+        "6620a4c1f3a92f486642",
+        "689291618b9c106fcae9",
+        "6a3e56f1eca36c56a217",
+        "6d10172fbd41fc9af1c8",
+        "724b7baa33ce5f979a25",
+        "7b1d71e4a09ea604563d",
+        "7c7b45c22a3515756160",
+        "7e9702e1a5f67d79e331",
+        "7edc11272c35b0d8e6d5",
+        "7ffdb96390db2b4edab2",
+        "8362151957efde1281ed",
+        "8526bc6129c408785610",
+        "86409e32e9e5b8a83141",
+        "90131f39922bf772b248",
+        "913f2442eddcfe451d67",
+        "979eedd2778347803a99",
+        "994e9a638fc68435b06d",
+        "9e718b962d32b76ca154",
+        "a0d21ce8d1f872e8c211",
+        "a628d599eeda0b1e0cf4",
+        "a6e0de615aa9369b0c58",
+        "a6f70997e7ce4496f132",
+        "a8a6b1a3b27416e35974",
+        "a9cce3d799c7c69e00f7",
+        "ab74011ca028cd3bc138",
+        "b25040c60d6c21ac7fb0",
+        "b4b83e86c26423309c89",
+        "c21840048da995a53d7b",
+        "c2a88e26b686695d4acb",
+        "c3d532448c0a057d8c8c",
+        "cd3da62f20b6a33b7dc1",
+        "cf3e5b3f93cc35ebc44d",
+        "d2542c859ec38ec78d8f",
+        "d315fb529df699791e67",
+        "dcca1d9edccfb1213636",
+        "dda0bad973992bf03d70",
+        "e053a9dabba0dc0c064e",
+        "e45917e0ba2ce87ee93b",
+        "e5ab209ec5c3ef5e7278",
+        "ec04c588131b54211764",
+        "f335c4fe59e24bc13a88",
+        "f4171900addf35c93078",
+        "f8a6817f6e6e374a0cdb",
+        "f8e8258c970208cb19ff",
+        "f9d6e99040c72876161d",
+        "fa883e78383f5d9d6d0e",
+        "fab91449267eb97853d2"
+      ]
+    }
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "feed"
+      ],
+      "kind": "heater",
+      "name": "heater",
+      "outlets": [
+        "product"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature"
+        }
+      }
+    }
+  ]
+}
