@@ -10,6 +10,34 @@ from fugacio.thermo.diagnostics import ConvergenceError, SolveStatus, require_co
 from fugacio.thermo.implicit import fixed_point_with_info, newton_system_with_info
 
 
+@pytest.mark.parametrize("kind", ["bracketed", "newton", "temperature"])
+def test_scalar_root_pytree_directions_and_hessian(kind):
+    from fugacio.thermo.energy import _implicit_temperature
+    from fugacio.thermo.implicit import bracketed_root, newton_root
+
+    def solve(values, seed=1.0):
+        params = {"target": values[0], "coefficient": values[1], "fixed": jnp.array([0.5, 0.5])}
+
+        def residual(x, th):
+            return th["coefficient"] * x**2 - th["target"] * jnp.sum(th["fixed"])
+
+        if kind == "bracketed":
+            return bracketed_root(residual, params, 0.1 * seed, 10.0)
+        if kind == "newton":
+            return newton_root(residual, params, seed)
+        return _implicit_temperature(residual, params, seed, 0.1, 10.0, 1e-12, 100)
+
+    def exact(values):
+        return jnp.sqrt(values[0] / values[1])
+
+    x = jnp.array([8.0, 2.0])
+    assert solve(x) == pytest.approx(exact(x), abs=1e-10)
+    assert jnp.allclose(jax.jacfwd(solve)(x), jax.jacfwd(exact)(x), atol=1e-10)
+    assert jnp.allclose(jax.jacrev(solve)(x), jax.jacrev(exact)(x), atol=1e-10)
+    assert jnp.allclose(jax.jit(jax.hessian(solve))(x), jax.hessian(exact)(x), atol=1e-10)
+    assert jax.grad(lambda seed: solve(x, seed))(1.0) == 0.0
+
+
 def test_scaled_newton_jvp_vjp_hessian_and_batch():
     def solve(target):
         return newton_system_with_info(

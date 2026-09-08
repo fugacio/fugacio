@@ -59,7 +59,11 @@ from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS, PropertyPackage
 from fugacio.thermo.activity.models import NRTL
 from fugacio.thermo.diagnostics import SolveReport, SolveResult, SolveStatus, require_converged
-from fugacio.thermo.implicit import implicit_solution, newton_system_with_info
+from fugacio.thermo.implicit import (
+    fixed_point_with_info,
+    implicit_solution,
+    newton_system_with_info,
+)
 from fugacio.thermo.package import GammaPhiPackage
 
 ArrayLike = Array | float
@@ -353,6 +357,55 @@ def _product_flows(
 # --------------------------------------------------------------------------- #
 
 
+@jax.jit
+def _incipient_vapor_k(pkg: PropertyPackage, t: Array, p: Array, x: Array) -> Array:
+    """Self-consistent incipient-vapor K-values above a specified liquid.
+
+    A total condenser's distillate composition is liquid, so it cannot also be
+    used as the vapor composition in a phi-phi bubble equation. Converge that
+    absent vapor separately and differentiate its fixed point implicitly.
+    Ideal-vapor gamma-phi packages need no composition iteration.
+    """
+    if isinstance(pkg, GammaPhiPackage) and pkg.vapor == "ideal":
+        return pkg.k_values(t, p, x, x)
+    seed = pkg.k_seed(t, p, x) * x
+    seed = seed / jnp.sum(seed)
+
+    def update(y: Array, theta: Any) -> Array:
+        model, temperature, pressure, liquid = theta
+        proposed = model.k_values(temperature, pressure, liquid, y) * liquid
+        return proposed / jnp.sum(proposed)
+
+    solved = fixed_point_with_info(update, seed, (pkg, t, p, x), tol=1e-12, max_iter=100)
+    k = pkg.k_values(t, p, x, solved.value)
+    return jnp.where(solved.report.converged, k, jnp.nan)
+
+
+@jax.custom_jvp
+def _bubble_sum(pkg: PropertyPackage, t: Array, p: Array, x: Array) -> Array:
+    """Bubble closure with a Gibbs-Duhem reduction of its implicit derivative."""
+    return jnp.sum(_incipient_vapor_k(pkg, t, p, x) * x)
+
+
+@_bubble_sum.defjvp
+def _bubble_sum_jvp(primals: tuple, tangents: tuple) -> tuple[Array, Array]:
+    pkg, t, p, x = primals
+    k = _incipient_vapor_k(pkg, t, p, x)
+    value = jnp.sum(k * x)
+    y = k * x / value
+    # At the normalized fixed point, K*x = S*y. The contribution from
+    # changing y to dS is -S * sum(y_i * d ln(phi_i^V)), which vanishes by
+    # Gibbs-Duhem. Hold y fixed in this first directional derivative to avoid
+    # nesting another implicit Jacobian inside the MESH and recycle Jacobians.
+    # Keep y differentiable above: higher derivatives still include its motion.
+    _, tangent = jax.jvp(
+        lambda model, tt, pp, xx: jnp.sum(model.k_values(tt, pp, xx, y) * xx),
+        primals,
+        tangents,
+    )
+    return value, tangent
+
+
 def _stage_properties(
     pkg: PropertyPackage, t: Array, p: Array, x: Array, y: Array, st: _Structure
 ) -> tuple[Array, Array, Array]:
@@ -420,7 +473,11 @@ def _residuals(u: Array, theta: dict[str, Any], st: _Structure) -> Array:
         # independent equalities) and the reflux is saturated (bubble point) or
         # at the specified subcooled temperature.
         equality = (un.ln_v[0] - jnp.log(big_v[0])) - (un.ln_l[0] - jnp.log(big_l[0]))
-        top = (t[0] - theta["t_reflux"]) / _T_SCALE if st.subcooled else jnp.sum(k[0] * x[0]) - 1.0
+        top = (
+            (t[0] - theta["t_reflux"]) / _T_SCALE
+            if st.subcooled
+            else _bubble_sum(pkg, t[0], p[0], x[0]) - 1.0
+        )
         equil = equil.at[0].set(jnp.concatenate([equality[: c - 1], jnp.reshape(top, (1,))]))
 
     # H: stage energy balances (scaled by the feed enthalpy-flow scale).
@@ -959,6 +1016,8 @@ def rigorous_column(
     x = liq / big_l[:, None]
     y = v / big_v[:, None]
     k = jax.vmap(lambda tj, pj, xj, yj: pkg.k_values(tj, pj, xj, yj))(un.t, p_prof, x, y)
+    if condenser == "total" and not st.subcooled:
+        k = k.at[0].set(_incipient_vapor_k(pkg, un.t[0], p_prof[0], x[0]))
     distillate = Stream(
         n=v[0],
         t=un.t[0],

@@ -1,0 +1,9 @@
+{
+  "grid": {
+    "approach": [
+      {"value": 12, "unit": "delta_K"},
+      {"value": 15, "unit": "delta_K"},
+      {"value": 20, "unit": "delta_K"}
+    ]
+  }
+}

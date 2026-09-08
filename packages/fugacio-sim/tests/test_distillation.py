@@ -29,6 +29,32 @@ from fugacio.sim import (
 BT = ("benzene", "toluene")
 
 
+@pytest.mark.parametrize("method", ["pr", "srk"])
+def test_bubble_closure_reduction_preserves_first_and_second_derivatives(method):
+    from fugacio.sim.distillation import _bubble_sum, _incipient_vapor_k
+
+    pkg = package_for(("propane", "n-butane", "n-pentane"), method)
+
+    def closure(v, reduced=False):
+        t, p = 330.0 + v[0], (16.0 + v[1]) * 1e5
+        x = jax.nn.softmax(jnp.array([2.0, 0.0, -1.0]) + v[2:])
+        if reduced:
+            return _bubble_sum(pkg, t, p, x)
+        return jnp.sum(_incipient_vapor_k(pkg, t, p, x) * x)
+
+    v = jnp.zeros(5)
+    full = jax.jit(jax.grad(closure))(v)
+    reduced = jax.jit(jax.grad(lambda a: closure(a, True)))(v)
+    finite_difference = jnp.asarray(
+        [(closure(v.at[i].set(0.001)) - closure(v.at[i].set(-0.001))) / 0.002 for i in range(5)]
+    )
+    assert jnp.allclose(reduced, full, rtol=1e-8, atol=1e-10)
+    assert jnp.allclose(reduced, finite_difference, rtol=2e-5, atol=1e-8)
+    full_second = jax.jit(jax.grad(jax.grad(lambda a: closure(v.at[0].set(a)))))(0.0)
+    reduced_second = jax.jit(jax.grad(jax.grad(lambda a: closure(v.at[0].set(a), True))))(0.0)
+    assert float(reduced_second) == pytest.approx(float(full_second), rel=1e-8, abs=1e-10)
+
+
 def _bt_feed() -> Stream:
     return Stream.from_fractions(BT, jnp.array([0.5, 0.5]), 100.0, 365.0, 1.013e5)
 

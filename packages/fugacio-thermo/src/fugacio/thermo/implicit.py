@@ -31,6 +31,34 @@ from fugacio.thermo.diagnostics import SolveResult, SolveStatus, residual_report
 ResidualFn = Callable[[Array, Any], Array]
 
 
+def _parameter_direction(residual: ResidualFn, root: Array, params: Any, params_dot: Any) -> Array:
+    """Differentiate only parameter leaves active in this JAX transformation.
+
+    Materializing zero directions for fixed property packages makes nested
+    flashes trace derivatives of every coefficient before discarding them.
+    Symbolic zeros keep those leaves closed over while retaining their ordinary
+    differentiability when a caller actually varies them.
+    """
+    leaves, tree = jax.tree_util.tree_flatten(params)
+    dots = jax.tree_util.tree_leaves(params_dot)
+    active = [
+        i for i, dot in enumerate(dots) if not isinstance(dot, jax.custom_derivatives.SymbolicZero)
+    ]
+    if not active:
+        return jnp.zeros_like(root)
+
+    def selected(*values: Any) -> Array:
+        inputs = list(leaves)
+        for i, value in zip(active, values, strict=True):
+            inputs[i] = value
+        return residual(root, jax.tree_util.tree_unflatten(tree, inputs))
+
+    _, direction = jax.jvp(
+        selected, tuple(leaves[i] for i in active), tuple(dots[i] for i in active)
+    )
+    return direction
+
+
 @partial(jax.custom_jvp, nondiff_argnums=(0, 4, 5))
 def bracketed_root(
     residual: ResidualFn,
@@ -82,7 +110,7 @@ def bracketed_root(
     return 0.5 * (lo_star + hi_star)
 
 
-@bracketed_root.defjvp
+@partial(bracketed_root.defjvp, symbolic_zeros=True)
 def _bracketed_root_jvp(
     residual: ResidualFn,
     tol: float,
@@ -93,12 +121,11 @@ def _bracketed_root_jvp(
     params, lo, hi = primals
     params_dot, _, _ = tangents
     root = bracketed_root(residual, params, lo, hi, tol, max_iter)
-    r_root = jax.grad(lambda xx: residual(xx, params))(root)
-    grad_params = jax.grad(lambda pp: residual(root, pp))(params)
-    leaves = jax.tree_util.tree_leaves(
-        jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
-    )
-    r_dot = sum(leaves, jnp.asarray(0.0))
+    _, r_root = jax.jvp(lambda xx: residual(xx, params), (root,), (jnp.ones_like(root),))
+    # A JVP needs one residual direction, not the full gradient over every
+    # property-package leaf. Keeping this forward-mode avoids nested reverse
+    # traces when a flowsheet differentiates an exchanger's energy flashes.
+    r_dot = _parameter_direction(residual, root, params, params_dot)
     return root, -r_dot / r_root
 
 
@@ -130,7 +157,7 @@ def newton_root(
 
     def body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
         x, i, _ = carry
-        r, dr = jax.value_and_grad(lambda xx: residual(xx, params))(x)
+        r, dr = jax.jvp(lambda xx: residual(xx, params), (x,), (jnp.ones_like(x),))
         dr = jnp.where(jnp.abs(dr) < 1e-30, 1e-30, dr)
         x_new = x - damping * r / dr
         return x_new, i + 1, jnp.abs(x_new - x)
@@ -141,7 +168,7 @@ def newton_root(
     return x_star
 
 
-@newton_root.defjvp
+@partial(newton_root.defjvp, symbolic_zeros=True)
 def _newton_root_jvp(
     residual: ResidualFn,
     tol: float,
@@ -153,12 +180,8 @@ def _newton_root_jvp(
     params, x0 = primals
     params_dot, _ = tangents
     x_star = newton_root(residual, params, x0, tol, max_iter, damping)
-    r_x = jax.grad(lambda xx: residual(xx, params))(x_star)
-    grad_params = jax.grad(lambda pp: residual(x_star, pp))(params)
-    leaves = jax.tree_util.tree_leaves(
-        jax.tree_util.tree_map(lambda g, d: jnp.vdot(g, d), grad_params, params_dot)
-    )
-    r_dot = sum(leaves, jnp.asarray(0.0))
+    _, r_x = jax.jvp(lambda xx: residual(xx, params), (x_star,), (jnp.ones_like(x_star),))
+    r_dot = _parameter_direction(residual, x_star, params, params_dot)
     return x_star, -r_dot / r_x
 
 
@@ -174,7 +197,7 @@ def implicit_solution(residual: ResidualFn, value: Array, theta: Any, valid: Arr
     return value
 
 
-@implicit_solution.defjvp
+@partial(implicit_solution.defjvp, symbolic_zeros=True)
 def _implicit_solution_jvp(
     residual: ResidualFn,
     primals: tuple[Array, Any, Array],
@@ -183,8 +206,10 @@ def _implicit_solution_jvp(
     value, theta, valid = primals
     _, theta_dot, _ = tangents
     root = implicit_solution(residual, value, theta, valid)
-    jac = jax.jacrev(lambda x: residual(x, theta))(root)
-    _, rhs = jax.jvp(lambda th: residual(root, th), (theta,), (theta_dot,))
+    # The root system is square. Forward assembly avoids a reverse trace of
+    # nested unit solvers; reverse callers still transpose the linear solve.
+    jac = jax.jacfwd(lambda x: residual(x, theta))(root)
+    rhs = _parameter_direction(residual, root, theta, theta_dot)
     tangent = jnp.linalg.solve(jnp.reshape(jac, (root.size, root.size)), -jnp.ravel(rhs)).reshape(
         root.shape
     )

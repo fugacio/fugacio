@@ -1,0 +1,10 @@
+{
+  "variables": [
+    "pressure",
+    "approach"
+  ],
+  "objective": "annual_cost",
+  "sense": "min",
+  "max_iterations": 30,
+  "release_caches": true
+}

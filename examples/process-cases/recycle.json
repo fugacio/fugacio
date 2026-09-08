@@ -1,0 +1,147 @@
+{
+  "components": [
+    "methane",
+    "ethane"
+  ],
+  "economics": {
+    "cooling_price": {
+      "unit": "USD/GJ",
+      "value": 0.4
+    },
+    "electricity_price": {
+      "unit": "USD/kWh",
+      "value": 0.12
+    },
+    "heating_price": {
+      "unit": "USD/GJ",
+      "value": 8
+    },
+    "operating_time": {
+      "unit": "h",
+      "value": 8000
+    }
+  },
+  "feeds": {
+    "feed": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    }
+  },
+  "metrics": {
+    "annual_cost": {
+      "expression": {
+        "plant": "annual_cost"
+      },
+      "unit": "USD/yr"
+    },
+    "duty": {
+      "expression": {
+        "property": "heat",
+        "unit": "heater"
+      },
+      "unit": "kW"
+    },
+    "product_temperature": {
+      "expression": {
+        "property": "temperature",
+        "stream": "product"
+      },
+      "unit": "K"
+    }
+  },
+  "name": "recycle",
+  "parameters": {
+    "purge_fraction": {
+      "lower": 0.2,
+      "unit": "1",
+      "upper": 0.9,
+      "value": 0.6
+    },
+    "recycle_fraction": {
+      "lower": 0.1,
+      "unit": "1",
+      "upper": 0.8,
+      "value": 0.4
+    },
+    "temperature": {
+      "lower": 310,
+      "unit": "K",
+      "upper": 400,
+      "value": 350
+    }
+  },
+  "property_package": {
+    "method": "pr"
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "feed",
+        "recycle"
+      ],
+      "kind": "mixer",
+      "name": "mixer",
+      "outlets": [
+        "mixed"
+      ],
+      "settings": {
+        "t": {
+          "unit": "K",
+          "value": 300
+        }
+      }
+    },
+    {
+      "inlets": [
+        "mixed"
+      ],
+      "kind": "heater",
+      "name": "heater",
+      "outlets": [
+        "heated"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "heated"
+      ],
+      "kind": "splitter",
+      "name": "split",
+      "outlets": [
+        "recycle",
+        "product"
+      ],
+      "settings": {
+        "fractions": [
+          {
+            "parameter": "recycle_fraction"
+          },
+          {
+            "parameter": "purge_fraction"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+# Portable process examples
+
+These JSON files are exported by `fugacio.sim.cases.examples.example_case` and
+can be edited without importing Python functions. The measured heater's fit
+and holdout IDs are included in its case. Utility prices and capital inputs are
+illustrative screening assumptions.
+
+From the repository root:
+
+```bash
+uv run fugacio run examples/process-cases/heater.json --report heater.md
+uv run fugacio optimize examples/process-cases/heater.json examples/process-cases/heater-optimization.json
+uv run fugacio run examples/process-cases/depropanizer.json --report depropanizer.md
+uv run fugacio sweep examples/process-cases/depropanizer.json examples/process-cases/depropanizer-sweep.json
+uv run fugacio sensitivities examples/process-cases/depropanizer.json examples/process-cases/depropanizer-sensitivities.json
+uv run fugacio optimize examples/process-cases/depropanizer.json examples/process-cases/depropanizer-optimization.json
+uv run fugacio run examples/process-cases/measured-heater.json --report measured-heater.md
+```
+
+The first rigorous plant solve and gradient compilation can take tens of
+minutes and require substantial memory, particularly on Intel Macs. Studies
+evaluate one parameter direction
+at a time and reuse compiled recycle maps across optimizer points. CI runs
+plant solves, derivatives, and optimization in separate processes to bound
+peak memory.
+
+To reuse compilation work across CLI invocations, enable JAX's persistent cache
+in your checkout before running the commands:
+
+```bash
+export JAX_COMPILATION_CACHE_DIR="$PWD/.jax_cache"
+```
+
+Results go to `.fugacio-cases` unless `--workspace` selects another directory.
+The printed `artifact_id` identifies a saved run or study. Use `fugacio inspect`
+to reopen it, and `fugacio compare` to compare compatible baseline and candidate
+runs. Failed points remain visible in study manifests.
+
+The recycle example declares both split fractions. If those defaults are
+edited, update both so they sum to one. The temperature parameter can be swept
+independently.
+
+See the [process cases guide](../../docs/process-cases.md) for the format,
+acceptance criteria, backend differences, and accountable copilot workflow.

@@ -133,7 +133,12 @@ class MeasuredFit:
     @classmethod
     def load(cls, path: str | Path) -> MeasuredFit:
         """Read and validate a versioned fit artifact."""
-        data = json.loads(Path(path).read_text())
+        return cls.from_dict(json.loads(Path(path).read_text()))
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> MeasuredFit:
+        """Validate an inline artifact without mutating the caller's document."""
+        data = json.loads(json.dumps(value, allow_nan=False))
         if data.pop("schema_version") != 1 or data.pop("evidence") != "measured_fit":
             raise ValueError("unsupported measured-fit artifact")
         for key in (

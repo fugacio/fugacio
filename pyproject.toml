@@ -124,7 +124,7 @@ warn_unused_ignores = true
 warn_return_any = false
 
 [[tool.mypy.overrides]]
-module = ["jax.*", "jaxlib.*"]
+module = ["jax.*", "jaxlib.*", "scipy.*"]
 ignore_missing_imports = true
 
 # Optional differential-testing oracles (see fugacio.thermo.oracles). They are

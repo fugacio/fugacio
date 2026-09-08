@@ -72,6 +72,7 @@ nav:
     - Physical & transport properties: physical-properties.md
     - Reactions & reactors: reactions.md
     - Optimization, design & economics: optimization.md
+    - Saved process cases & design studies: process-cases.md
     - Rigorous distillation: distillation.md
     - Flowsheeting, tears & exchangers: flowsheeting.md
     - Equation-oriented flowsheeting: equation-oriented.md
@@ -101,6 +102,7 @@ nav:
     - fugacio.sim:
       - Package: api/sim/index.md
       - Streams & properties: api/sim/streams.md
+      - Process cases & studies: api/sim/cases.md
       - Unit operations: api/sim/units.md
       - Flowsheet & recycle: api/sim/flowsheet.md
       - Process acceptance: api/sim/acceptance.md
