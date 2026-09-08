@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.6.0 (2026-09-08)
+
+### Documentation
+
+- Refine README and clarify project goals ([#21](https://github.com/fugacio/fugacio/pull/21),
+  [`dd0112f`](https://github.com/fugacio/fugacio/commit/dd0112faae07f10667c99e16292240f9bcf78e45))
+
+### Features
+
+- Add reproducible process design workflows ([#22](https://github.com/fugacio/fugacio/pull/22),
+  [`15cafcf`](https://github.com/fugacio/fugacio/commit/15cafcf6309b1b8c63accbb71f8513fc3c4e4f22))
+
+
 ## v0.5.0 (2026-09-07)
 
 ### Features
