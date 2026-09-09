@@ -1,5 +1,6 @@
 """Portable process cases, independently audited runs, and reproducible studies."""
 
+from fugacio.sim.cases.profiling import PerformanceRecorder, profile
 from fugacio.sim.cases.quantities import CaseValidationError
 from fugacio.sim.cases.registry import registry_schema
 from fugacio.sim.cases.results import CaseAcceptanceError, CaseRun, compare_runs
@@ -16,11 +17,13 @@ __all__ = [
     "CaseRunner",
     "CaseValidationError",
     "CaseWorkspace",
+    "PerformanceRecorder",
     "ProcessCase",
     "SolverOptions",
     "StudyResult",
     "compare_runs",
     "optimize",
+    "profile",
     "registry_schema",
     "sensitivities",
     "sweep",

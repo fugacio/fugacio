@@ -84,6 +84,9 @@ flowsheet backends, bounded design specifications, sweeps, constrained
 optimization, gradient checks, and copilot submissions tied to computed runs.
 It includes a rigorous depropanizer with heat recovery and a measured NRTL
 heater whose independent holdout is reevaluated when the case is loaded.
+The [performance guide](docs/performance.md) covers structured column solves,
+reusable forward and reverse sensitivities, and benchmarks that retain timing,
+memory, and physical-acceptance evidence.
 
 ## Packages
 
@@ -196,6 +199,7 @@ then run `just` to list available tasks.
 | Run lint, types, import boundaries, tests, and qualification | `just check` |
 | Run reference comparison tests | `just oracles` |
 | Rebuild measured qualification and process example | `just qualify` |
+| Benchmark process solves and derivatives with resource limits | `just benchmark` |
 | Run the pinned Julia/Clapeyron comparison | `just clapeyron-oracles` |
 | Preview documentation | `just docs-serve` |
 | Build documentation with warnings treated as errors | `just docs-build` |

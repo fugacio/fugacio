@@ -44,6 +44,10 @@ class RegisteredBlock(Block):
     definition: UnitDefinition
     kernel: Any = None
 
+    def residual_dependencies(self, ctx: Context) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        """Declare the ports read by this registered procedural unit."""
+        return self.inlets + self.outlets, ()
+
     def n_residuals(self, ctx: Context) -> int:
         """Return one material vector, thermal equation, and pressure equation per outlet."""
         return len(self.outlets) * (ctx.n_components + 2)

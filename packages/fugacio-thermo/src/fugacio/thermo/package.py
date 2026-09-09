@@ -225,6 +225,23 @@ class PropertyPackage(Protocol):
         ...
 
 
+def _phase_classification(pkg: Any, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
+    """Evaluate a detached phase locator without tracing an unused flash derivative.
+
+    Stopping only the output is too late for eager linearization: the flash's
+    implicit rule can already have assembled its Jacobian. Detach input array
+    leaves, including registered package parameters, before calling the flash.
+    The output gate also supports custom packages held as opaque Python objects.
+    """
+    package, temperature, pressure, composition = jax.tree_util.tree_map(
+        lambda value: (
+            lax.stop_gradient(value) if isinstance(value, Array | jax.core.Tracer) else value
+        ),
+        (pkg, t, p, z),
+    )
+    return lax.stop_gradient(package.flash_pt(temperature, pressure, composition))
+
+
 class _PackageBase:
     """Generic machinery shared by every concrete package.
 
@@ -356,7 +373,7 @@ class _PackageBase:
         multiplying an absent phase by zero would still propagate the ``NaN``
         gradient of a cubic root that does not exist in that region.
         """
-        beta = lax.stop_gradient(self.flash_pt(t, p, z).beta)
+        beta = _phase_classification(self, t, p, z).beta
         fn = getattr(self, prop)
 
         def liquid(_: None) -> Array:
@@ -437,7 +454,7 @@ class _PackageBase:
                 temperature = _implicit_temperature(
                     residual, params, t_star, t_min, t_max, tol, max_iter
                 )
-            classified = lax.stop_gradient(self.flash_pt(temperature, p, z))
+            classified = _phase_classification(self, temperature, p, z)
 
             def two_phase(_: None) -> EnergyFlashResult:
                 r = self.flash_pt(temperature, p, z)

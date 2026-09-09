@@ -151,6 +151,13 @@ anything fed in (the feed state, a spec value, a `kij`, a stage pressure) is one
 adjoint solve against the converged Jacobian, never a differentiation *through*
 the iterations.
 
+The default `linear_solver="block"` assembles the nearest-neighbor stage
+Jacobian with coloring and solves its bordered block system. It checks the
+linear residual and uses a pivoted dense fallback if block elimination fails.
+`linear_solver="dense"` retains the reference implementation. See the
+[performance guide](performance.md) for direction counts, scaling, fallback
+limits, and reproducible column benchmarks.
+
 The `Column` block in [`fugacio.sim.eo`](equation-oriented.md) embeds a
 converged `rigorous_column` inside an equation-oriented flowsheet, so a column
 can sit in the middle of a globally solved plant with recycles around it.

@@ -41,6 +41,10 @@ oracles:
 qualify:
     uv run python scripts/qualify.py
 
+# Fresh-process, cold-cache column benchmark with physical and gradient checks.
+benchmark *args:
+    uv run python scripts/benchmark_process.py {{args}}
+
 # Requires Julia 1.10.10 on PATH; the Julia package environment is fully pinned.
 clapeyron-oracles:
     julia --project=scripts/julia -e 'using Pkg; Pkg.instantiate()'

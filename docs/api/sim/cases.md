@@ -13,4 +13,6 @@ CLI, design-study, and accountable-copilot workflows.
 
 ::: fugacio.sim.cases.studies
 
+::: fugacio.sim.cases.profiling
+
 ::: fugacio.sim.cases.examples

@@ -1,0 +1,220 @@
+{
+  "components": [
+    "ethanol",
+    "water"
+  ],
+  "description": "Curated NRTL ethanol-water heat-recovery train; numerical benchmark scope.",
+  "economics": {
+    "cooling_price": {
+      "unit": "USD/GJ",
+      "value": 0.4
+    },
+    "electricity_price": {
+      "unit": "USD/kWh",
+      "value": 0.12
+    },
+    "equipment": [
+      {
+        "cepci": 800,
+        "kind": "heat_exchanger",
+        "material": "CS",
+        "name": "economizer",
+        "pressure": {
+          "parameter": "pressure"
+        },
+        "size": {
+          "property": "area",
+          "unit": "economizer"
+        }
+      }
+    ],
+    "fixed_capital": {
+      "unit": "USD",
+      "value": 1000000.0
+    },
+    "heating_price": {
+      "unit": "USD/GJ",
+      "value": 8
+    },
+    "interest_rate": 0.1,
+    "operating_time": {
+      "unit": "h",
+      "value": 8000
+    },
+    "years": 10
+  },
+  "feeds": {
+    "feed": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 100
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1.5
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.1,
+        0.9
+      ]
+    }
+  },
+  "metrics": {
+    "annual_cost": {
+      "expression": {
+        "plant": "annual_cost"
+      },
+      "unit": "USD/yr"
+    },
+    "exchanger_area": {
+      "expression": {
+        "property": "area",
+        "unit": "economizer"
+      },
+      "unit": "m2"
+    },
+    "purity": {
+      "expression": {
+        "component": "ethanol",
+        "property": "mole_fraction",
+        "stream": "distillate"
+      },
+      "unit": "%"
+    },
+    "reboiler_duty": {
+      "expression": {
+        "property": "reboiler_duty",
+        "unit": "column"
+      },
+      "unit": "MW"
+    },
+    "recovered_heat": {
+      "expression": {
+        "property": "duty",
+        "unit": "economizer"
+      },
+      "unit": "MW"
+    },
+    "recovery": {
+      "expression": {
+        "args": [
+          {
+            "component": "ethanol",
+            "property": "component_flow",
+            "stream": "distillate"
+          },
+          {
+            "component": "ethanol",
+            "property": "component_flow",
+            "stream": "feed"
+          }
+        ],
+        "op": "divide"
+      },
+      "unit": "%"
+    }
+  },
+  "name": "ethanol-train",
+  "parameters": {
+    "approach": {
+      "lower": 8,
+      "unit": "delta_K",
+      "upper": 20,
+      "value": 10
+    },
+    "pressure": {
+      "lower": 1.0,
+      "unit": "bar",
+      "upper": 1.1,
+      "value": 1.013
+    },
+    "reflux": {
+      "lower": 2.5,
+      "unit": "1",
+      "upper": 5,
+      "value": 3
+    }
+  },
+  "property_package": {
+    "method": "nrtl"
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "bottoms",
+        "feed"
+      ],
+      "kind": "heat_exchanger",
+      "name": "economizer",
+      "outlets": [
+        "bottoms_cooled",
+        "preheated"
+      ],
+      "settings": {
+        "min_approach": {
+          "parameter": "approach"
+        },
+        "u": {
+          "unit": "W/(m2 K)",
+          "value": 600
+        }
+      }
+    },
+    {
+      "inlets": [
+        "preheated"
+      ],
+      "kind": "valve",
+      "name": "letdown",
+      "outlets": [
+        "column_feed"
+      ],
+      "settings": {
+        "p_out": {
+          "parameter": "pressure"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "column_feed"
+      ],
+      "kind": "column",
+      "name": "column",
+      "outlets": [
+        "distillate",
+        "bottoms"
+      ],
+      "settings": {
+        "feed_stages": [
+          6
+        ],
+        "n_stages": 12,
+        "p": {
+          "parameter": "pressure"
+        },
+        "specs": [
+          {
+            "kind": "reflux_ratio",
+            "value": {
+              "parameter": "reflux"
+            }
+          },
+          {
+            "kind": "distillate_rate",
+            "value": {
+              "unit": "mol/s",
+              "value": 11.5
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

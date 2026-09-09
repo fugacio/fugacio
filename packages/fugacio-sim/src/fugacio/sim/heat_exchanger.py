@@ -38,6 +38,7 @@ from jax import Array, lax
 from fugacio.sim.economics import lmtd
 from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
+from fugacio.sim.units import flash_drum
 from fugacio.thermo import PR, CubicEOS, PropertyPackage
 from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
 from fugacio.thermo.implicit import bracketed_root
@@ -118,6 +119,32 @@ def _outlet_temperature(
     return pkg.flash_ph(p_out, h_molar, stream.z, t_init=t_init).t
 
 
+def _outlet_stream(
+    pkg: PropertyPackage,
+    stream: Stream,
+    temperature: Array,
+    pressure: Array,
+    duty: Array,
+    t_init: float,
+) -> Stream:
+    """Reuse a curve's solved mixture temperature when resolving its inventory.
+
+    Pure-fluid saturation still needs the PH flash to determine quality: a PT
+    flash cannot recover that inventory from the plateau temperature alone.
+    """
+    if pkg.n_components == 1:
+        nonempty = _nonempty(stream)
+        enthalpy = molar_enthalpy(nonempty, model=pkg) + duty / jnp.maximum(
+            stream.total, _FLOW_FLOOR
+        )
+        result = pkg.flash_ph(pressure, enthalpy, nonempty.z, t_init=t_init)
+        return Stream(
+            stream.n, result.t, pressure, stream.components, result.beta * stream.total * result.y
+        )
+    vapor, _ = flash_drum(stream, temperature, pressure, model=pkg)
+    return Stream(stream.n, temperature, pressure, stream.components, vapor.n)
+
+
 def _curves(
     q: Array,
     zones: int,
@@ -146,6 +173,44 @@ def _curves(
     # floor keeps its molar enthalpy finite instead of dividing by zero.
     n_hot = jnp.maximum(hot.total, _FLOW_FLOOR)
     n_cold = jnp.maximum(cold.total, _FLOW_FLOOR)
+
+    # Compatible property models can share one sequential flash body. Keep
+    # each side's coefficients and stream state dynamic, including when the
+    # two packages have different parameter values. Flatten before stacking so
+    # a package constructor never sees an artificial leading batch dimension.
+    hot_leaves, hot_tree = jax.tree_util.tree_flatten((pkg_h, hot, h_hot_in, p_hot_out, -q / n_hot))
+    cold_leaves, cold_tree = jax.tree_util.tree_flatten(
+        (pkg_c, cold, h_cold_in, p_cold_out, q / n_cold)
+    )
+    numeric = (Array, jax.core.Tracer, float, int)
+    compatible = hot_tree == cold_tree and all(
+        isinstance(a, numeric)
+        and isinstance(b, numeric)
+        and jnp.shape(a) == jnp.shape(b)
+        and jnp.asarray(a).dtype == jnp.asarray(b).dtype
+        for a, b in zip(hot_leaves, cold_leaves, strict=True)
+    )
+    if compatible:
+        sides = [jnp.stack((a, b)) for a, b in zip(hot_leaves, cold_leaves, strict=True)]
+
+        def temperature(position: tuple[Array, Array]) -> Array:
+            side, fraction = position
+            pkg, stream, enthalpy, p_out, change = jax.tree_util.tree_unflatten(
+                hot_tree, [leaf[side] for leaf in sides]
+            )
+            pressure = stream.p + fraction * (p_out - stream.p)
+            return lax.cond(
+                fraction == 0.0,
+                lambda _: stream.t,
+                lambda _: _outlet_temperature(
+                    pkg, stream, enthalpy + fraction * change, pressure, t_init
+                ),
+                None,
+            )
+
+        positions = (jnp.repeat(jnp.arange(2), zones + 1), jnp.concatenate((frac, cold_frac)))
+        values = lax.map(temperature, positions)
+        return values[: zones + 1], values[zones + 1 :]
 
     def t_hot(fr: Array) -> Array:
         pressure = hot.p + fr * (p_hot_out - hot.p)
@@ -367,12 +432,10 @@ def heat_exchanger(
         t_init=t_init,
         tol=tol,
     )
-    hh = molar_enthalpy(_nonempty(hot), model=pkg_h) - q / jnp.maximum(hot.total, _FLOW_FLOOR)
-    hc = molar_enthalpy(_nonempty(cold), model=pkg_c) + q / jnp.maximum(cold.total, _FLOW_FLOOR)
-    rh = pkg_h.flash_ph(p_hot_out, hh, _nonempty(hot).z, t_init=t_init)
-    rc = pkg_c.flash_ph(p_cold_out, hc, _nonempty(cold).z, t_init=t_init)
-    hot_out = Stream(hot.n, rh.t, p_hot_out, hot.components, rh.beta * hot.total * rh.y)
-    cold_out = Stream(cold.n, rc.t, p_cold_out, cold.components, rc.beta * cold.total * rc.y)
+    hot_out = _outlet_stream(pkg_h, hot, t_h[-1], p_hot_out, -q, t_init)
+    cold_out = _outlet_stream(
+        pkg_c, cold, t_c[0] if flow == "counter" else t_c[-1], p_cold_out, q, t_init
+    )
     dt = t_h - t_c
     area_out = ua_req / jnp.asarray(u, dtype=float) if u is not None else jnp.asarray(jnp.nan)
     actual = {

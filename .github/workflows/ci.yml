@@ -173,6 +173,9 @@ jobs:
                 packages/fugacio-sim/tests/test_cases_studies.py
                 packages/fugacio-sim/tests/test_cases_evidence.py
                 packages/fugacio-sim/tests/test_cases_plant.py
+                packages/fugacio-sim/tests/test_column_structure.py
+                packages/fugacio-sim/tests/test_eo_structure.py
+                packages/fugacio-sim/tests/test_case_performance.py
               )
               run packages/fugacio-sim/tests/test_utilities.py
               run packages/fugacio-sim/tests \
@@ -182,10 +185,12 @@ jobs:
             flowsheeting)
               run packages/fugacio-sim/tests/test_eo.py
               run packages/fugacio-sim/tests/test_eo_reliability.py
+              run packages/fugacio-sim/tests/test_eo_structure.py
               run packages/fugacio-sim/tests/test_flowsheet.py
               ;;
             distillation)
               run packages/fugacio-sim/tests/test_distillation.py
+              run packages/fugacio-sim/tests/test_column_structure.py
               ;;
             heat-exchanger)
               run packages/fugacio-sim/tests/test_heat_exchanger.py
@@ -218,6 +223,7 @@ jobs:
               run packages/fugacio-sim/tests/test_cases_runtime.py
               run packages/fugacio-sim/tests/test_cases_studies.py
               run packages/fugacio-sim/tests/test_cases_evidence.py
+              run packages/fugacio-sim/tests/test_case_performance.py
               ;;
             case-plant)
               run packages/fugacio-sim/tests/test_cases_plant.py::test_saved_depropanizer_meets_specs_balances_and_stability

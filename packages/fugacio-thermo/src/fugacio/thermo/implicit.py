@@ -20,13 +20,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
-from typing import Any
+from typing import Any, Literal
 
 import jax
 import jax.numpy as jnp
 from jax import Array
 
 from fugacio.thermo.diagnostics import SolveResult, SolveStatus, residual_report
+from fugacio.thermo.linear import DenseJacobian, Jacobian, JacobianFn
 
 ResidualFn = Callable[[Array, Any], Array]
 
@@ -57,6 +58,39 @@ def _parameter_direction(residual: ResidualFn, root: Array, params: Any, params_
         selected, tuple(leaves[i] for i in active), tuple(dots[i] for i in active)
     )
     return direction
+
+
+def _residual_linearization(
+    residual: ResidualFn, root: Array, params: Any, params_dot: Any
+) -> tuple[Array, Callable[[Array], Array], Array]:
+    """Share converged residual data between state and active parameter directions.
+
+    A scalar duty root can contain energy flashes, which themselves contain
+    equilibrium roots. Separate JVP calls at each level duplicate those nested
+    primal calculations in derivative executables. One linearization retains
+    their shared data without activating fixed property-package coefficients.
+    """
+    leaves, tree = jax.tree_util.tree_flatten(params)
+    dots = jax.tree_util.tree_leaves(params_dot)
+    active = [
+        i for i, dot in enumerate(dots) if not isinstance(dot, jax.custom_derivatives.SymbolicZero)
+    ]
+
+    def selected(x: Array, values: tuple[Any, ...]) -> Array:
+        parameters = list(leaves)
+        for i, value in zip(active, values, strict=True):
+            parameters[i] = value
+        return residual(x, jax.tree_util.tree_unflatten(tree, parameters))
+
+    parameters = tuple(leaves[i] for i in active)
+    value, push = jax.linearize(selected, root, parameters)
+    zeros = jax.tree_util.tree_map(jnp.zeros_like, parameters)
+    direction = (
+        push(jnp.zeros_like(root), tuple(dots[i] for i in active))
+        if active
+        else jnp.zeros_like(root)
+    )
+    return value, lambda v: push(v, zeros), direction
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 4, 5))
@@ -121,11 +155,8 @@ def _bracketed_root_jvp(
     params, lo, hi = primals
     params_dot, _, _ = tangents
     root = bracketed_root(residual, params, lo, hi, tol, max_iter)
-    _, r_root = jax.jvp(lambda xx: residual(xx, params), (root,), (jnp.ones_like(root),))
-    # A JVP needs one residual direction, not the full gradient over every
-    # property-package leaf. Keeping this forward-mode avoids nested reverse
-    # traces when a flowsheet differentiates an exchanger's energy flashes.
-    r_dot = _parameter_direction(residual, root, params, params_dot)
+    _, push, r_dot = _residual_linearization(residual, root, params, params_dot)
+    r_root = push(jnp.ones_like(root))
     return root, -r_dot / r_root
 
 
@@ -180,19 +211,30 @@ def _newton_root_jvp(
     params, x0 = primals
     params_dot, _ = tangents
     x_star = newton_root(residual, params, x0, tol, max_iter, damping)
-    _, r_x = jax.jvp(lambda xx: residual(xx, params), (x_star,), (jnp.ones_like(x_star),))
-    r_dot = _parameter_direction(residual, x_star, params, params_dot)
+    _, push, r_dot = _residual_linearization(residual, x_star, params, params_dot)
+    r_x = push(jnp.ones_like(x_star))
     return x_star, -r_dot / r_x
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0,))
-def implicit_solution(residual: ResidualFn, value: Array, theta: Any, valid: Array) -> Array:
+@partial(jax.custom_jvp, nondiff_argnums=(0, 4))
+def implicit_solution(
+    residual: ResidualFn,
+    value: Array,
+    theta: Any,
+    valid: Array,
+    jacobian: JacobianFn | Literal["sequential"] | None = None,
+) -> Array:
     """Attach an implicit derivative to a detached, independently solved root.
 
     The initial guess and iteration history carry no derivative. Both forward
     and reverse differentiation solve the linearized residual system. A failed
     primal has a nonfinite sensitivity, preventing optimization from silently
     consuming derivatives at an unconverged iterate.
+    ``jacobian`` optionally supplies an exact structured linearization. The
+    same operator is used for forward derivatives and its transposed adjoint.
+    ``jacobian="sequential"`` builds a dense matrix one direction at a time,
+    sharing one residual linearization between state and parameter directions.
+    This avoids repeated nested unit linearizations in a recycle residual.
     """
     return value
 
@@ -200,22 +242,40 @@ def implicit_solution(residual: ResidualFn, value: Array, theta: Any, valid: Arr
 @partial(implicit_solution.defjvp, symbolic_zeros=True)
 def _implicit_solution_jvp(
     residual: ResidualFn,
+    jacobian: JacobianFn | Literal["sequential"] | None,
     primals: tuple[Array, Any, Array],
     tangents: tuple[Array, Any, Any],
 ) -> tuple[Array, Array]:
     value, theta, valid = primals
     _, theta_dot, _ = tangents
-    root = implicit_solution(residual, value, theta, valid)
+    root = implicit_solution(residual, value, theta, valid, jacobian)
+    if isinstance(jacobian, str):
+        if jacobian != "sequential":
+            raise ValueError("the dense implicit Jacobian strategy must be sequential")
+        tangent = _joint_dense_tangent(residual, root, theta, theta_dot)
+        return root, tangent * jnp.where(valid, 1.0, jnp.nan)
     # The root system is square. Forward assembly avoids a reverse trace of
     # nested unit solvers; reverse callers still transpose the linear solve.
-    jac = jax.jacfwd(lambda x: residual(x, theta))(root)
-    rhs = _parameter_direction(residual, root, theta, theta_dot)
-    tangent = jnp.linalg.solve(jnp.reshape(jac, (root.size, root.size)), -jnp.ravel(rhs)).reshape(
-        root.shape
-    )
+    matrix: Jacobian
+    if jacobian is None:
+        _, push, rhs = _residual_linearization(residual, root, theta, theta_dot)
+        directions = jnp.eye(root.size, dtype=root.dtype).reshape((root.size, *root.shape))
+        matrix = DenseJacobian(jax.vmap(push)(directions).reshape(root.size, root.size).T)
+    else:
+        matrix = jacobian(root, theta)
+        rhs = _parameter_direction(residual, root, theta, theta_dot)
+    tangent = matrix.solve(-jnp.ravel(rhs)).reshape(root.shape)
     # The gate depends only on primals, so this remains linear in tangents and
     # JAX can transpose it to obtain the independently solved adjoint.
     return root, tangent * jnp.where(valid, 1.0, jnp.nan)
+
+
+def _joint_dense_tangent(residual: ResidualFn, root: Array, theta: Any, theta_dot: Any) -> Array:
+    """Reuse one nested residual linearization for the matrix and right-hand side."""
+    _, push, rhs = _residual_linearization(residual, root, theta, theta_dot)
+    directions = jnp.eye(root.size, dtype=root.dtype)
+    matrix = jax.lax.map(lambda v: push(v.reshape(root.shape)).ravel(), directions).T
+    return jnp.linalg.solve(matrix, -rhs.ravel()).reshape(root.shape)
 
 
 def _newton_iterations(
@@ -228,6 +288,7 @@ def _newton_iterations(
     residual_scale: Array,
     lower: Array,
     upper: Array,
+    jacobian: JacobianFn | None = None,
 ) -> SolveResult:
     """Scaled, bounded Newton with an actual residual-decreasing line search."""
     alphas = jnp.asarray([1.0, 0.5, 0.25, 0.1, 0.03, 0.01, 0.003, 0.001])
@@ -247,15 +308,22 @@ def _newton_iterations(
 
     def body(carry: tuple[Array, Array, Array, Array, Array]) -> tuple:
         y, r, i, _, _ = carry
-        jac = jax.jacrev(f)(y)
-        dy = jnp.linalg.solve(jac, -r)
+        matrix = (
+            DenseJacobian(jax.jacrev(f)(y).reshape(y.size, y.size))
+            if jacobian is None
+            else jacobian(y * scale, theta).scaled(1 / residual_scale.ravel(), scale.ravel())
+        )
+        dy = matrix.solve(-r.ravel()).reshape(y.shape)
 
         def regularized(_: None) -> Array:
             # A singular Newton matrix can still have a useful descent direction.
             # This changes the search step, never the equations or their derivative.
+            jac = matrix.to_dense()
             jt = jac.T
             damping = 1e-8 * jnp.maximum(jnp.max(jnp.abs(jt @ jac)), 1.0)
-            return jnp.linalg.solve(jt @ jac + damping * jnp.eye(y.size), -(jt @ r))
+            return jnp.linalg.solve(
+                jt @ jac + damping * jnp.eye(y.size), -(jt @ r.ravel())
+            ).reshape(y.shape)
 
         dy = jax.lax.cond(jnp.all(jnp.isfinite(dy)), lambda _: dy, regularized, None)
 
@@ -313,6 +381,7 @@ def newton_system_with_info(
     residual_scale: Array | None = None,
     lower: Array | None = None,
     upper: Array | None = None,
+    jacobian: JacobianFn | None = None,
 ) -> SolveResult:
     """Solve a square residual system and report convergence independently.
 
@@ -326,6 +395,8 @@ def newton_system_with_info(
         residual_scale: Positive equation scales; defaults to one.
         lower: Optional lower bounds used only during initialization and search.
         upper: Optional upper bounds used only during initialization and search.
+        jacobian: Optional exact structured Jacobian factory ``(x, theta)``.
+            It must describe the original residual, before the supplied scales.
 
     Returns:
         Best iterate and a :class:`SolveReport`. Bounds and scales are numerical
@@ -344,13 +415,15 @@ def newton_system_with_info(
     lo = -jnp.full_like(x0, jnp.inf) if lower is None else jnp.broadcast_to(lower, x0.shape)
     hi = jnp.full_like(x0, jnp.inf) if upper is None else jnp.broadcast_to(upper, x0.shape)
     args = jax.lax.stop_gradient((x0, theta, sc, rs, lo, hi))
-    raw = _newton_iterations(residual, args[0], args[1], tol, max_iter, *args[2:])
+    raw = _newton_iterations(residual, args[0], args[1], tol, max_iter, *args[2:], jacobian)
     valid_input = jnp.all((sc > 0) & (rs > 0) & jnp.isfinite(sc) & jnp.isfinite(rs) & (lo <= hi))
     report = raw.report._replace(
         status=jnp.where(valid_input, raw.report.status, SolveStatus.INVALID_INPUT)
     )
     report = jax.lax.stop_gradient(report)
-    value = implicit_solution(residual, jax.lax.stop_gradient(raw.value), theta, report.converged)
+    value = implicit_solution(
+        residual, jax.lax.stop_gradient(raw.value), theta, report.converged, jacobian
+    )
     return SolveResult(value, report)
 
 

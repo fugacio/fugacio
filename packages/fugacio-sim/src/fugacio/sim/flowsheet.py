@@ -80,6 +80,7 @@ def _tear_iterations(
     tol: float,
     atol: float,
     max_iter: int,
+    mapped0: Array | None = None,
 ) -> SolveResult:
     """Converge a recycle while retaining iterations and a residual check."""
     scale = jnp.maximum(jnp.abs(x0), 1.0)
@@ -95,7 +96,7 @@ def _tear_iterations(
     def error(x: Array, r: Array) -> Array:
         return jnp.max(jnp.abs(r) / (atol + jnp.maximum(jnp.abs(x), 1.0)))
 
-    gx0 = g(x0, theta)
+    gx0 = g(x0, theta) if mapped0 is None else mapped0
     n = x0.size
 
     def cond(carry: tuple) -> Array:
@@ -117,24 +118,27 @@ def _tear_iterations(
             r = (gx - x) / scale
             ds = -inverse @ r
             x_new = x + ds * scale
-        g_new = g(x_new, theta)
         if method == "broyden":
             direction = x_new - x
             old_error = error(x, gx - x)
 
             def search_cond(state: tuple) -> Array:
-                alpha, point, mapped = state
-                score = error(point, mapped - point)
-                return (alpha > 1 / 128) & (~jnp.isfinite(score) | (score > old_error))
+                return ~state[3]
 
             def search_body(state: tuple) -> tuple:
-                alpha, _, _ = state
-                alpha = alpha / 2
-                point = x + alpha * direction
-                return alpha, point, g(point, theta)
+                alpha, point, _, _ = state
+                mapped = g(point, theta)
+                score = error(point, mapped - point)
+                retry = (alpha > 1 / 128) & (~jnp.isfinite(score) | (score > old_error))
+                alpha = jnp.where(retry, alpha / 2, alpha)
+                following = jnp.where(retry, x + alpha * direction, point)
+                return alpha, following, mapped, ~retry
 
-            _, x_new, g_new = jax.lax.while_loop(
-                search_cond, search_body, (jnp.asarray(1.0), x_new, g_new)
+            # One call site for every trial, including alpha=1. Embedding g
+            # before AND inside the search duplicates a full column/exchanger
+            # graph in XLA. The map in the final state always belongs to x_new.
+            _, x_new, g_new, _ = jax.lax.while_loop(
+                search_cond, search_body, (jnp.asarray(1.0), x_new, gx, jnp.asarray(False))
             )
             ds = (x_new - x) / scale
             df = ((g_new - x_new) - (gx - x)) / scale
@@ -148,6 +152,8 @@ def _tear_iterations(
                 inverse + update,
                 -jnp.eye(n),
             )
+        else:
+            g_new = g(x_new, theta)
         step = error(x_new, x_new - x)
         return x_new, g_new, x, gx, inverse, i + 1, step, error(x_new, g_new - x_new)
 
@@ -223,13 +229,22 @@ def tear_solve_with_info(
         g_flat = _cached_flat_map(g, unravel)
 
     start, params = jax.lax.stop_gradient((flat0, theta))
-    raw = _tear_iterations(g_flat, start, params, method, q_min, q_max, tol, atol, max_iter)
+    # A modular host solve can reuse compiled unit kernels for this initial
+    # pass. Keep it out of the iteration executable, where it would duplicate
+    # the complete recycle body. Under an enclosing JIT it remains traceable.
+    mapped = None if method == "newton" else g_flat(start, params)
+    raw = _tear_iterations(g_flat, start, params, method, q_min, q_max, tol, atol, max_iter, mapped)
     report = jax.lax.stop_gradient(raw.report)
+
+    def residual(x: Array, th: Any) -> Array:
+        return g_flat(x, th) - x
+
     value = implicit_solution(
-        lambda x, th: g_flat(x, th) - x,
+        residual,
         jax.lax.stop_gradient(raw.value),
         theta,
         report.converged,
+        "sequential",
     )
     return TearResult(unravel(value), report)
 

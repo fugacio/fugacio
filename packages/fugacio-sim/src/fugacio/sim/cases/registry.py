@@ -461,7 +461,7 @@ def parse_units(
             if flow not in ("counter", "co"):
                 raise CaseValidationError(sp + ".flow", "choose counter or co")
             structure = {
-                "flow": flow,
+                "flow": "parallel" if flow == "co" else flow,
                 "zones": integer(source.get("zones", 1), sp + ".zones", 1, 100),
             }
             if "area" in settings and "u" not in settings:
@@ -604,6 +604,7 @@ def evaluate_unit(
     package: Any,
     *,
     guess: dict[str, Any] | None = None,
+    column_solver: str = "block",
 ) -> UnitEvaluation:
     """Evaluate a registered unit using the existing public numerical kernels."""
     from fugacio.sim import distillation as dist
@@ -693,6 +694,7 @@ def evaluate_unit(
             model=package,
             check=False,
             guess=guess,
+            linear_solver=column_solver,
             **kw,
         )
         outputs = (result.distillate, result.bottoms, *result.side_draws)
@@ -709,7 +711,20 @@ def evaluate_unit(
             }
         )
         profiles.update(
-            {k: getattr(result, k) for k in ("t", "p", "x", "y", "k", "liquid_flow", "vapor_flow")}
+            {
+                k: getattr(result, k)
+                for k in (
+                    "t",
+                    "p",
+                    "x",
+                    "y",
+                    "k",
+                    "liquid_flow",
+                    "vapor_flow",
+                    "stage_liquid",
+                    "stage_vapor",
+                )
+            }
         )
     elif kind == "stoichiometric_reactor":
         from fugacio.thermo.reactions import reaction_arrays

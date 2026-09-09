@@ -1,0 +1,13 @@
+{
+  "derivative_mode": "auto",
+  "metrics": [
+    "reboiler_duty",
+    "annual_cost"
+  ],
+  "parameters": [
+    "approach",
+    "reflux"
+  ],
+  "relative_tolerance": 0.005,
+  "release_caches": true
+}

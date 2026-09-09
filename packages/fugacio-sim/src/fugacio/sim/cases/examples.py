@@ -6,7 +6,15 @@ from typing import Any
 
 from fugacio.sim.cases.schema import ProcessCase
 
-EXAMPLES = ("heater", "recycle", "depropanizer", "reaction", "measured-heater")
+EXAMPLES = (
+    "heater",
+    "recycle",
+    "depropanizer",
+    "reaction",
+    "measured-heater",
+    "ethanol-train",
+    "heater-bank",
+)
 
 
 def _q(value: float, unit: str) -> dict[str, Any]:
@@ -30,6 +38,10 @@ def example_case(name: str = "heater") -> ProcessCase:
     """
     if name not in EXAMPLES:
         raise ValueError(f"unknown example {name!r}; choose from {EXAMPLES}")
+    if name == "ethanol-train":
+        return ethanol_train_case()
+    if name == "heater-bank":
+        return heater_bank_case()
     document: dict[str, Any] = {
         "schema_version": 1,
         "name": name,
@@ -269,4 +281,105 @@ def example_case(name: str = "heater") -> ProcessCase:
                 }
             },
         )
+    return ProcessCase.from_dict(document)
+
+
+def ethanol_train_case(n_stages: int = 12) -> ProcessCase:
+    """An NRTL ethanol-water column with feed/bottoms heat recovery.
+
+    Uses the curated parameter case from the existing numerical plant test.
+    This performance example makes no new measured qualification claim.
+    """
+    if isinstance(n_stages, bool) or not isinstance(n_stages, int) or not 6 <= n_stages <= 100:
+        raise ValueError("ethanol train needs from six to 100 stages")
+    document = example_case("depropanizer").to_dict()
+    document.update(
+        name="ethanol-train",
+        description="Curated NRTL ethanol-water heat-recovery train; numerical benchmark scope.",
+        components=["ethanol", "water"],
+        property_package={"method": "nrtl"},
+        parameters={
+            "pressure": {"value": 1.013, "unit": "bar", "lower": 1.0, "upper": 1.1},
+            "approach": {"value": 10, "unit": "delta_K", "lower": 8, "upper": 20},
+            "reflux": {"value": 3, "unit": "1", "lower": 2.5, "upper": 5},
+        },
+        feeds={
+            "feed": {
+                "flow": _q(100, "mol/s"),
+                "z": [0.1, 0.9],
+                "temperature": _q(300, "K"),
+                "pressure": _q(1.5, "bar"),
+            }
+        },
+    )
+    document["units"].insert(
+        1,
+        {
+            "name": "letdown",
+            "kind": "valve",
+            "inlets": ["preheated"],
+            "outlets": ["column_feed"],
+            "settings": {"p_out": _p("pressure")},
+        },
+    )
+    column = document["units"][-1]
+    column["inlets"] = ["column_feed"]
+    column["settings"].update(
+        n_stages=n_stages,
+        feed_stages=[n_stages // 2],
+        specs=[
+            {"kind": "reflux_ratio", "value": _p("reflux")},
+            {"kind": "distillate_rate", "value": _q(11.5, "mol/s")},
+        ],
+    )
+    document["metrics"]["purity"]["expression"]["component"] = "ethanol"
+    for expression in document["metrics"]["recovery"]["expression"]["args"]:
+        expression["component"] = "ethanol"
+    return ProcessCase.from_dict(document)
+
+
+def heater_bank_case(count: int = 24) -> ProcessCase:
+    """Independent energy-balanced heaters for many-variable derivative studies.
+
+    Each heater has its own fresh feed, outlet, and bounded temperature. Total
+    heat and annual cost depend on every variable, so a reverse derivative
+    measures the cost of increasing the parameter count without adding an
+    artificial optimization objective.
+    """
+    if isinstance(count, bool) or not isinstance(count, int) or not 2 <= count <= 80:
+        raise ValueError("heater bank needs from two to 80 units")
+    document = example_case("heater").to_dict()
+    feed = document["feeds"]["feed"]
+    document.update(name="heater-bank", parameters={}, feeds={}, units=[], metrics={})
+    terms: list[Any] = []
+    for i in range(count):
+        name = f"heater_{i:02d}"
+        parameter = f"temperature_{i:02d}"
+        document["parameters"][parameter] = {
+            "value": 350 + i / count,
+            "unit": "K",
+            "lower": 320,
+            "upper": 400,
+        }
+        document["feeds"][f"feed_{i:02d}"] = feed
+        document["units"].append(
+            {
+                "name": name,
+                "kind": "heater",
+                "inlets": [f"feed_{i:02d}"],
+                "outlets": [f"product_{i:02d}"],
+                "settings": {"t_out": _p(parameter)},
+            }
+        )
+        terms.append({"unit": name, "property": "heat"})
+    # Balanced expression tree stays within the portable expression depth cap.
+    while len(terms) > 1:
+        terms = [
+            {"op": "add", "args": terms[i : i + 2]} if i + 1 < len(terms) else terms[i]
+            for i in range(0, len(terms), 2)
+        ]
+    document["metrics"] = {
+        "duty": _metric(terms[0], "kW"),
+        "annual_cost": _metric({"plant": "annual_cost"}, "USD/yr"),
+    }
     return ProcessCase.from_dict(document)

@@ -6,6 +6,7 @@ from typing import Any
 
 from fugacio.sim.cases import CaseRunner, CaseWorkspace, ProcessCase, SolverOptions, compare_runs
 from fugacio.sim.cases.examples import EXAMPLES, example_case
+from fugacio.sim.cases.profiling import profile
 from fugacio.sim.cases.quantities import UNITS
 from fugacio.sim.cases.registry import registry_schema
 from fugacio.sim.cases.studies import optimize, sensitivities, sweep
@@ -68,12 +69,21 @@ def _example(name: str) -> dict[str, Any]:
 
 
 def _solve(
-    case: dict[str, Any], overrides: dict[str, Any] | None = None, backend: str = "sequential"
+    case: dict[str, Any],
+    overrides: dict[str, Any] | None = None,
+    backend: str = "sequential",
+    column_solver: str = "block",
+    eo_jacobian: str = "colored",
 ) -> dict[str, Any]:
     return (
         CaseRunner(
             ProcessCase.from_dict(case),
-            options=SolverOptions(backend=backend, recycle_method="broyden"),
+            options=SolverOptions(
+                backend=backend,
+                recycle_method="broyden",
+                column_solver=column_solver,
+                eo_jacobian=eo_jacobian,
+            ),
         )
         .run(overrides)
         .to_dict()
@@ -111,6 +121,8 @@ def case_tool_specs() -> list[Any]:
                     "case": {"type": "object"},
                     "overrides": {"type": "object"},
                     "backend": {"type": "string", "enum": ["sequential", "eo"]},
+                    "column_solver": {"type": "string", "enum": ["block", "dense"]},
+                    "eo_jacobian": {"type": "string", "enum": ["colored", "dense"]},
                 },
                 ["case"],
             ),
@@ -132,14 +144,14 @@ class DesignSession:
         self.current_case_id: str | None = None
         self.trusted_runs: set[str] = set()
         self.pending: dict[str, Any] | None = None
-        self._runners: dict[tuple[str, str], CaseRunner] = {}
+        self._runners: dict[tuple[str, str, str, str], CaseRunner] = {}
 
     def create_case(self, case: dict[str, Any]) -> dict[str, Any]:
         """Validate and select a new immutable case revision."""
         parsed = ProcessCase.from_dict(case)
         runner = CaseRunner(parsed, options=SolverOptions(recycle_method="broyden"))
         identity = self.workspace.save_case(parsed)
-        self._runners[(identity, "sequential")] = runner
+        self._runners[(identity, "sequential", "block", "colored")] = runner
         self.current_case_id, self.pending = identity, None
         return {"case_id": identity, "case": parsed.to_dict(), "selected": True}
 
@@ -162,44 +174,69 @@ class DesignSession:
         case = self.workspace.load_case(case_id).with_parameters(overrides)
         return self.update_case(case_id, case.to_dict())
 
-    def _runner(self, case_id: str, backend: str) -> CaseRunner:
+    def _runner(
+        self, case_id: str, backend: str, column_solver: str = "block", eo_jacobian: str = "colored"
+    ) -> CaseRunner:
         if case_id != self.current_case_id:
             raise ValueError("select the intended case before running or studying it")
-        key = (case_id, backend)
+        key = (case_id, backend, column_solver, eo_jacobian)
         if key not in self._runners:
             self._runners[key] = CaseRunner(
                 self.workspace.load_case(case_id),
-                options=SolverOptions(backend=backend, recycle_method="broyden"),
+                options=SolverOptions(
+                    backend=backend,
+                    recycle_method="broyden",
+                    column_solver=column_solver,
+                    eo_jacobian=eo_jacobian,
+                ),
             )
         return self._runners[key]
 
     def run_case(
-        self, case_id: str, overrides: dict[str, Any] | None = None, backend: str = "sequential"
+        self,
+        case_id: str,
+        overrides: dict[str, Any] | None = None,
+        backend: str = "sequential",
+        column_solver: str = "block",
+        eo_jacobian: str = "colored",
     ) -> dict[str, Any]:
         """Compute, audit, and save a run, preserving failed calculation evidence."""
-        run = self._runner(case_id, backend).run(overrides)
+        run = self._runner(case_id, backend, column_solver, eo_jacobian).run(overrides)
         self.workspace.save_run(run)
         self.trusted_runs.add(run.run_id)
         self.pending = None
         return run.to_dict()
 
     def study_case(
-        self, case_id: str, kind: str, request: dict[str, Any], backend: str = "sequential"
+        self,
+        case_id: str,
+        kind: str,
+        request: dict[str, Any],
+        backend: str = "sequential",
+        column_solver: str = "block",
+        eo_jacobian: str = "colored",
     ) -> dict[str, Any]:
         """Run a bounded sweep, optimization, or independently checked sensitivity study."""
         functions: dict[str, Any] = {
             "sweep": sweep,
             "optimization": optimize,
             "sensitivities": sensitivities,
+            "profile": profile,
         }
-        if kind not in functions or {"runner", "workspace"} & request.keys():
+        if kind not in functions or {"runner", "workspace", "recorder"} & request.keys():
             raise ValueError("invalid study kind or reserved request argument")
         result = functions[kind](
-            self._runner(case_id, backend), workspace=self.workspace, **request
+            self._runner(case_id, backend, column_solver, eo_jacobian),
+            workspace=self.workspace,
+            **request,
         )
         self.trusted_runs.update(run.run_id for run in result.runs)
         self.pending = None
         return result.artifact
+
+    def diagnose_case(self, case_id: str) -> dict[str, Any]:
+        """Inspect topology and declared dependencies without granting run eligibility."""
+        return self._runner(case_id, "sequential").diagnose_structure()
 
     def inspect(self, artifact_id: str) -> dict[str, Any]:
         """Inspect a verified artifact without granting it trusted execution status."""
@@ -311,21 +348,36 @@ class DesignSession:
                     "case_id": string,
                     "overrides": obj,
                     "backend": {"type": "string", "enum": ["sequential", "eo"]},
+                    "column_solver": {"type": "string", "enum": ["block", "dense"]},
+                    "eo_jacobian": {"type": "string", "enum": ["colored", "dense"]},
                 },
                 ["case_id"],
                 self.run_case,
             ),
             (
                 "study_case",
-                "Run a reproducible study; request uses the study API's named arguments.",
+                "Run a reproducible study. Request accepts derivative_mode (auto/forward/reverse) "
+                "and derivative_batch_size for sensitivities and optimization.",
                 {
                     "case_id": string,
-                    "kind": {"type": "string", "enum": ["sweep", "optimization", "sensitivities"]},
+                    "kind": {
+                        "type": "string",
+                        "enum": ["sweep", "optimization", "sensitivities", "profile"],
+                    },
                     "request": obj,
                     "backend": string,
+                    "column_solver": {"type": "string", "enum": ["block", "dense"]},
+                    "eo_jacobian": {"type": "string", "enum": ["colored", "dense"]},
                 },
                 ["case_id", "kind", "request"],
                 self.study_case,
+            ),
+            (
+                "diagnose_case",
+                "Inspect process topology, column sizes, and structural matching without solving.",
+                {"case_id": string},
+                ["case_id"],
+                self.diagnose_case,
             ),
             (
                 "inspect_case_artifact",

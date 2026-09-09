@@ -44,6 +44,7 @@ from fugacio.thermo import CubicEOS
 from fugacio.thermo.diagnostics import SolveReport, require_converged
 from fugacio.thermo.eos import PR
 from fugacio.thermo.implicit import newton_system_with_info
+from fugacio.thermo.sparsity import SparsityPattern
 
 #: A measurement read off the solved streams (for a design spec / objective).
 Measure = Callable[[Mapping[str, Stream]], Array]
@@ -224,6 +225,7 @@ class EOFlowsheet:
     feeds: dict[str, Stream] = field(default_factory=dict)
     blocks: list[Block] = field(default_factory=list)
     specs: list[_DesignSpec] = field(default_factory=list)
+    jacobian_mode: str = "colored"
     _plans: dict[Any, _Plan] = field(default_factory=dict, init=False, repr=False, compare=False)
 
     # -- construction ------------------------------------------------------ #
@@ -263,6 +265,8 @@ class EOFlowsheet:
         Returns:
             ``self`` for chaining.
         """
+        if any(spec.manipulated == manipulated for spec in self.specs):
+            raise ValueError(f"design variable {manipulated!r} is already freed by a specification")
         self.specs.append(_DesignSpec(manipulated, measure, target, init))
         return self
 
@@ -290,6 +294,8 @@ class EOFlowsheet:
         """
         produced: dict[str, int] = {}
         for i, blk in enumerate(self.blocks):
+            if not blk.outlets:
+                raise ValueError(f"block #{i} must declare at least one outlet")
             for name in blk.outlets:
                 if name in self.feeds:
                     raise ValueError(f"block output {name!r} shadows a feed of the same name")
@@ -312,8 +318,84 @@ class EOFlowsheet:
         """Collect every block's auxiliary unknowns into one key -> scale map."""
         out: dict[str, float] = {}
         for blk in self.blocks:
-            out.update(blk.aux_scales(ctx))
+            declared = blk.aux_scales(ctx)
+            duplicate = out.keys() & declared.keys()
+            if duplicate:
+                raise ValueError(f"auxiliary variables have multiple owners: {sorted(duplicate)}")
+            out.update(declared)
         return out
+
+    def _incidence(self, ctx: Context) -> tuple[SparsityPattern, tuple[str, ...]]:
+        """Declare scalar dependencies in the same a/d/s order as ravel_pytree."""
+        internal = self._internal_names()
+        aux = sorted(self._aux_scales(ctx))
+        freed = sorted(spec.manipulated for spec in self.specs)
+        if len(set(freed)) != len(freed):
+            raise ValueError("a design variable cannot be freed by multiple specifications")
+        variables = [*("aux:" + key for key in aux), *("parameter:" + key for key in freed)]
+        auxiliaries = {key: i for i, key in enumerate(aux)}
+        parameters = tuple(range(len(aux), len(aux) + len(freed)))
+        streams: dict[str, tuple[int, ...]] = {}
+        for name in internal:
+            streams[name] = tuple(range(len(variables), len(variables) + ctx.n_components + 2))
+            variables.extend(f"{name}:n[{component}]" for component in ctx.components)
+            variables.extend(
+                (
+                    name + (":enthalpy" if ctx.n_components == 1 else ":temperature"),
+                    name + ":pressure",
+                )
+            )
+        rows = []
+        for block in self.blocks:
+            declaration = block.residual_dependencies(ctx)
+            if declaration is None:
+                columns = tuple(range(len(variables)))
+            else:
+                ports, own_aux = declaration
+                if (
+                    set(ports) - (streams.keys() | self.feeds.keys())
+                    or set(own_aux) - auxiliaries.keys()
+                ):
+                    raise ValueError(
+                        f"invalid residual dependency declaration for {block.outlets[0]!r}"
+                    )
+                columns = tuple(
+                    sorted(
+                        {
+                            *parameters,
+                            *(auxiliaries[key] for key in own_aux),
+                            *(i for name in ports for i in streams.get(name, ())),
+                        }
+                    )
+                )
+            rows.extend([columns] * block.n_residuals(ctx))
+        rows.extend([tuple(range(len(variables)))] * len(self.specs))
+        return SparsityPattern(len(variables), tuple(rows)), tuple(variables)
+
+    def diagnose_structure(self) -> dict[str, Any]:
+        """Inspect declared incidence without compiling or solving the flowsheet.
+
+        This identifies disconnected equation/variable counts and reports the
+        coloring cost. Matching is an upper bound on rank. Use ``diagnose``
+        afterward for state-dependent rank and conditioning.
+        """
+        ctx = self._context()
+        pattern, variables = self._incidence(ctx)
+        return {
+            **pattern.diagnose(equations=self.equation_labels(ctx), variables=variables),
+            "jacobian_mode": self.jacobian_mode,
+            "global_linear_solver": "pivoted_dense",
+            "blocks": [
+                {
+                    "name": block.outlets[0],
+                    "equations": block.n_residuals(ctx),
+                    "dependencies": "all_unknowns"
+                    if block.residual_dependencies(ctx) is None
+                    else "declared",
+                }
+                for block in self.blocks
+            ],
+        }
 
     def _context(self) -> Context:
         """Build the static solve context (components, EOS, scales)."""
@@ -559,6 +641,7 @@ class EOFlowsheet:
             kij_sig,
             scales_sig,
             model_sig,
+            self.jacobian_mode,
             int(sweeps),
             float(tol),
             int(max_iter),
@@ -580,6 +663,9 @@ class EOFlowsheet:
         ctx = self._context()
         internal = tuple(self._internal_names())
         aux_scales = self._aux_scales(ctx)
+        if self.jacobian_mode not in ("colored", "dense"):
+            raise ValueError("EO jacobian_mode must be colored or dense")
+        pattern, _ = self._incidence(ctx)
 
         # Warm the process-global component-data cache with *concrete* arrays so
         # the JIT-compiled core below hits it, instead of caching a trace-time
@@ -594,6 +680,11 @@ class EOFlowsheet:
         template = self._initial_unknowns(ctx, internal, aux_scales, params, self.feeds, None, 0)
         _, unravel = ravel_pytree(template)
         residual = self._residual_fn(ctx, internal, aux_scales, unravel)
+        jacobian = (
+            pattern.jacobian(residual)
+            if self.jacobian_mode == "colored" and len(pattern.rows) == pattern.columns
+            else None
+        )
         lower_tree = jax.tree_util.tree_map(lambda x: jnp.full_like(x, -jnp.inf), template)
         for name in internal:
             lower_tree["s"][name] = jnp.concatenate(
@@ -613,7 +704,13 @@ class EOFlowsheet:
             """Newton solve from an externally supplied (detached) seed ``x0``."""
             theta = {"params": params_, "feeds": feeds_, "pkg": pkg_}
             result = newton_system_with_info(
-                residual, jax.lax.stop_gradient(x0), theta, tol, max_iter, lower=lower
+                residual,
+                jax.lax.stop_gradient(x0),
+                theta,
+                tol,
+                max_iter,
+                lower=lower,
+                jacobian=jacobian,
             )
             return result.value, result.report
 
@@ -694,6 +791,7 @@ class EOFlowsheet:
             else None
         )
         return {
+            "structure": self.diagnose_structure(),
             "n_unknowns": plan.n_unknowns,
             "n_equations": plan.n_equations,
             "degrees_of_freedom": plan.n_unknowns - plan.n_equations,
