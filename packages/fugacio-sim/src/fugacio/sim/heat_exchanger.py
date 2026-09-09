@@ -182,8 +182,11 @@ def _curves(
     cold_leaves, cold_tree = jax.tree_util.tree_flatten(
         (pkg_c, cold, h_cold_in, p_cold_out, q / n_cold)
     )
+    # Some jaxlib wheels don't expose PyTreeDef's comparison types to mypy.
+    hot_structure: object = hot_tree
+    cold_structure: object = cold_tree
     numeric = (Array, jax.core.Tracer, float, int)
-    compatible = hot_tree == cold_tree and all(
+    compatible = hot_structure == cold_structure and all(
         isinstance(a, numeric)
         and isinstance(b, numeric)
         and jnp.shape(a) == jnp.shape(b)
