@@ -423,6 +423,8 @@
       
         
       
+        
+      
     
     
     
@@ -793,6 +795,34 @@
     
   
     Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process performance
   
 
     
@@ -1962,6 +1992,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fugacio.sim.eo.flowsheet.EOFlowsheet.diagnose_structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;diagnose_structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fugacio.sim.eo.flowsheet.EOFlowsheet.degrees_of_freedom" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2110,6 +2151,17 @@
   
     <nav class="md-nav" aria-label=" Block">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.eo.blocks.Block.residual_dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;residual_dependencies
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#fugacio.sim.eo.blocks.Block.aux_scales" class="md-nav__link">
@@ -3430,6 +3482,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fugacio.sim.eo.flowsheet.EOFlowsheet.diagnose_structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;diagnose_structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fugacio.sim.eo.flowsheet.EOFlowsheet.degrees_of_freedom" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3578,6 +3641,17 @@
   
     <nav class="md-nav" aria-label=" Block">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.eo.blocks.Block.residual_dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;residual_dependencies
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#fugacio.sim.eo.blocks.Block.aux_scales" class="md-nav__link">
@@ -4776,7 +4850,8 @@ first outlet name).</p>
       &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt; (&lt;code&gt;fugacio.sim.eo.blocks.Block&lt;/code&gt;)" href="#fugacio.sim.eo.blocks.Block">Block</a></span><span class="p">]</span> <span class="o">=</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">(),</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">specs</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><span title="fugacio.sim.eo.flowsheet._DesignSpec">_DesignSpec</span></span><span class="p">]</span> <span class="o">=</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">(),</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">jacobian_mode</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;colored&quot;</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4912,6 +4987,14 @@ fluid) can drive the whole simultaneous solve.</p>
               <td>
                 <div class="doc-md-description">
                   <p>Add a design spec: free parameter <code>manipulated</code> to hit <code>measure = target</code>.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;diagnose_structure&lt;/span&gt; (&lt;code&gt;fugacio.sim.eo.flowsheet.EOFlowsheet.diagnose_structure&lt;/code&gt;)" href="#fugacio.sim.eo.flowsheet.EOFlowsheet.diagnose_structure">diagnose_structure</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Inspect declared incidence without compiling or solving the flowsheet.</p>
                 </div>
               </td>
             </tr>
@@ -5172,6 +5255,29 @@ freedom). Its value becomes an unknown; the value passed in
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="fugacio.sim.eo.flowsheet.EOFlowsheet.diagnose_structure" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">diagnose_structure</span>
+
+
+<a href="#fugacio.sim.eo.flowsheet.EOFlowsheet.diagnose_structure" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">diagnose_structure</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Inspect declared incidence without compiling or solving the flowsheet.</p>
+<p>This identifies disconnected equation/variable counts and reports the
+coloring cost. Matching is an upper bound on rank. Use <code>diagnose</code>
+afterward for state-dependent rank and conditioning.</p>
 
 
     </div>
@@ -6293,6 +6399,14 @@ outlets).</p>
       </thead>
       <tbody>
             <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;residual_dependencies&lt;/span&gt; (&lt;code&gt;fugacio.sim.eo.blocks.Block.residual_dependencies&lt;/code&gt;)" href="#fugacio.sim.eo.blocks.Block.residual_dependencies">residual_dependencies</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Declare stream and auxiliary dependencies, or return None for all unknowns.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
               <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;aux_scales&lt;/span&gt; (&lt;code&gt;fugacio.sim.eo.blocks.Block.aux_scales&lt;/code&gt;)" href="#fugacio.sim.eo.blocks.Block.aux_scales">aux_scales</a></code></td>
               <td>
                 <div class="doc-md-description">
@@ -6350,6 +6464,38 @@ outlets).</p>
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="fugacio.sim.eo.blocks.Block.residual_dependencies" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">residual_dependencies</span>
+
+
+<a href="#fugacio.sim.eo.blocks.Block.residual_dependencies" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">residual_dependencies</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">ctx</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Context&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;fugacio.sim.eo.blocks.Context&lt;/code&gt;)" href="#fugacio.sim.eo.blocks.Context">Context</a></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Declare stream and auxiliary dependencies, or return None for all unknowns.</p>
+<p>This is a structural contract for every equation and operating point,
+not an observation of zeros at one state. Built-in blocks depend on
+their ports and owned auxiliaries. Custom classes, including subclasses
+of built-ins, default to all unknowns unless they override this method.
+Freed operating parameters are always included by the assembler.</p>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 

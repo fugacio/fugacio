@@ -423,6 +423,8 @@
       
         
       
+        
+      
     
     
     
@@ -793,6 +795,34 @@
     
   
     Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process performance
   
 
     
@@ -1989,6 +2019,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.distillation.RigorousColumnResult.solver_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;solver_info
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2711,6 +2752,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;warm_start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.distillation.RigorousColumnResult.solver_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;solver_info
       
     </span>
   </a>
@@ -3852,6 +3904,61 @@ partial condenser, the overhead vapour for an absorber).</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.distillation.RigorousColumnResult.report">report</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;SolveReport&lt;/span&gt; (&lt;code&gt;fugacio.thermo.diagnostics.SolveReport&lt;/code&gt;)" href="../../thermo/solvers/#fugacio.thermo.diagnostics.SolveReport">SolveReport</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Numerical convergence report in the original equation order.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.distillation.RigorousColumnResult.stage_liquid">stage_liquid</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Internal liquid component flows, excluding side products.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.distillation.RigorousColumnResult.stage_vapor">stage_vapor</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Internal vapor component flows, excluding side products.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.distillation.RigorousColumnResult.solver_code">solver_code</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array code for the selected linear strategy, 1 for block and 0 for dense.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="fugacio.sim.distillation.RigorousColumnResult.jacobian_size">jacobian_size</span></code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scalar number of simultaneous unknowns.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3880,6 +3987,14 @@ partial condenser, the overhead vapour for an absorber).</p>
               <td>
                 <div class="doc-md-description">
                   <p>Full stage state for <code>rigorous_column(..., guess=result.warm_start())</code>.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;solver_info&lt;/span&gt; (&lt;code&gt;fugacio.sim.distillation.RigorousColumnResult.solver_info&lt;/code&gt;)" href="#fugacio.sim.distillation.RigorousColumnResult.solver_info">solver_info</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Describe the selected Jacobian strategy for this concrete column.</p>
                 </div>
               </td>
             </tr>
@@ -3940,6 +4055,28 @@ partial condenser, the overhead vapour for an absorber).</p>
     <div class="doc doc-contents ">
 
         <p>Full stage state for <code>rigorous_column(..., guess=result.warm_start())</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="fugacio.sim.distillation.RigorousColumnResult.solver_info" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">solver_info</span>
+
+
+<a href="#fugacio.sim.distillation.RigorousColumnResult.solver_info" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">solver_info</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Describe the selected Jacobian strategy for this concrete column.</p>
+<p>Block solves independently check their linear residual and may use a
+pivoted dense fallback. This description isn't a count of fallbacks.</p>
 
 
     </div>
@@ -4294,7 +4431,8 @@ partial condenser, the overhead vapour for an absorber).</p>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">80</span><span class="p">,</span>
 </span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">check</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="n">homotopy</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RigorousColumnResult&lt;/span&gt; (&lt;code&gt;fugacio.sim.distillation.RigorousColumnResult&lt;/code&gt;)" href="#fugacio.sim.distillation.RigorousColumnResult">RigorousColumnResult</a></span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="n">linear_solver</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;block&quot;</span><span class="p">,</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RigorousColumnResult&lt;/span&gt; (&lt;code&gt;fugacio.sim.distillation.RigorousColumnResult&lt;/code&gt;)" href="#fugacio.sim.distillation.RigorousColumnResult">RigorousColumnResult</a></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4684,6 +4822,24 @@ from an ideal-activity solution. The final report checks the original model.</p>
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>linear_solver</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>"block"</code> uses colored stage Jacobians and checked block
+elimination with a pivoted dense fallback. <code>"dense"</code> selects the
+original dense reference equations and linearization.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;block&#39;</code>
             </td>
           </tr>
       </tbody>

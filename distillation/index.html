@@ -425,6 +425,8 @@
       
         
       
+        
+      
     
     
     
@@ -898,6 +900,34 @@
     
   
     Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process performance
   
 
     
@@ -2668,6 +2698,12 @@ computed from the result (a duty, a purity, a reflux ratio) with respect to
 anything fed in (the feed state, a spec value, a <code>kij</code>, a stage pressure) is one
 adjoint solve against the converged Jacobian, never a differentiation <em>through</em>
 the iterations.</p>
+<p>The default <code>linear_solver="block"</code> assembles the nearest-neighbor stage
+Jacobian with coloring and solves its bordered block system. It checks the
+linear residual and uses a pivoted dense fallback if block elimination fails.
+<code>linear_solver="dense"</code> retains the reference implementation. See the
+<a href="../performance/">performance guide</a> for direction counts, scaling, fallback
+limits, and reproducible column benchmarks.</p>
 <p>The <code>Column</code> block in <a href="../equation-oriented/"><code>fugacio.sim.eo</code></a> embeds a
 converged <code>rigorous_column</code> inside an equation-oriented flowsheet, so a column
 can sit in the middle of a globally solved plant with recycles around it.</p>

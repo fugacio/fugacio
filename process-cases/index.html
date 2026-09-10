@@ -425,6 +425,8 @@
       
         
       
+        
+      
     
     
     
@@ -931,6 +933,34 @@
     
   
     Reliability and diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process performance
   
 
     
@@ -2708,26 +2738,27 @@ doesn't expand a column into global MESH unknowns. Pure-fluid EO streams retain
 enthalpy coordinates so quality isn't lost on the saturation line. Failed
 solves retain their reports, and no backend silently substitutes another.
 Execution compiles each complete registered unit, including feed-property
-preparation and retained outputs, with dynamic operating values. Studies evaluate
-one forward derivative direction for each design variable, keeping the unit kernels
-separate instead of compiling one whole-plant program. Fixed case topology and
-dynamic recycle parameters let optimizer trials reuse the compiled maps. Saved
+preparation and retained outputs, with dynamic operating values. Studies reuse
+one local linearization per operating point, selecting forward or reverse
+directions from the input/output counts. They retain the individual unit kernels.
+Fixed case topology and dynamic recycle parameters let optimizer trials reuse
+the compiled maps. Saved
 profiles remain available without becoming study derivative outputs.
 Separate CLI invocations can reuse JAX's persistent compilation cache with
 <code>export JAX_COMPILATION_CACHE_DIR="$PWD/.jax_cache"</code> before running commands.
-The first derivative trace and compilation of a full plant can be lengthy,
-particularly with the older JAX release required by Intel Macs. In one local
-validation of the 16-stage example, the first optimization derivative took
-about 21 minutes; subsequent operating points took 10 to 12 seconds. These
-timings depend on hardware, JAX version, and cache state.
+The <a href="../performance/">performance guide</a> covers structured column solves,
+flowsheet coloring, reusable derivatives, profiling artifacts, and isolated
+benchmarks. Timings depend on hardware, JAX version, and cache state.
 For machines with limited memory, pass <code>release_caches=True</code> to sensitivities
 or optimization (or <code>"release_caches": true</code> in a CLI request). This explicitly
 clears process-wide in-memory JAX compilation caches between the baseline,
-derivative/optimization, and final audit phases. It retains the disk cache and
-all completed artifacts. The depropanizer study requests enable this option.
-A 7 GB Linux validation container could solve the baseline but couldn't
-complete the full-plant derivative compilation. Clearing caches doesn't
-eliminate the peak memory required by each compilation.</p>
+derivative/optimization, and final audit phases. Optimization retains compiled
+kernels across points and collects unreachable Python objects between them.
+It retains the disk cache and all completed artifacts. Clearing caches doesn't eliminate the peak memory
+required by each compilation. The older dense implementation couldn't complete
+the plant derivative in a 7 GB Linux validation container; the dedicated
+performance workflow now checks the structured implementation against an
+explicit process memory limit and retains the observed result.</p>
 <p>The registry is deliberately finite. Dynamic units, multiphase liquid
 inventories, custom Python functions, and arbitrary Python EO blocks remain
 available through their existing APIs; they aren't serialized as version 1
