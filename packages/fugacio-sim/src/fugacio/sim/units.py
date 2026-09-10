@@ -46,6 +46,7 @@ from fugacio.sim.properties import (
 from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS
 from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
+from fugacio.thermo.package import _phase_classification
 
 ArrayLike = Array | float
 
@@ -172,7 +173,7 @@ def flash_drum(
     """
     pkg = resolve_package(feed.components, model, eos=eos, kij=kij)
     z = _composition(feed.n)
-    classified = jax.lax.stop_gradient(pkg.flash_pt(t, p, z))
+    classified = _phase_classification(pkg, t, p, z)
     total = feed.total
 
     def single_phase(_: None) -> tuple[Array, Array]:

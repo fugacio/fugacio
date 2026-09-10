@@ -1,0 +1,11 @@
+{
+  "derivative_mode": "auto",
+  "metrics": [
+    "annual_cost"
+  ],
+  "parameters": [
+    "pressure",
+    "approach"
+  ],
+  "warm_repeats": 2
+}

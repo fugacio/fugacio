@@ -64,6 +64,7 @@ from fugacio.thermo.implicit import (
     implicit_solution,
     newton_system_with_info,
 )
+from fugacio.thermo.linear import BlockLayout
 from fugacio.thermo.package import GammaPhiPackage
 
 ArrayLike = Array | float
@@ -229,6 +230,11 @@ class RigorousColumnResult(NamedTuple):
         reflux_ratio: ``L_1 / D`` at the solution.
         boilup_ratio: ``V_N / B`` at the solution.
         residual_norm: Max-norm of the scaled MESH residual at the solution.
+        report: Numerical convergence report in the original equation order.
+        stage_liquid: Internal liquid component flows, excluding side products.
+        stage_vapor: Internal vapor component flows, excluding side products.
+        solver_code: Array code for the selected linear strategy, 1 for block and 0 for dense.
+        jacobian_size: Scalar number of simultaneous unknowns.
     """
 
     distillate: Stream
@@ -247,12 +253,16 @@ class RigorousColumnResult(NamedTuple):
     boilup_ratio: Array
     residual_norm: Array
     report: SolveReport
+    stage_liquid: Array
+    stage_vapor: Array
+    solver_code: Array
+    jacobian_size: Array
 
     def warm_start(self) -> dict[str, Array]:
         """Full stage state for ``rigorous_column(..., guess=result.warm_start())``."""
         return {
-            "liquid": self.liquid_flow[:, None] * self.x,
-            "vapor": self.vapor_flow[:, None] * self.y,
+            "liquid": self.stage_liquid,
+            "vapor": self.stage_vapor,
             "t": self.t,
             "condenser_duty": self.condenser_duty,
             "reboiler_duty": self.reboiler_duty,
@@ -262,6 +272,26 @@ class RigorousColumnResult(NamedTuple):
     def converged(self) -> Array:
         """Whether the stage balances and specifications converged."""
         return self.report.converged
+
+    def solver_info(self) -> dict[str, Any]:
+        """Describe the selected Jacobian strategy for this concrete column.
+
+        Block solves independently check their linear residual and may use a
+        pivoted dense fallback. This description isn't a count of fallbacks.
+        """
+        stages, components = self.x.shape
+        size = int(self.jacobian_size)
+        border = size - stages * (2 * components + 1)
+        block = bool(self.solver_code)
+        return {
+            "linear_solver": "block" if block else "dense",
+            "unknowns": size,
+            "jacobian_directions": min(stages, 3) * (2 * components + 1) + border
+            if block
+            else size,
+            "border_reverse_directions": border if block else 0,
+            "dense_fallback": "checked" if block else "not_applicable",
+        }
 
 
 # --------------------------------------------------------------------------- #
@@ -674,7 +704,63 @@ def _seed(
     return _pack(jnp.log(l_mat), jnp.log(v_mat), t, q_c, q_r, st)
 
 
-@partial(jax.jit, static_argnames=("st", "sweeps", "tol", "max_iter", "homotopy"))
+def _structured_system(st: _Structure, theta: dict[str, Any]) -> tuple[Any, ...]:
+    """Order stage unknowns and place endpoint duties inside the chain.
+
+    A total condenser's local energy row is dependent on its material rows
+    when the condenser duty is held outside the block. Exchange that duty
+    with one endpoint flow unknown; do the analogous exchange at the reboiler.
+    The displaced flow unknowns form the small border. No equation is changed.
+    """
+    n, c = st.n, st.c
+    b = 2 * c + 1
+    border = int(st.has_condenser) + int(st.has_reboiler)
+    ordering = tuple(
+        i
+        for stage in range(n)
+        for i in (
+            *range(stage * c, (stage + 1) * c),
+            *range(n * c + stage * c, n * c + (stage + 1) * c),
+            2 * n * c + stage,
+        )
+    ) + tuple(range(n * b, n * b + border))
+    rows = jnp.asarray(ordering)
+    columns = rows
+    pivot = jnp.argmax(jnp.sum(theta["f"], axis=0))
+    edge = n * b
+    if st.has_condenser:
+        endpoint = c + pivot
+        displaced = columns[endpoint]
+        columns = columns.at[endpoint].set(edge).at[edge].set(displaced)
+        edge += 1
+    if st.has_reboiler:
+        endpoint = (n - 1) * b + pivot
+        displaced = columns[endpoint]
+        columns = columns.at[endpoint].set(edge).at[edge].set(displaced)
+    inverse = jnp.argsort(columns)
+    scales = jnp.ones(st.n_unknowns).at[n * b :].set(theta["f_total"] * _H_MOLAR_SCALE)
+    scales = jax.lax.stop_gradient(scales[columns])
+    layout = BlockLayout(n, b, border)
+
+    def encode(u: Array) -> Array:
+        return u[columns] / scales
+
+    def decode(v: Array) -> Array:
+        return (v * scales)[inverse]
+
+    def residual(v: Array, th: Any) -> Array:
+        # Custom derivative callbacks must close over static structure only.
+        # Dynamic coordinate data travels in theta, never in a cached closure.
+        original = (v * th["_column_scales"])[jnp.argsort(th["_column_columns"])]
+        return _residuals(original, th, st)[jnp.asarray(ordering)]
+
+    def jacobian(v: Array, th: Any) -> Any:
+        return layout.linearize(residual, v, th)
+
+    return encode, decode, residual, jacobian, rows, columns, scales
+
+
+@partial(jax.jit, static_argnames=("st", "sweeps", "tol", "max_iter", "homotopy", "linear_solver"))
 def _solve(
     theta: dict[str, Any],
     feeds: list[Stream],
@@ -684,6 +770,7 @@ def _solve(
     tol: float,
     max_iter: int,
     homotopy: bool,
+    linear_solver: str = "block",
 ) -> tuple[Array, SolveReport]:
     """Seed and converge the MESH system; compiled once per column *structure*.
 
@@ -707,16 +794,43 @@ def _solve(
         u0 = _seed(pkg, st, theta_seed, feeds, hints, sweeps)
     u0 = jax.lax.stop_gradient(u0)
 
-    def residual(u: Array, th: dict[str, Any]) -> Array:
-        return _residuals(u, th, st)
-
     lower = jnp.full_like(u0, -jnp.inf).at[: 2 * st.n * st.c].set(-700.0)
     upper = jnp.full_like(u0, jnp.inf).at[: 2 * st.n * st.c].set(700.0)
     lower = lower.at[2 * st.n * st.c : 2 * st.n * st.c + st.n].set(50.0 / _T_SCALE)
     upper = upper.at[2 * st.n * st.c : 2 * st.n * st.c + st.n].set(2000.0 / _T_SCALE)
 
+    if linear_solver == "block":
+        encode, decode, residual, jacobian, rows, columns, scales = _structured_system(
+            st, theta_seed
+        )
+        lower, upper = lower[columns] / scales, upper[columns] / scales
+        theta = {**theta, "_column_columns": columns, "_column_scales": scales}
+        theta_seed = jax.lax.stop_gradient(theta)
+    else:
+
+        def identity(u: Array) -> Array:
+            return u
+
+        encode = decode = identity
+
+        def residual(u: Array, th: Any) -> Array:
+            return _residuals(u, th, st)
+
+        jacobian = None
+        rows = jnp.arange(st.n_unknowns)
+
     def converge(seed: Array, th: dict[str, Any]) -> SolveResult:
-        return newton_system_with_info(residual, seed, th, tol, max_iter, lower=lower, upper=upper)
+        solved = newton_system_with_info(
+            residual,
+            encode(seed),
+            th,
+            tol,
+            max_iter,
+            lower=lower,
+            upper=upper,
+            jacobian=jacobian,
+        )
+        return solved._replace(value=decode(solved.value))
 
     if (
         homotopy
@@ -793,9 +907,12 @@ def _solve(
     else:
         result = converge(u0, theta_seed)
     report = jax.lax.stop_gradient(result.report)
-    value = implicit_solution(
-        residual, jax.lax.stop_gradient(result.value), theta, report.converged
+    value = decode(
+        implicit_solution(
+            residual, encode(jax.lax.stop_gradient(result.value)), theta, report.converged, jacobian
+        )
     )
+    report = report._replace(worst_equation=rows[jnp.maximum(report.worst_equation, 0)])
     return value, report
 
 
@@ -827,6 +944,7 @@ def rigorous_column(
     max_iter: int = 80,
     check: bool = True,
     homotopy: bool = True,
+    linear_solver: str = "block",
 ) -> RigorousColumnResult:
     """Solve a rigorous multistage column by simultaneous correction (MESH).
 
@@ -864,6 +982,9 @@ def rigorous_column(
         max_iter: Iteration cap for each Newton solve, including homotopy increments.
         homotopy: Retry a failed NRTL solve by gradually restoring activity effects
             from an ideal-activity solution. The final report checks the original model.
+        linear_solver: ``"block"`` uses colored stage Jacobians and checked block
+            elimination with a pivoted dense fallback. ``"dense"`` selects the
+            original dense reference equations and linearization.
 
     Returns:
         A `RigorousColumnResult` with the products, duties, and stage profiles, all
@@ -877,6 +998,8 @@ def rigorous_column(
     """
     if not feeds:
         raise ValueError("a column needs at least one feed")
+    if linear_solver not in ("block", "dense"):
+        raise ValueError("linear_solver must be 'block' or 'dense'")
     if n_stages < 1:
         raise ValueError("n_stages must be at least 1")
     if condenser not in (None, "total", "partial"):
@@ -992,7 +1115,9 @@ def rigorous_column(
         for s in feed_streams
     ]
     hints = {k: jnp.asarray(v, dtype=float) for k, v in hints.items()}
-    u_star, solve_report = _solve(theta, canon, hints, st, sweeps, tol, max_iter, homotopy)
+    u_star, solve_report = _solve(
+        theta, canon, hints, st, sweeps, tol, max_iter, homotopy, linear_solver
+    )
     if check:
         labels = tuple(
             [f"stage {stage + 1}: material {comp}" for stage in range(n) for comp in components]
@@ -1061,6 +1186,10 @@ def rigorous_column(
         boilup_ratio=big_v[n - 1] / big_l[n - 1],
         residual_norm=solve_report.residual_norm,
         report=solve_report,
+        stage_liquid=liq,
+        stage_vapor=v,
+        solver_code=jnp.asarray(int(linear_solver == "block")),
+        jacobian_size=jnp.asarray(st.n_unknowns),
     )
 
 

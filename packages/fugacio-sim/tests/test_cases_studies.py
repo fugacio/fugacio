@@ -81,13 +81,17 @@ def test_failed_baseline_is_saved_without_a_study_claim(tmp_path, kind):
     runner = CaseRunner(ProcessCase.from_dict(d), options=SolverOptions(specification_iterations=0))
     workspace = CaseWorkspace(tmp_path)
     study = (
-        sensitivities(runner, ["flow"], ["duty"], workspace=workspace)
+        sensitivities(runner, ["flow"], ["duty"], derivative_mode="reverse", workspace=workspace)
         if kind == "sensitivities"
-        else optimize(runner, ["flow"], "annual_cost", workspace=workspace)
+        else optimize(
+            runner, ["flow"], "annual_cost", derivative_mode="reverse", workspace=workspace
+        )
     )
     assert not study.accepted
     assert not workspace.load_run(study.artifact["baseline_id"]).accepted
     assert workspace.load_artifact(study.study_id)["reason"].startswith("The baseline failed")
+    assert study.artifact["request"]["derivative_mode"] == "reverse"
+    assert study.artifact["request"]["derivative_batch_size"] == 1
 
 
 def test_sensitivity_verifies_units_and_rejects_boundary_claim(runner):
@@ -110,11 +114,13 @@ def test_eo_study_preserves_implicit_derivatives():
     assert study.artifact["results"][0]["metrics"]["duty"]["relative_error"] < 1e-5
 
 
-def test_optimization_meets_constraint_and_retains_baseline(runner):
+@pytest.mark.parametrize("release_caches", [False, True])
+def test_optimization_meets_constraint_and_retains_baseline(runner, release_caches):
     study = optimize(
         runner,
         ["temperature"],
         "annual_cost",
+        release_caches=release_caches,
         constraints=[
             {
                 "metric": "product_temperature",

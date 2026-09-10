@@ -200,6 +200,32 @@ class Block:
     inlets: tuple[str, ...]
     outlets: tuple[str, ...]
 
+    def residual_dependencies(self, ctx: Context) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+        """Declare stream and auxiliary dependencies, or return None for all unknowns.
+
+        This is a structural contract for every equation and operating point,
+        not an observation of zeros at one state. Built-in blocks depend on
+        their ports and owned auxiliaries. Custom classes, including subclasses
+        of built-ins, default to all unknowns unless they override this method.
+        Freed operating parameters are always included by the assembler.
+        """
+        if type(self) in (
+            Mixer,
+            Splitter,
+            Heater,
+            Valve,
+            Pump,
+            Compressor,
+            Turbine,
+            Flash,
+            ComponentSeparator,
+            HeatExchanger,
+            StoichiometricReactor,
+            Column,
+        ):
+            return self.inlets + self.outlets, tuple(self.aux_scales(ctx))
+        return None
+
     def aux_scales(self, ctx: Context) -> dict[str, float]:
         """Auxiliary unknowns introduced by the block, mapped to their scale.
 

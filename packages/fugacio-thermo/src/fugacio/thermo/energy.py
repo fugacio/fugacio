@@ -38,7 +38,7 @@ from jax import Array
 from fugacio.thermo.constants import P_REF, T_REF
 from fugacio.thermo.eos import CubicEOS
 from fugacio.thermo.equilibrium import flash_pt
-from fugacio.thermo.implicit import _parameter_direction
+from fugacio.thermo.implicit import _residual_linearization
 from fugacio.thermo.properties import CpCoeffs, molar_enthalpy, molar_entropy
 
 ArrayLike = Array | float
@@ -190,9 +190,9 @@ def _implicit_temperature_jvp(
     params, t_init = primals
     params_dot, _ = tangents
     t_star = _implicit_temperature(residual, params, t_init, t_min, t_max, tol, max_iter)
-    _, r_t = jax.jvp(lambda tt: residual(tt, params), (t_star,), (jnp.ones_like(t_star),))
-    r_dot = _parameter_direction(residual, t_star, params, params_dot)
-    error = jnp.abs(residual(t_star, params))
+    value, push, r_dot = _residual_linearization(residual, t_star, params, params_dot)
+    r_t = push(jnp.ones_like(t_star))
+    error = jnp.abs(value)
     valid = jnp.isfinite(error) & (error <= jnp.maximum(4 * tol * jnp.abs(r_t), 1e-6))
     t_dot = (-r_dot / r_t) * jnp.where(valid, 1.0, jnp.nan)
     return t_star, t_dot

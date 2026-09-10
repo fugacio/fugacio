@@ -7,7 +7,7 @@ import itertools
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jax
 import jax.numpy as jnp
@@ -25,6 +25,10 @@ from fugacio.sim.cases.results import CaseRun, compare_runs, sealed
 from fugacio.sim.cases.runtime import CaseRunner
 from fugacio.sim.cases.schema import sequence
 from fugacio.sim.cases.workspace import CaseWorkspace
+from fugacio.thermo.sensitivity import derivative_strategy, linearize
+
+if TYPE_CHECKING:
+    from fugacio.sim.cases.profiling import PerformanceRecorder
 
 
 @dataclass(frozen=True)
@@ -194,27 +198,35 @@ def _failed_baseline(
     return result
 
 
-def _directional_jacobian(function: Callable[..., Any]) -> Callable[..., Any]:
-    """Evaluate directions through reusable unit kernels, without one plant JIT.
-
-    Design studies usually vary a few scalar parameters. Sequential JVPs keep
-    the unit kernels separate and avoid constructing a reverse trace of the
-    entire converged plant and all its nested flashes. Recycle iteration maps
-    receive dynamic parameters, so changed operating points reuse their code.
-    """
-
-    def direction(x: Any, tangent: Any) -> Any:
-        return jax.jvp(function, (x,), (tangent,), has_aux=True)
+def _directional_jacobian(
+    function: Callable[..., Any],
+    *,
+    mode: str = "auto",
+    batch_size: int = 1,
+    recorder: PerformanceRecorder | None = None,
+) -> Callable[..., Any]:
+    """Reuse one converged linearization for every direction at a design point."""
+    count = 0
 
     def evaluate(x: Any) -> tuple[np.ndarray, np.ndarray, bool]:
-        x = jnp.asarray(x)
-        columns = []
-        accepted = True
-        for tangent in jnp.eye(x.size, dtype=x.dtype):
-            value, derivative, ok = direction(x, tangent)
-            columns.append(np.asarray(derivative))
-            accepted = accepted and bool(ok)
-        return np.asarray(value), np.stack(columns, axis=1), accepted
+        nonlocal count
+        index, count = count, count + 1
+        if recorder is None:
+            local = linearize(function, jnp.asarray(x), has_aux=True)
+            matrix = np.asarray(local.jacobian(mode=mode, batch_size=batch_size))
+        else:
+            local = recorder.measure(
+                f"linearization[{index}]",
+                lambda: linearize(function, jnp.asarray(x), has_aux=True),
+            )
+            matrix = np.asarray(
+                recorder.measure(
+                    f"jacobian[{index}]", lambda: local.jacobian(mode=mode, batch_size=batch_size)
+                )
+            )
+        value = np.asarray(local.value)
+        accepted = bool(local.auxiliary) and bool(np.all(np.isfinite(matrix)))
+        return value, matrix, accepted and bool(np.all(np.isfinite(value)))
 
     return evaluate
 
@@ -228,7 +240,10 @@ def sensitivities(
     relative_step: float = 1e-4,
     relative_tolerance: float = 2e-3,
     release_caches: bool = False,
+    derivative_mode: str = "auto",
+    derivative_batch_size: int = 1,
     workspace: CaseWorkspace | None = None,
+    recorder: PerformanceRecorder | None = None,
 ) -> StudyResult:
     """Compare implicit JAX derivatives with centered differences of accepted runs.
 
@@ -236,9 +251,14 @@ def sensitivities(
     nonfinite derivatives, failed perturbed runs, and boundary points are
     reported as unverified, with no extrapolated gradient claim. This checks a
     local derivative; it doesn't establish uncertainty or a global response.
+    An optional ``recorder`` observes derivative phases without changing the
+    study's identity or acceptance criteria.
     """
     names = _names(runner, parameters)
     outputs = _names(runner, metrics, metrics=True)
+    strategy = derivative_strategy(
+        len(names), len(outputs), mode=derivative_mode, batch_size=derivative_batch_size
+    )
     if not isinstance(release_caches, bool):
         raise ValueError("release_caches must be a boolean")
     if (
@@ -260,6 +280,8 @@ def sensitivities(
                 "relative_step": relative_step,
                 "relative_tolerance": relative_tolerance,
                 "release_caches": release_caches,
+                "derivative_mode": derivative_mode,
+                "derivative_batch_size": derivative_batch_size,
             },
             workspace,
         )
@@ -278,7 +300,9 @@ def sensitivities(
             jnp.asarray([r.converged for r in e.reports.values()])
         )
 
-    _, derivatives, derivative_ok = _directional_jacobian(vector)(x)
+    _, derivatives, derivative_ok = _directional_jacobian(
+        vector, mode=derivative_mode, batch_size=derivative_batch_size, recorder=recorder
+    )(x)
     if release_caches:
         jax.clear_caches()
         gc.collect()
@@ -371,6 +395,7 @@ def sensitivities(
                 "relative_step": relative_step,
                 "relative_tolerance": relative_tolerance,
                 "derivative_numerically_accepted": derivative_ok,
+                "derivatives": strategy,
                 "release_caches": release_caches,
                 "parameters": list(names),
                 "metrics": list(outputs),
@@ -434,7 +459,10 @@ def optimize(
     overrides: dict[str, Any] | None = None,
     max_iterations: int = 100,
     release_caches: bool = False,
+    derivative_mode: str = "auto",
+    derivative_batch_size: int = 1,
     workspace: CaseWorkspace | None = None,
+    recorder: PerformanceRecorder | None = None,
 ) -> StudyResult:
     """Solve a bounded local constrained design using SLSQP and exact JAX derivatives.
 
@@ -443,6 +471,8 @@ def optimize(
     Success requires optimizer termination, feasibility, finite derivatives, and
     accepted final physics. A failed final candidate is retained, never promoted.
     Screening economics and local optimization don't imply a global optimum.
+    An optional ``recorder`` measures each local linearization and Jacobian
+    application without adding timing fields to the study artifact.
     """
     from scipy.optimize import minimize
 
@@ -463,6 +493,9 @@ def optimize(
         if p.lower is None or p.upper is None or p.lower >= p.upper:
             raise ValueError("every optimization variable needs finite distinct bounds")
     limits = _constraints(runner, constraints or [])
+    strategy = derivative_strategy(
+        len(names), 1 + len(limits), mode=derivative_mode, batch_size=derivative_batch_size
+    )
     baseline = runner.run(overrides)
     if workspace is not None:
         workspace.save_run(baseline)
@@ -478,6 +511,8 @@ def optimize(
                 "constraints": constraints or [],
                 "max_iterations": max_iterations,
                 "release_caches": release_caches,
+                "derivative_mode": derivative_mode,
+                "derivative_batch_size": derivative_batch_size,
             },
             workspace,
         )
@@ -520,7 +555,9 @@ def optimize(
 
     # Host SLSQP keeps the optimizer out of the nested unit-solver trace. The
     # differentiated objective still uses the kernels' implicit Jacobians.
-    jacobian = _directional_jacobian(evaluate)
+    jacobian = _directional_jacobian(
+        evaluate, mode=derivative_mode, batch_size=derivative_batch_size, recorder=recorder
+    )
     cached_x: np.ndarray | None = None
     cached: tuple[np.ndarray, np.ndarray] | None = None
 
@@ -539,6 +576,13 @@ def optimize(
                 reason = "Numerical solve or derivative failed."
         except (ValueError, RuntimeError, ArithmeticError) as exc:
             reason = str(exc)
+        finally:
+            if release_caches:
+                # The local map is gone and its results are host arrays. Drop
+                # unreachable Python cycles, but retain compiled unit kernels:
+                # clearing JAX's caches here forces expensive recompilation at
+                # the next point and can increase its compiler memory peak.
+                gc.collect()
         history.append(
             {
                 "normalized_variables": x.tolist(),
@@ -595,6 +639,7 @@ def optimize(
                     "accepted": False,
                     "baseline_id": baseline.run_id,
                     "candidate_id": None,
+                    "derivatives": strategy,
                     "variables": list(names),
                     "objective": objective,
                     "sense": sense,
@@ -661,6 +706,7 @@ def optimize(
                 "accepted": valid,
                 "baseline_id": baseline.run_id,
                 "candidate_id": candidate.run_id,
+                "derivatives": strategy,
                 "initialization": "accepted_baseline; final candidate starts cold",
                 "initialization_checks": initialization_checks,
                 "variables": list(names),

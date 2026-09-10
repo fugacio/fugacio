@@ -1,0 +1,85 @@
+name: Process performance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/fugacio-thermo/src/fugacio/thermo/implicit.py"
+      - "packages/fugacio-thermo/src/fugacio/thermo/energy.py"
+      - "packages/fugacio-thermo/src/fugacio/thermo/package.py"
+      - "packages/fugacio-thermo/src/fugacio/thermo/linear.py"
+      - "packages/fugacio-thermo/src/fugacio/thermo/sensitivity.py"
+      - "packages/fugacio-thermo/src/fugacio/thermo/sparsity.py"
+      - "packages/fugacio-sim/src/fugacio/sim/distillation.py"
+      - "packages/fugacio-sim/src/fugacio/sim/flowsheet.py"
+      - "packages/fugacio-sim/src/fugacio/sim/units.py"
+      - "packages/fugacio-sim/src/fugacio/sim/heat_exchanger.py"
+      - "packages/fugacio-sim/src/fugacio/sim/eo/**"
+      - "packages/fugacio-sim/src/fugacio/sim/cases/**"
+      - "scripts/benchmark_process.py"
+      - "uv.lock"
+      - ".github/workflows/performance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: column-32
+            arguments: --scenario column --stages 32
+            rss-gb: 7
+          - name: column-64
+            arguments: --scenario column --stages 64
+            rss-gb: 7
+          - name: depropanizer-optimization
+            arguments: --scenario depropanizer --study optimization --release-caches
+            rss-gb: 7
+          - name: ethanol-train
+            arguments: --scenario ethanol-train --stages 12 --study sensitivities --release-caches
+            # This job needs the public-repository 16 GB runner, or a larger
+            # runner on private forks. Its budget is separate from the 7 GB
+            # depropanizer acceptance target.
+            rss-gb: 12
+          - name: many-variable
+            arguments: --scenario heater-bank --variables 24
+            rss-gb: 7
+    env:
+      UV_PYTHON: "3.12"
+      # Bound glibc's allocation arenas at process startup. Record this setting
+      # with the observations; it materially affects retained Linux RSS.
+      MALLOC_ARENA_MAX: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      # A fresh subprocess and empty persistent cache are essential here.
+      # Compile-cache restoration belongs to the functional test jobs, not
+      # cold performance evidence. Resource limits fail with retained reports.
+      - name: Run bounded cold benchmark
+        run: >-
+          uv run --no-sync python scripts/benchmark_process.py
+          ${{ matrix.arguments }}
+          --output artifacts/performance/${{ matrix.name }}
+          --cache cold --max-rss-gb ${{ matrix.rss-gb }} --timeout-seconds 3000
+      - name: Preserve observations and audited runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: process-performance-${{ matrix.name }}
+          path: |
+            artifacts/performance/*/*.json
+            artifacts/performance/*/*.log
+            artifacts/performance/*/workspace/**/*.json
+          if-no-files-found: error

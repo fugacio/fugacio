@@ -8,14 +8,70 @@ temperature curve, (5) the second-law cap on an infeasible request, and (6) the
 implicit gradient of the ``UA``-specified duty against a finite difference.
 """
 
+from dataclasses import dataclass
+from typing import NamedTuple
+
 import jax
 import jax.numpy as jnp
+import numpy as np
 import pytest
 
 from fugacio.sim import Stream, heat_exchanger, package_for
+from fugacio.sim.heat_exchanger import _curves
 from fugacio.sim.properties import enthalpy_flow
 
 C = ("methane", "ethane", "propane")
+
+
+@pytest.mark.parametrize("flow", ["counter", "parallel"])
+def test_compatible_curve_models_share_a_flash_body_and_keep_both_parameter_derivatives(flow):
+    calls = []
+
+    class Temperature(NamedTuple):
+        t: jax.Array
+
+    @jax.tree_util.register_dataclass
+    @dataclass
+    class Package:
+        cp: jax.Array
+
+        def flash_ph(self, pressure, enthalpy, composition, **kwargs):
+            calls.append(True)
+            return Temperature(enthalpy / self.cp + pressure * 0.01 + jnp.sum(composition**2))
+
+    hot = Stream(jnp.array([2.0, 8.0]), jnp.array(80.0), jnp.array(3.0), ("a", "b"))
+    cold = Stream(jnp.array([7.0, 3.0]), jnp.array(20.0), jnp.array(6.0), ("a", "b"))
+    point = jnp.array([2.0, 4.0, 120.0, 90.0, 12.0, 2.0, 5.0])
+
+    def curves(x):
+        h, c = _curves(
+            x[4], 3, flow, hot, cold, Package(x[0]), Package(x[1]), x[2], x[3], x[5], x[6], 300.0
+        )
+        return jnp.concatenate((h, c))
+
+    def expected(x):
+        fraction = jnp.linspace(0.0, 1.0, 4)
+        cold_fraction = 1 - fraction if flow == "counter" else fraction
+        h = (x[2] - fraction * x[4] / 10) / x[0]
+        h += (3 + fraction * (x[5] - 3)) * 0.01 + 0.68
+        c = (x[3] + cold_fraction * x[4] / 10) / x[1]
+        c += (6 + cold_fraction * (x[6] - 6)) * 0.01 + 0.58
+        return jnp.concatenate(
+            (jnp.where(fraction == 0, 80.0, h), jnp.where(cold_fraction == 0, 20.0, c))
+        )
+
+    jax.make_jaxpr(curves)(point)
+    assert calls == [True]
+    for transform in (lambda f: f, jax.jacfwd, jax.jacrev):
+        np.testing.assert_allclose(
+            jax.jit(transform(curves))(point), transform(expected)(point), rtol=1e-11, atol=1e-11
+        )
+    np.testing.assert_allclose(
+        jax.jit(jax.hessian(lambda x: jnp.sum(curves(x) ** 2)))(point),
+        jax.hessian(lambda x: jnp.sum(expected(x) ** 2))(point),
+        rtol=1e-10,
+        atol=1e-10,
+    )
 
 
 def _hot() -> Stream:

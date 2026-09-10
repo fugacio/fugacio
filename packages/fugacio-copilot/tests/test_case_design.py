@@ -25,6 +25,28 @@ def test_default_registry_exposes_portable_case_tools():
     assert len(schema["unit_types"]) == 12
 
 
+def test_design_solver_choices_structure_and_profile_evidence(tmp_path):
+    session = DesignSession(CaseWorkspace(tmp_path))
+    case_id = session.create_case(example_case().to_dict())["case_id"]
+    diagnostic = session.diagnose_case(case_id)
+    assert diagnostic["equation_oriented"]["structurally_square_and_matched"]
+    assert not session.trusted_runs
+    dense = session._runner(case_id, "sequential", "dense", "dense")
+    block = session._runner(case_id, "sequential", "block", "colored")
+    assert dense is not block
+    assert dense is session._runner(case_id, "sequential", "dense", "dense")
+    study = session.study_case(
+        case_id, "profile", {"warm_repeats": 1}, column_solver="dense", eo_jacobian="dense"
+    )
+    assert study["accepted"]
+    run = session.workspace.load_run(study["baseline_id"])
+    assert run.to_dict()["solver"]["column_solver"] == "dense"
+    assert run.run_id in session.trusted_runs
+    assert session.inspect(study["artifact_id"])["artifact"]["observations"]["phases"]
+    with pytest.raises(ValueError, match="reserved"):
+        session.study_case(case_id, "profile", {"recorder": {"checkpoint": "elsewhere"}})
+
+
 def test_unsupported_provider_text_cannot_become_design_answer(tmp_path):
     provider = MockProvider(
         [ChatResponse(content="This design is verified and costs exactly $123.")]

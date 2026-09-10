@@ -261,6 +261,24 @@ def build_run(
             "component_generation_mol_s": u.generation,
             "numerical": u.report.to_dict(),
         }
+        if definition.kind == "column":
+            stages = definition.structure["n_stages"]
+            width = 2 * len(runner.case.components) + 1
+            border = int(definition.structure["condenser"] is not None) + int(
+                definition.structure["reboiler"] is not None
+            )
+            block = runner.options.column_solver == "block"
+            units[definition.name]["linear_system"] = {
+                "solver": runner.options.column_solver,
+                "unknowns": stages * width + border,
+                "stage_block_size": width,
+                "border_size": border,
+                "forward_directions": min(stages, 3) * width + border
+                if block
+                else stages * width + border,
+                "border_reverse_directions": border if block else 0,
+                "fallback_policy": "checked_dense" if block else "not_applicable",
+            }
         if definition.kind in ("flash", "component_separator") or (
             definition.kind == "mixer" and "t" in definition.settings
         ):
@@ -424,6 +442,8 @@ def render_report(run: CaseRun) -> str:
         "",
         f"Process acceptance: **{'passed' if run.accepted else 'failed'}**. "
         f"Backend: `{d['solver']['backend']}`.",
+        f"Column linear solver: `{d['solver'].get('column_solver', 'dense')}`. "
+        f"EO Jacobian assembly: `{d['solver'].get('eo_jacobian', 'dense')}`.",
         "",
         "| Check | Result |",
         "| --- | --- |",

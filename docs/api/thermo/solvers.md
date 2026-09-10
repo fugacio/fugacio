@@ -12,3 +12,13 @@ failure handling, and derivative limits.
 ## Implicit solvers
 
 ::: fugacio.thermo.implicit
+
+## Structured linear algebra
+
+::: fugacio.thermo.linear
+
+::: fugacio.thermo.sparsity
+
+## Reusable sensitivities
+
+::: fugacio.thermo.sensitivity

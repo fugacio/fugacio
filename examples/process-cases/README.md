@@ -15,14 +15,19 @@ uv run fugacio sweep examples/process-cases/depropanizer.json examples/process-c
 uv run fugacio sensitivities examples/process-cases/depropanizer.json examples/process-cases/depropanizer-sensitivities.json
 uv run fugacio optimize examples/process-cases/depropanizer.json examples/process-cases/depropanizer-optimization.json
 uv run fugacio run examples/process-cases/measured-heater.json --report measured-heater.md
+uv run fugacio profile examples/process-cases/depropanizer.json examples/process-cases/depropanizer-profile.json
+uv run fugacio sensitivities examples/process-cases/ethanol-train.json examples/process-cases/ethanol-train-sensitivities.json
+uv run fugacio sensitivities examples/process-cases/heater-bank.json examples/process-cases/heater-bank-sensitivities.json
 ```
 
 The first rigorous plant solve and gradient compilation can take tens of
 minutes and require substantial memory, particularly on Intel Macs. Studies
-evaluate one parameter direction
-at a time and reuse compiled recycle maps across optimizer points. CI runs
-plant solves, derivatives, and optimization in separate processes to bound
+reuse one linearization per point and select forward or reverse directions
+from the input/output counts. They reuse compiled recycle maps across optimizer
+points. CI runs plant solves, derivatives, and optimization in separate processes to bound
 peak memory.
+The [performance guide](../../docs/performance.md) covers structured columns,
+explicit solver options, profiling, and isolated benchmarks with resource limits.
 
 To reuse compilation work across CLI invocations, enable JAX's persistent cache
 in your checkout before running the commands:

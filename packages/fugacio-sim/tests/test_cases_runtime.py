@@ -329,7 +329,8 @@ def test_pure_fluid_eo_retains_saturation_quality():
     assert b.to_dict()["metrics"]["quality"]["value"] == pytest.approx(quality, abs=1e-7)
 
 
-def test_exchanger_retains_profiles_and_independent_heat_balance():
+@pytest.mark.parametrize("flow", ["counter", "co"])
+def test_exchanger_retains_profiles_and_independent_heat_balance(flow):
     d = example_case().to_dict()
     d["feeds"]["hot"] = {**d["feeds"]["feed"], "temperature": {"value": 400, "unit": "K"}}
     d["units"] = [
@@ -339,6 +340,7 @@ def test_exchanger_retains_profiles_and_independent_heat_balance():
             "inlets": ["hot", "feed"],
             "outlets": ["cooled", "heated"],
             "settings": {
+                "flow": flow,
                 "min_approach": {"value": 20, "unit": "delta_K"},
                 "u": {"value": 200, "unit": "W/(m2 K)"},
             },

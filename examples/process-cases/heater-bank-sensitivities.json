@@ -1,0 +1,33 @@
+{
+  "derivative_batch_size": 1,
+  "derivative_mode": "auto",
+  "metrics": [
+    "duty"
+  ],
+  "parameters": [
+    "temperature_00",
+    "temperature_01",
+    "temperature_02",
+    "temperature_03",
+    "temperature_04",
+    "temperature_05",
+    "temperature_06",
+    "temperature_07",
+    "temperature_08",
+    "temperature_09",
+    "temperature_10",
+    "temperature_11",
+    "temperature_12",
+    "temperature_13",
+    "temperature_14",
+    "temperature_15",
+    "temperature_16",
+    "temperature_17",
+    "temperature_18",
+    "temperature_19",
+    "temperature_20",
+    "temperature_21",
+    "temperature_22",
+    "temperature_23"
+  ]
+}

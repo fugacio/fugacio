@@ -99,7 +99,11 @@ class CaseWorkspace:
             for k, v in d["requested_parameters_si"].items()
         }
         run = CaseRunner(
-            case, options=SolverOptions(**d["solver"]), policy=AcceptancePolicy(**d["policy"])
+            case,
+            options=SolverOptions(
+                **{"column_solver": "dense", "eo_jacobian": "dense", **d["solver"]}
+            ),
+            policy=AcceptancePolicy(**d["policy"]),
         ).run(overrides)
         self.save_run(run)
         return run

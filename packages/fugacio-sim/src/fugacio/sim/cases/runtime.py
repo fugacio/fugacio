@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any, NamedTuple
 
 import jax
@@ -13,6 +13,7 @@ from fugacio.sim.cases.backends import CaseFlowsheet, RegisteredBlock
 from fugacio.sim.cases.costing import evaluate_economics, parse_economics, validate_economic_values
 from fugacio.sim.cases.evidence import build_package
 from fugacio.sim.cases.expressions import metric_values
+from fugacio.sim.cases.jsonio import canonical_json
 from fugacio.sim.cases.quantities import (
     TEMPERATURE,
     CaseValidationError,
@@ -21,6 +22,7 @@ from fugacio.sim.cases.quantities import (
     unit_for,
 )
 from fugacio.sim.cases.registry import (
+    UnitDefinition,
     UnitEvaluation,
     evaluate_unit,
     parse_units,
@@ -34,6 +36,50 @@ from fugacio.thermo.diagnostics import SolveReport, residual_report
 from fugacio.thermo.implicit import newton_system_with_info
 
 
+def _unit_template(definition: UnitDefinition) -> tuple[UnitDefinition, dict[str, Any]]:
+    """Separate parameter bindings from unit identity for compilation reuse.
+
+    Fixed settings remain part of the template, preserving constant folding.
+    Parameter names don't affect its numerical equations or compiled shape.
+    """
+    bindings: dict[str, Any] = {}
+
+    def convert(value: Any) -> Any:
+        # Validated value specifications store parameter references as names.
+        if isinstance(value, str):
+            name = f"setting_{len(bindings)}"
+            bindings[name] = value
+            return name
+        if isinstance(value, list | tuple):
+            return [convert(v) for v in value]
+        return value
+
+    structure = copy.deepcopy(definition.structure)
+    if definition.kind == "column":
+        for group, field in (
+            ("specs", "value"),
+            ("side_draws", "fraction"),
+            ("stage_duties", "duty"),
+        ):
+            for item in structure[group]:
+                item[field] = convert(item[field])
+    return replace(
+        definition,
+        name="unit",
+        inlets=tuple(f"inlet_{i}" for i in range(len(definition.inlets))),
+        outlets=tuple(f"outlet_{i}" for i in range(len(definition.outlets))),
+        settings={k: convert(v) for k, v in definition.settings.items()},
+        structure=structure,
+    ), bindings
+
+
+def _typed_arrays(tree: Any) -> Any:
+    """Keep dtypes while removing weak scalar types from numerical call boundaries."""
+    return jax.tree_util.tree_map(
+        lambda value: jnp.asarray(value, dtype=jnp.asarray(value).dtype), tree
+    )
+
+
 @dataclass(frozen=True)
 class SolverOptions:
     """Reproducible numerical choices; no solver silently falls back to another backend."""
@@ -43,12 +89,18 @@ class SolverOptions:
     tolerance: float = 1e-9
     max_iterations: int = 100
     specification_iterations: int = 40
+    column_solver: str = "block"
+    eo_jacobian: str = "colored"
 
     def __post_init__(self) -> None:
         if self.backend not in ("sequential", "eo"):
             raise ValueError("backend must be sequential or eo")
         if self.recycle_method not in ("wegstein", "broyden", "newton"):
             raise ValueError("unknown recycle method")
+        if self.column_solver not in ("block", "dense"):
+            raise ValueError("column_solver must be block or dense")
+        if self.eo_jacobian not in ("colored", "dense"):
+            raise ValueError("eo_jacobian must be colored or dense")
         if number(self.tolerance, "tolerance") <= 0:
             raise ValueError("tolerance must be positive")
         for n in (self.max_iterations, self.specification_iterations):
@@ -108,8 +160,9 @@ class CaseRunner:
                 "reaction formation enthalpies aren't compatible with the reference-fluid datum",
             )
         self._sequential = CaseFlowsheet()
-        self._eo = EOFlowsheet(model=self.package)
+        self._eo = EOFlowsheet(model=self.package, jacobian_mode=self.options.eo_jacobian)
         self._unit_kernels: dict[str, Any] = {}
+        self._unit_templates: dict[str, Any] = {}
         for feed in self.feeds:
             stream = feed.build(self.case.components, self.defaults, self.package)
             self._sequential.feed(feed.name, stream)
@@ -120,9 +173,29 @@ class CaseRunner:
                 # Stage the complete registered unit, including feed-property
                 # preparation and retained outputs. Keeping every operating
                 # value dynamic lets later design points reuse these kernels.
-                @jax.jit
+                template, bindings = _unit_template(d)
+                key = canonical_json(asdict(template))
+                if key not in self._unit_templates:
+
+                    @jax.jit
+                    def compiled(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
+                        return evaluate_unit(
+                            template,
+                            inputs,
+                            parameters,
+                            package,
+                            guess=guess,
+                            column_solver=self.options.column_solver,
+                        )
+
+                    self._unit_templates[key] = compiled
+                compiled = self._unit_templates[key]
+
                 def kernel(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
-                    return evaluate_unit(d, inputs, parameters, package, guess=guess)
+                    local = {k: resolve_value(v, parameters) for k, v in bindings.items()}
+                    return compiled(
+                        _typed_arrays(inputs), _typed_arrays(local), package, _typed_arrays(guess)
+                    )
 
                 self._unit_kernels[d.name] = kernel
 
@@ -174,6 +247,37 @@ class CaseRunner:
         self._spec_lower, self._spec_span = lower, span
         self._spec_target, self._spec_tolerance = target, tolerance
         self._ready = False
+
+    def diagnose_structure(self) -> dict[str, Any]:
+        """Describe process topology and declared numerical structure without solving.
+
+        Registered EO units retain nested column and flash solves. Their global
+        incidence report describes stream connections, not an expanded MESH
+        system. Structural matching doesn't imply accepted process physics.
+        """
+        return {
+            "case_id": self.case.case_id,
+            "solver": asdict(self.options),
+            "unit_instances": len(self.units),
+            "unit_templates": len(self._unit_templates),
+            "partitions": [
+                {"units": list(part.units), "cyclic": part.cyclic, "tears": list(part.tears)}
+                for part in self._sequential.partition()
+            ],
+            "equation_oriented": self._eo.diagnose_structure(),
+            "columns": {
+                unit.name: {
+                    "stages": unit.structure["n_stages"],
+                    "components": len(self.case.components),
+                    "stage_block_size": 2 * len(self.case.components) + 1,
+                    "border_size": int(unit.structure["condenser"] is not None)
+                    + int(unit.structure["reboiler"] is not None),
+                    "linear_solver": self.options.column_solver,
+                }
+                for unit in self.units
+                if unit.kind == "column"
+            },
+        }
 
     def parameter_values(self, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         """Convert explicit host quantities and validate the entire operating point."""
@@ -241,6 +345,10 @@ class CaseRunner:
             p, q = saved["profiles_si"], saved["quantities_si"]
             traffic = {}
             for phase, composition in (("liquid", "x"), ("vapor", "y")):
+                if "stage_" + phase in p:
+                    traffic[phase] = jnp.asarray(p["stage_" + phase])
+                    continue
+                # Older saved runs contain totals including side draws.
                 factor = jnp.ones(d.structure["n_stages"])
                 for draw in d.structure["side_draws"]:
                     if draw["phase"] == phase:

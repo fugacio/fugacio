@@ -1,0 +1,3892 @@
+{
+  "schema_version": 1,
+  "kind": "process_performance_observations",
+  "recorded_date_utc": "2026-09-09",
+  "scope": [
+    "Local CPU observations, not universal timing or memory guarantees.",
+    "Cold runs use fresh workers and independent empty persistent caches.",
+    "Peak RSS is a process-lifetime high-water mark, including compilation.",
+    "Failed OOM observations retain checkpoint memory, which is not the final peak.",
+    "macOS and Linux use different JAX versions; their timings are not direct comparisons.",
+    "The macOS train and Linux benchmarks shared a physical host; elapsed times are not isolated hardware comparisons.",
+    "Numerical and conservation checks do not extend measured thermodynamic qualification.",
+    "No validated 3x cold-gradient speedup against v0.6.0 is claimed.",
+    "Normwise observations use infinity-norm backward errors and RHS-relative residual checks, and initialize the persistent cache before Fugacio imports.",
+    "Source digests distinguish numerical changes, runtime-setting metadata, and the completed-worker RSS guard. Every accepted observation has a recorded peak below its declared budget.",
+    "Prior numerical and resource failures retain their distinct source digests and implementation labels; they are not current acceptance claims.",
+    "The hard 7 GB optimization target does not apply to all sensitivity studies."
+  ],
+  "environments": {
+    "linux-jax-0.10.1-31ca17d4": {
+      "python": "3.12.14",
+      "platform": "Linux-6.10.14-linuxkit-x86_64-with-glibc2.41",
+      "machine": "x86_64",
+      "jax": "0.10.1",
+      "jax_backend": "cpu",
+      "jax_x64": true,
+      "devices": [
+        "cpu:0"
+      ],
+      "cpu_count": 16,
+      "runtime_settings": {
+        "MALLOC_ARENA_MAX": "2",
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null,
+        "XLA_FLAGS": null
+      }
+    },
+    "macos-jax-0.4.38-eefed80e": {
+      "python": "3.12.13",
+      "platform": "macOS-15.7.9-x86_64-i386-64bit",
+      "machine": "x86_64",
+      "jax": "0.4.38",
+      "jax_backend": "cpu",
+      "jax_x64": true,
+      "devices": [
+        "TFRT_CPU_0"
+      ],
+      "cpu_count": 16,
+      "runtime_settings": {
+        "MALLOC_ARENA_MAX": null,
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null,
+        "XLA_FLAGS": null
+      }
+    },
+    "macos-jax-0.4.38-e4702e51": {
+      "python": "3.12.13",
+      "platform": "macOS-15.7.9-x86_64-i386-64bit",
+      "machine": "x86_64",
+      "jax": "0.4.38",
+      "jax_backend": "cpu",
+      "jax_x64": true,
+      "devices": [
+        "TFRT_CPU_0"
+      ],
+      "cpu_count": 16
+    },
+    "linux-jax-0.10.1-2a7ab6f1": {
+      "cpu_count": 16,
+      "devices": [
+        "cpu:0"
+      ],
+      "jax": "0.10.1",
+      "jax_backend": "cpu",
+      "jax_x64": true,
+      "machine": "x86_64",
+      "platform": "Linux-6.10.14-linuxkit-x86_64-with-glibc2.41",
+      "python": "3.12.14"
+    }
+  },
+  "observations": [
+    {
+      "name": "column-32-block",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "292da4f9ed0c1ccaeb0836a7ca3c26b3b9d8ef2b9b7e3c8b439f5bd504624f2e",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/column32-normwise-final/benchmark.json",
+      "original_report_sha256": "9985b3005183d7891a1f1bf96af940c1eeb25fac16a740a348b028b6b6a5cb15",
+      "configuration": {
+        "scenario": "column",
+        "study": "profile",
+        "stages": 32,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 114.80181219699807,
+      "peak_rss_bytes": 1392128000,
+      "last_checkpoint_peak_rss_bytes": 1392128000,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "column:trace_and_lower",
+          "status": "completed",
+          "seconds": 7.117455461000645,
+          "cpu_seconds": 7.872413085,
+          "process_peak_rss_bytes": 356302848
+        },
+        {
+          "name": "column:compile",
+          "status": "completed",
+          "seconds": 25.411277650997363,
+          "cpu_seconds": 65.41100577099999,
+          "process_peak_rss_bytes": 966934528
+        },
+        {
+          "name": "column:first_execution",
+          "status": "completed",
+          "seconds": 0.019098789998679422,
+          "cpu_seconds": 0.0405190489999967,
+          "process_peak_rss_bytes": 966934528
+        },
+        {
+          "name": "column:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.024332674001925625,
+          "cpu_seconds": 0.08162914999999771,
+          "process_peak_rss_bytes": 966934528
+        },
+        {
+          "name": "column:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.015561496002192143,
+          "cpu_seconds": 0.042491327999997,
+          "process_peak_rss_bytes": 966934528
+        },
+        {
+          "name": "column_derivative:trace_and_lower",
+          "status": "completed",
+          "seconds": 9.021847837000678,
+          "cpu_seconds": 9.292087242000008,
+          "process_peak_rss_bytes": 1007456256
+        },
+        {
+          "name": "column_derivative:compile",
+          "status": "completed",
+          "seconds": 35.46102019799946,
+          "cpu_seconds": 95.07003595300002,
+          "process_peak_rss_bytes": 1367420928
+        },
+        {
+          "name": "column_derivative:first_execution",
+          "status": "completed",
+          "seconds": 0.042275072999473196,
+          "cpu_seconds": 0.07419397999998978,
+          "process_peak_rss_bytes": 1367420928
+        },
+        {
+          "name": "column_derivative:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.01492855299875373,
+          "cpu_seconds": 0.03939174300001014,
+          "process_peak_rss_bytes": 1367420928
+        },
+        {
+          "name": "column_derivative:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.014390573996934108,
+          "cpu_seconds": 0.038472367999986545,
+          "process_peak_rss_bytes": 1367420928
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "solver": {
+        "linear_solver": "block",
+        "unknowns": 162,
+        "jacobian_directions": 17,
+        "border_reverse_directions": 2,
+        "dense_fallback": "checked"
+      },
+      "numerical": {
+        "converged": true,
+        "status": "converged",
+        "iterations": 5,
+        "residual_norm": 6.648315244496497e-15,
+        "step_norm": 1.77072409179857e-07,
+        "worst_equation": 156
+      },
+      "checks": {
+        "material_error_mol_s": 9.237055564881302e-14,
+        "energy_error_w": 1.1641532182693481e-09,
+        "finite_difference_relative_error": 1.512510943525183e-06
+      },
+      "metrics_si": [
+        5386867.952324904,
+        0.9997926102260819,
+        383.8031855229878
+      ],
+      "jacobian_si": [
+        [
+          1516844.6977898935,
+          2.7850019159721433
+        ],
+        [
+          0.00036352120042670855,
+          -4.299758903147994e-09
+        ],
+        [
+          0.016990222799741026,
+          0.00034939934348000406
+        ]
+      ]
+    },
+    {
+      "name": "column-32-dense",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "292da4f9ed0c1ccaeb0836a7ca3c26b3b9d8ef2b9b7e3c8b439f5bd504624f2e",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/column32-dense-normwise-final/benchmark.json",
+      "original_report_sha256": "4318fa8a7ea04c0e9d50413c4a2f44eab65cce72aa49ad055ee4a37224361e0d",
+      "configuration": {
+        "scenario": "column",
+        "study": "profile",
+        "stages": 32,
+        "variables": 24,
+        "column_solver": "dense",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 94.50812789700285,
+      "peak_rss_bytes": 1108529152,
+      "last_checkpoint_peak_rss_bytes": 1108529152,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "column:trace_and_lower",
+          "status": "completed",
+          "seconds": 6.152311976999044,
+          "cpu_seconds": 6.921421606000001,
+          "process_peak_rss_bytes": 340656128
+        },
+        {
+          "name": "column:compile",
+          "status": "completed",
+          "seconds": 20.500652963000903,
+          "cpu_seconds": 54.671193358,
+          "process_peak_rss_bytes": 772210688
+        },
+        {
+          "name": "column:first_execution",
+          "status": "completed",
+          "seconds": 0.03860268500284292,
+          "cpu_seconds": 0.10439958800000682,
+          "process_peak_rss_bytes": 772210688
+        },
+        {
+          "name": "column:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.023737908999464707,
+          "cpu_seconds": 0.09308043000000055,
+          "process_peak_rss_bytes": 772210688
+        },
+        {
+          "name": "column:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.02373284400164266,
+          "cpu_seconds": 0.09165693500000316,
+          "process_peak_rss_bytes": 772210688
+        },
+        {
+          "name": "column_derivative:trace_and_lower",
+          "status": "completed",
+          "seconds": 6.531185469000775,
+          "cpu_seconds": 6.788371420000004,
+          "process_peak_rss_bytes": 772210688
+        },
+        {
+          "name": "column_derivative:compile",
+          "status": "completed",
+          "seconds": 27.211681142001908,
+          "cpu_seconds": 74.03332626400001,
+          "process_peak_rss_bytes": 1045504000
+        },
+        {
+          "name": "column_derivative:first_execution",
+          "status": "completed",
+          "seconds": 0.03615169399927254,
+          "cpu_seconds": 0.11621582299997613,
+          "process_peak_rss_bytes": 1045504000
+        },
+        {
+          "name": "column_derivative:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.02604951800094568,
+          "cpu_seconds": 0.1046889919999785,
+          "process_peak_rss_bytes": 1045504000
+        },
+        {
+          "name": "column_derivative:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.024915477002650732,
+          "cpu_seconds": 0.09890667900000949,
+          "process_peak_rss_bytes": 1045504000
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "solver": {
+        "linear_solver": "dense",
+        "unknowns": 162,
+        "jacobian_directions": 162,
+        "border_reverse_directions": 0,
+        "dense_fallback": "not_applicable"
+      },
+      "numerical": {
+        "converged": true,
+        "status": "converged",
+        "iterations": 5,
+        "residual_norm": 8.992669656792219e-15,
+        "step_norm": 4.238449037075043e-05,
+        "worst_equation": 147
+      },
+      "checks": {
+        "material_error_mol_s": 5.684341886080802e-14,
+        "energy_error_w": 4.656612873077393e-10,
+        "finite_difference_relative_error": 1.5123577375585662e-06
+      },
+      "metrics_si": [
+        5386867.952324906,
+        0.9997926102260816,
+        383.80318552298786
+      ],
+      "jacobian_si": [
+        [
+          1516844.6977898893,
+          2.7850019159720802
+        ],
+        [
+          0.0003635212004268912,
+          -4.299758903147968e-09
+        ],
+        [
+          0.01699022279971712,
+          0.00034939934348000395
+        ]
+      ]
+    },
+    {
+      "name": "column-64-block",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "12cade90b6f92435d9c77ef43660c8de366d243ba0cdfdaf8e7c521bef80c8b2",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/column64-normwise-checked/benchmark.json",
+      "original_report_sha256": "cb4946e268a7f460e7050963d3ad2faa51ff229cbecf126c11d11fa29557f68d",
+      "configuration": {
+        "scenario": "column",
+        "study": "profile",
+        "stages": 64,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 110.73915092800235,
+      "peak_rss_bytes": 1408294912,
+      "last_checkpoint_peak_rss_bytes": 1408294912,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "column:trace_and_lower",
+          "status": "completed",
+          "seconds": 5.9274935069988715,
+          "cpu_seconds": 6.691392093999999,
+          "process_peak_rss_bytes": 356409344
+        },
+        {
+          "name": "column:compile",
+          "status": "completed",
+          "seconds": 22.901783133998833,
+          "cpu_seconds": 61.314330246999994,
+          "process_peak_rss_bytes": 983953408
+        },
+        {
+          "name": "column:first_execution",
+          "status": "completed",
+          "seconds": 0.040950595997856,
+          "cpu_seconds": 0.33949450800000136,
+          "process_peak_rss_bytes": 1000448000
+        },
+        {
+          "name": "column:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.09853885499978787,
+          "cpu_seconds": 0.40799903600000675,
+          "process_peak_rss_bytes": 1001627648
+        },
+        {
+          "name": "column:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.16466954000134137,
+          "cpu_seconds": 0.4363109659999935,
+          "process_peak_rss_bytes": 1002020864
+        },
+        {
+          "name": "column_derivative:trace_and_lower",
+          "status": "completed",
+          "seconds": 8.12917585499963,
+          "cpu_seconds": 8.626555436999993,
+          "process_peak_rss_bytes": 1046192128
+        },
+        {
+          "name": "column_derivative:compile",
+          "status": "completed",
+          "seconds": 32.997397785999055,
+          "cpu_seconds": 87.308055873,
+          "process_peak_rss_bytes": 1381638144
+        },
+        {
+          "name": "column_derivative:first_execution",
+          "status": "completed",
+          "seconds": 0.06600311000147485,
+          "cpu_seconds": 0.43888150999998743,
+          "process_peak_rss_bytes": 1381638144
+        },
+        {
+          "name": "column_derivative:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.10491758699936327,
+          "cpu_seconds": 0.48872235700000033,
+          "process_peak_rss_bytes": 1381638144
+        },
+        {
+          "name": "column_derivative:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.10589973799869767,
+          "cpu_seconds": 0.48004870299999425,
+          "process_peak_rss_bytes": 1381638144
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "solver": {
+        "linear_solver": "block",
+        "unknowns": 322,
+        "jacobian_directions": 17,
+        "border_reverse_directions": 2,
+        "dense_fallback": "checked"
+      },
+      "numerical": {
+        "converged": true,
+        "status": "converged",
+        "iterations": 7,
+        "residual_norm": 2.7592791189545565e-14,
+        "step_norm": 4.4732281878623326e-07,
+        "worst_equation": 288
+      },
+      "checks": {
+        "material_error_mol_s": 1.7053025658242404e-13,
+        "energy_error_w": 4.656612873077393e-10,
+        "finite_difference_relative_error": 2.3670233038956105e-05
+      },
+      "metrics_si": [
+        5386695.491260134,
+        0.9999999763149034,
+        383.8128783953207
+      ],
+      "jacobian_si": [
+        [
+          1517079.395957796,
+          2.781566222210126
+        ],
+        [
+          7.383693750862004e-08,
+          -9.54206001435522e-13
+        ],
+        [
+          3.4517064839823107e-06,
+          0.00034960021257994387
+        ]
+      ]
+    },
+    {
+      "name": "column-64-dense",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "unchanged_dense_reference",
+      "source_sha256": "4f6eaa60e8e830849eca18e4fbc46bbeee092c8c214c3fac76ee19f0616ac9bf",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/column64-dense-diagnostic/benchmark.json",
+      "original_report_sha256": "abc9e55deb40f6aa7a544ae74e5b00194752109d435d58c5cbb53a5c7d8f1780",
+      "configuration": {
+        "scenario": "column",
+        "study": "profile",
+        "stages": 64,
+        "variables": 24,
+        "column_solver": "dense",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 96.06806033800058,
+      "peak_rss_bytes": 1142149120,
+      "last_checkpoint_peak_rss_bytes": 1142149120,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "column:trace_and_lower",
+          "status": "completed",
+          "seconds": 5.708292743000129,
+          "cpu_seconds": 6.418145282999999,
+          "process_peak_rss_bytes": 340361216
+        },
+        {
+          "name": "column:compile",
+          "status": "completed",
+          "seconds": 19.053469475000384,
+          "cpu_seconds": 49.613134581000004,
+          "process_peak_rss_bytes": 760688640
+        },
+        {
+          "name": "column:first_execution",
+          "status": "completed",
+          "seconds": 0.24762435100092262,
+          "cpu_seconds": 1.1364332020000063,
+          "process_peak_rss_bytes": 760688640
+        },
+        {
+          "name": "column:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.30055217999870365,
+          "cpu_seconds": 1.2140208590000015,
+          "process_peak_rss_bytes": 760688640
+        },
+        {
+          "name": "column:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.29277151900168974,
+          "cpu_seconds": 1.139449141,
+          "process_peak_rss_bytes": 760688640
+        },
+        {
+          "name": "column_derivative:trace_and_lower",
+          "status": "completed",
+          "seconds": 7.06159180800023,
+          "cpu_seconds": 7.534452668,
+          "process_peak_rss_bytes": 781160448
+        },
+        {
+          "name": "column_derivative:compile",
+          "status": "completed",
+          "seconds": 26.992288907998955,
+          "cpu_seconds": 71.00269778399999,
+          "process_peak_rss_bytes": 1064235008
+        },
+        {
+          "name": "column_derivative:first_execution",
+          "status": "completed",
+          "seconds": 0.32248099299977184,
+          "cpu_seconds": 1.387017291999996,
+          "process_peak_rss_bytes": 1064235008
+        },
+        {
+          "name": "column_derivative:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.4053665900009946,
+          "cpu_seconds": 1.6784899499999995,
+          "process_peak_rss_bytes": 1064235008
+        },
+        {
+          "name": "column_derivative:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.47310576499876333,
+          "cpu_seconds": 1.7065460799999812,
+          "process_peak_rss_bytes": 1064235008
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "solver": {
+        "linear_solver": "dense",
+        "unknowns": 322,
+        "jacobian_directions": 322,
+        "border_reverse_directions": 0,
+        "dense_fallback": "not_applicable"
+      },
+      "numerical": {
+        "converged": true,
+        "status": "converged",
+        "iterations": 7,
+        "residual_norm": 2.0772135488656663e-14,
+        "step_norm": 3.8965597815021624e-07,
+        "worst_equation": 293
+      },
+      "checks": {
+        "material_error_mol_s": 2.1316282072803006e-14,
+        "energy_error_w": 1.862645149230957e-09,
+        "finite_difference_relative_error": 1.5433011467334043e-05
+      },
+      "metrics_si": [
+        5386695.491260131,
+        0.9999999763149057,
+        383.81287839532064
+      ],
+      "jacobian_si": [
+        [
+          1517079.3959577864,
+          2.7815662222102664
+        ],
+        [
+          7.383693814647725e-08,
+          -9.542060230609e-13
+        ],
+        [
+          3.4517064958556408e-06,
+          0.00034960021257994376
+        ]
+      ]
+    },
+    {
+      "name": "heater-bank-24",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "292da4f9ed0c1ccaeb0836a7ca3c26b3b9d8ef2b9b7e3c8b439f5bd504624f2e",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/heater-bank-normwise-final/benchmark.json",
+      "original_report_sha256": "167d95a293fdfe0a990c2160426c4224fdcc0ae36d6c8f2c92609f8251863d6b",
+      "configuration": {
+        "scenario": "heater-bank",
+        "study": "profile",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 43.48760122800013,
+      "peak_rss_bytes": 861085696,
+      "last_checkpoint_peak_rss_bytes": 861085696,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "first_audited_run",
+          "status": "completed",
+          "seconds": 18.196730655003194,
+          "cpu_seconds": 38.844141384000004,
+          "process_peak_rss_bytes": 589217792
+        },
+        {
+          "name": "warm_audited_run[0]",
+          "status": "completed",
+          "seconds": 0.4727214080012345,
+          "cpu_seconds": 0.5068045880000014,
+          "process_peak_rss_bytes": 590602240
+        },
+        {
+          "name": "warm_audited_run[1]",
+          "status": "completed",
+          "seconds": 0.47120832899963716,
+          "cpu_seconds": 0.5025283490000021,
+          "process_peak_rss_bytes": 590655488
+        },
+        {
+          "name": "first:linearization",
+          "status": "completed",
+          "seconds": 13.486982690999866,
+          "cpu_seconds": 22.731022195999998,
+          "process_peak_rss_bytes": 814534656
+        },
+        {
+          "name": "first:jacobian",
+          "status": "completed",
+          "seconds": 3.283055523999792,
+          "cpu_seconds": 4.6453486139999995,
+          "process_peak_rss_bytes": 838766592
+        },
+        {
+          "name": "warm[0]:linearization",
+          "status": "completed",
+          "seconds": 1.6471830370028329,
+          "cpu_seconds": 1.672072301,
+          "process_peak_rss_bytes": 855281664
+        },
+        {
+          "name": "warm[0]:jacobian",
+          "status": "completed",
+          "seconds": 0.410594396002125,
+          "cpu_seconds": 0.41359825399999295,
+          "process_peak_rss_bytes": 857247744
+        },
+        {
+          "name": "warm[1]:linearization",
+          "status": "completed",
+          "seconds": 1.6027560250004171,
+          "cpu_seconds": 1.6275044739999913,
+          "process_peak_rss_bytes": 858427392
+        },
+        {
+          "name": "warm[1]:jacobian",
+          "status": "completed",
+          "seconds": 0.4548850739993213,
+          "cpu_seconds": 0.4580384329999987,
+          "process_peak_rss_bytes": 858820608
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "study_id": "f2e64a0c03f87288f8e1fddad518c572dc753e5e1e3811d5870dbad648aefe46",
+      "case_id": "e74e46d3e1ff1d27efb868ce90e9a6e6c86d97a6ebc6446f545f6ccaf15a931e",
+      "baseline_id": "7da84a48c0fc9d03dbe4bc8c7ad2103f65b2f867d675d809fcfbbf7714d03f3b",
+      "derivatives": {
+        "requested_mode": "auto",
+        "mode": "reverse",
+        "inputs": 24,
+        "outputs": 1,
+        "directions": 1,
+        "batch_size": 1,
+        "linearizations_per_evaluation": 1,
+        "parameters": [
+          "temperature_00",
+          "temperature_01",
+          "temperature_02",
+          "temperature_03",
+          "temperature_04",
+          "temperature_05",
+          "temperature_06",
+          "temperature_07",
+          "temperature_08",
+          "temperature_09",
+          "temperature_10",
+          "temperature_11",
+          "temperature_12",
+          "temperature_13",
+          "temperature_14",
+          "temperature_15",
+          "temperature_16",
+          "temperature_17",
+          "temperature_18",
+          "temperature_19",
+          "temperature_20",
+          "temperature_21",
+          "temperature_22",
+          "temperature_23"
+        ],
+        "metrics": [
+          "duty"
+        ],
+        "jacobian_si": [
+          [
+            42.72472659561454,
+            42.72786243310456,
+            42.7309981973477,
+            42.73413388833957,
+            42.73726950607578,
+            42.740405050551935,
+            42.74354052176365,
+            42.74667591970653,
+            42.74981124437621,
+            42.75294649576831,
+            42.75608167387844,
+            42.75921677870223,
+            42.76235181023532,
+            42.76548676847334,
+            42.76862165341191,
+            42.77175646504668,
+            42.774891203373286,
+            42.778025868387374,
+            42.78116046008458,
+            42.784294978460565,
+            42.787429423510964,
+            42.79056379523145,
+            42.793698093617664,
+            42.79683231866527
+          ]
+        ],
+        "finite_difference_verified": false
+      },
+      "unit_instances": 24,
+      "unit_templates": 1,
+      "audited_runs": [
+        {
+          "run_id": "7da84a48c0fc9d03dbe4bc8c7ad2103f65b2f867d675d809fcfbbf7714d03f3b",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 0.0,
+            "heat_w": 49482.812057709394,
+            "material_relative_error": 0.0,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 11400.839898096245,
+              "unit": "USD/yr"
+            },
+            "duty": {
+              "value": 49.482812057709396,
+              "unit": "kW"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "depropanizer-optimization-linux",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "12cade90b6f92435d9c77ef43660c8de366d243ba0cdfdaf8e7c521bef80c8b2",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/depropanizer-normwise-final/benchmark.json",
+      "original_report_sha256": "79f5e47b58b11da35dd81028009ea143fbe97182e9f6b7d3e9b81ac33a0261c7",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "optimization",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 832.8878511049988,
+      "peak_rss_bytes": 6590074880,
+      "last_checkpoint_peak_rss_bytes": 6590074880,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "optimization_study",
+          "status": "completed",
+          "seconds": 829.0958486340023,
+          "cpu_seconds": 1490.4207733360001,
+          "process_peak_rss_bytes": 6590074880
+        },
+        {
+          "name": "audited_run[0]",
+          "status": "completed",
+          "seconds": 193.59744294900156,
+          "cpu_seconds": 387.926927533,
+          "process_peak_rss_bytes": 2404159488
+        },
+        {
+          "name": "linearization[0]",
+          "status": "completed",
+          "seconds": 506.04650213100103,
+          "cpu_seconds": 934.714517545,
+          "process_peak_rss_bytes": 6143508480
+        },
+        {
+          "name": "jacobian[0]",
+          "status": "completed",
+          "seconds": 43.33229632099756,
+          "cpu_seconds": 74.75198311100007,
+          "process_peak_rss_bytes": 6146248704
+        },
+        {
+          "name": "linearization[1]",
+          "status": "completed",
+          "seconds": 3.8002470760002325,
+          "cpu_seconds": 4.697606451999945,
+          "process_peak_rss_bytes": 6153125888
+        },
+        {
+          "name": "jacobian[1]",
+          "status": "completed",
+          "seconds": 0.9261554590011656,
+          "cpu_seconds": 0.9314074480000727,
+          "process_peak_rss_bytes": 6206734336
+        },
+        {
+          "name": "linearization[2]",
+          "status": "completed",
+          "seconds": 3.2910276660004456,
+          "cpu_seconds": 4.093164244000036,
+          "process_peak_rss_bytes": 6249779200
+        },
+        {
+          "name": "jacobian[2]",
+          "status": "completed",
+          "seconds": 0.7778572679999343,
+          "cpu_seconds": 0.7822766239999055,
+          "process_peak_rss_bytes": 6280712192
+        },
+        {
+          "name": "linearization[3]",
+          "status": "completed",
+          "seconds": 3.175676970000495,
+          "cpu_seconds": 3.932564998000089,
+          "process_peak_rss_bytes": 6349004800
+        },
+        {
+          "name": "jacobian[3]",
+          "status": "completed",
+          "seconds": 0.7900683620027849,
+          "cpu_seconds": 0.7952314710000792,
+          "process_peak_rss_bytes": 6374825984
+        },
+        {
+          "name": "linearization[4]",
+          "status": "completed",
+          "seconds": 3.1519777909998083,
+          "cpu_seconds": 3.8786198120001245,
+          "process_peak_rss_bytes": 6464114688
+        },
+        {
+          "name": "jacobian[4]",
+          "status": "completed",
+          "seconds": 0.8137080119995517,
+          "cpu_seconds": 0.8176621140000861,
+          "process_peak_rss_bytes": 6482333696
+        },
+        {
+          "name": "linearization[5]",
+          "status": "completed",
+          "seconds": 3.1424728259989934,
+          "cpu_seconds": 3.882755105999877,
+          "process_peak_rss_bytes": 6569758720
+        },
+        {
+          "name": "jacobian[5]",
+          "status": "completed",
+          "seconds": 0.873106186001678,
+          "cpu_seconds": 0.8774575339998592,
+          "process_peak_rss_bytes": 6590074880
+        },
+        {
+          "name": "audited_run[1]",
+          "status": "completed",
+          "seconds": 36.68946187799884,
+          "cpu_seconds": 38.947926841000026,
+          "process_peak_rss_bytes": 6590074880
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "study_id": "f4c2b26ab0c39cba9176fa1a9c658ea618d58498ec05f5e1c15f415256470b83",
+      "case_id": "12d5581763e2730ab26c81f88a4fbef0958df79f4b5795e276f16500b2e3f5a9",
+      "baseline_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+      "derivatives": {
+        "requested_mode": "auto",
+        "mode": "reverse",
+        "inputs": 2,
+        "outputs": 1,
+        "directions": 1,
+        "batch_size": 1,
+        "linearizations_per_evaluation": 1
+      },
+      "candidate_id": "a21a4932232f216443999fe57ced3c8b4def1b5301be8ef7ae602c4e15452b77",
+      "optimizer": {
+        "method": "SLSQP",
+        "success": true,
+        "status": 0,
+        "message": "Optimization terminated successfully",
+        "iterations": 6,
+        "max_iterations": 30
+      },
+      "history": [
+        {
+          "normalized_variables": [
+            0.3333333333333333,
+            0.5
+          ],
+          "numerically_accepted": true,
+          "reason": null
+        },
+        {
+          "normalized_variables": [
+            0.31998720031855354,
+            0.3336520310552617
+          ],
+          "numerically_accepted": true,
+          "reason": null
+        },
+        {
+          "normalized_variables": [
+            0.2833505807757709,
+            0.0
+          ],
+          "numerically_accepted": true,
+          "reason": null
+        },
+        {
+          "normalized_variables": [
+            0.26970714332760576,
+            0.0
+          ],
+          "numerically_accepted": true,
+          "reason": null
+        },
+        {
+          "normalized_variables": [
+            0.198529481630924,
+            4.652057923124134e-16
+          ],
+          "numerically_accepted": true,
+          "reason": null
+        },
+        {
+          "normalized_variables": [
+            0.0,
+            4.652057923124134e-16
+          ],
+          "numerically_accepted": true,
+          "reason": null
+        }
+      ],
+      "feasibility": [],
+      "initialization_checks": [
+        {
+          "metric": "annual_cost",
+          "trial_si": 0.0228879345168798,
+          "cold_start_si": 0.022887934516397958,
+          "tolerance_si": 2.4853465911505115e-08,
+          "accepted": true
+        }
+      ],
+      "comparison": {
+        "schema_version": 1,
+        "kind": "comparison",
+        "baseline_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+        "candidate_id": "a21a4932232f216443999fe57ced3c8b4def1b5301be8ef7ae602c4e15452b77",
+        "baseline_accepted": true,
+        "candidate_accepted": true,
+        "metrics": {
+          "annual_cost": {
+            "baseline_si": 0.024853465911505116,
+            "candidate_si": 0.022887934516397958,
+            "delta_si": -0.0019655313951071583,
+            "relative_change": -0.07908480057090463
+          },
+          "exchanger_area": {
+            "baseline_si": 53.703737915205075,
+            "candidate_si": 63.055988439409575,
+            "delta_si": 9.3522505242045,
+            "relative_change": 0.1741452436508448
+          },
+          "purity": {
+            "baseline_si": 0.949999999945272,
+            "candidate_si": 0.9499999999232288,
+            "delta_si": -2.2043145087025096e-11,
+            "relative_change": -2.320331061925786e-11
+          },
+          "reboiler_duty": {
+            "baseline_si": 2489541.186311546,
+            "candidate_si": 2225324.8611112246,
+            "delta_si": -264216.32520032115,
+            "relative_change": -0.10613052985549468
+          },
+          "recovered_heat": {
+            "baseline_si": 806213.0599090055,
+            "candidate_si": 764973.0617471575,
+            "delta_si": -41239.99816184805,
+            "relative_change": -0.05115272899015388
+          },
+          "recovery": {
+            "baseline_si": 0.9799999999999999,
+            "candidate_si": 0.9799999999999999,
+            "delta_si": 0.0,
+            "relative_change": 0.0
+          }
+        },
+        "parameters": {
+          "approach": {
+            "baseline_si": 15.0,
+            "candidate_si": 10.0
+          },
+          "pressure": {
+            "baseline_si": 1600000.0,
+            "candidate_si": 1400000.0000000002
+          }
+        },
+        "package_changed": false,
+        "solver_changed": false,
+        "policy_changed": false,
+        "artifact_id": "b5a2477af0ad8bb00ed5db3d87c22a048b3d8b3aa9445edd7f07089c1163425e"
+      },
+      "audited_runs": [
+        {
+          "run_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.68936683606103e-12,
+            "heat_w": 265416.0866603134,
+            "material_relative_error": 2.6543389708422183e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784315.7358489139,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.703737915205075,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895411863115458,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062130599090055,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "a21a4932232f216443999fe57ced3c8b4def1b5301be8ef7ae602c4e15452b77",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 3.716427525649246e-12,
+            "heat_w": 185254.79425343103,
+            "material_relative_error": 3.754117017251701e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 722288.2822946802,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 63.055988439409575,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999232288,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.2253248611112246,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.7649730617471575,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "depropanizer-sensitivities-linux-warm-cache",
+      "accepted": true,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "292da4f9ed0c1ccaeb0836a7ca3c26b3b9d8ef2b9b7e3c8b439f5bd504624f2e",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/depropanizer-sensitivities-normwise-final/benchmark.json",
+      "original_report_sha256": "cbad9d113b6eaf34b99e0ce26e9dd8f90db8206764e89eaf185eae0c9784f65c",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "sensitivities",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "warm",
+        "max_rss_gb": 12.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "warm",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 270.77171223700134,
+      "peak_rss_bytes": 7653720064,
+      "last_checkpoint_peak_rss_bytes": 7653720064,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "completed",
+          "seconds": 267.2829091620006,
+          "cpu_seconds": 295.54279975000003,
+          "process_peak_rss_bytes": 7653720064
+        },
+        {
+          "name": "audited_run[0]",
+          "status": "completed",
+          "seconds": 37.18375623999964,
+          "cpu_seconds": 39.997460035,
+          "process_peak_rss_bytes": 2958114816
+        },
+        {
+          "name": "linearization[0]",
+          "status": "completed",
+          "seconds": 144.32314753300307,
+          "cpu_seconds": 150.085352758,
+          "process_peak_rss_bytes": 7653720064
+        },
+        {
+          "name": "jacobian[0]",
+          "status": "completed",
+          "seconds": 19.8306850150002,
+          "cpu_seconds": 50.174308542000006,
+          "process_peak_rss_bytes": 7653720064
+        },
+        {
+          "name": "audited_run[1]",
+          "status": "completed",
+          "seconds": 36.89796153399948,
+          "cpu_seconds": 38.321480640000004,
+          "process_peak_rss_bytes": 7653720064
+        },
+        {
+          "name": "audited_run[2]",
+          "status": "completed",
+          "seconds": 0.7619003199979488,
+          "cpu_seconds": 0.843205963999992,
+          "process_peak_rss_bytes": 7653720064
+        },
+        {
+          "name": "audited_run[3]",
+          "status": "completed",
+          "seconds": 0.7488272439986758,
+          "cpu_seconds": 0.8264909800000169,
+          "process_peak_rss_bytes": 7653720064
+        },
+        {
+          "name": "audited_run[4]",
+          "status": "completed",
+          "seconds": 0.7723244010012422,
+          "cpu_seconds": 0.8521370509999997,
+          "process_peak_rss_bytes": 7653720064
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7800000000,
+        "memory_plus_swap_limit_bytes": 9000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true,
+        "vm_memory_bytes": 8218144768,
+        "vm_swap_bytes": 1073737728
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "study_id": "d630e6792eed007bbf6ed25f70476ec72f5c6a9863fbd9d8ab766b2d0a31d546",
+      "case_id": "12d5581763e2730ab26c81f88a4fbef0958df79f4b5795e276f16500b2e3f5a9",
+      "baseline_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+      "derivatives": {
+        "requested_mode": "auto",
+        "mode": "forward",
+        "inputs": 2,
+        "outputs": 2,
+        "directions": 2,
+        "batch_size": 1,
+        "linearizations_per_evaluation": 1
+      },
+      "relative_tolerance": 0.005,
+      "derivative_numerically_accepted": true,
+      "results": [
+        {
+          "parameter": "approach",
+          "accepted": true,
+          "step_si": 0.0015,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "7f7656433176b28da2b21a392ed51051b4474267f5fb89b5038259e665154e43",
+            "17c73a48094feae52e2088c1c93dfdc4fd2ae9065cdbd985fab7db01ee29952d"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": 4431.499111495796,
+              "finite_difference_si": 4431.586809766789,
+              "relative_error": 1.978936095757754e-05,
+              "autodiff_display": 0.0044314991114957954,
+              "derivative_unit": "(MW)/(delta_K increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": 2.211317746221463e-05,
+              "finite_difference_si": 2.211365699352393e-05,
+              "relative_error": 2.168484884420959e-05,
+              "autodiff_display": 697.8388090815845,
+              "derivative_unit": "(USD/yr)/(delta_K increment)"
+            }
+          }
+        },
+        {
+          "parameter": "pressure",
+          "accepted": true,
+          "step_si": 160.0,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "4d4e42b6f84bd7e3cd766b4c9477e5eaa2dc1d80dd7ccfb8aed037b8e12edfc5",
+            "2d5e154de9b0241b414f5821151b631547bc770ccc406a9e989e85b85305500d"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": 1.346594560650483,
+              "finite_difference_si": 1.346594601329707,
+              "relative_error": 3.020896114476171e-08,
+              "autodiff_display": 0.1346594560650483,
+              "derivative_unit": "(MW)/(bar increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": 1.0335808939040671e-08,
+              "finite_difference_si": 1.033580968571755e-08,
+              "relative_error": 7.224174029517326e-08,
+              "autodiff_display": 32617.332417466994,
+              "derivative_unit": "(USD/yr)/(bar increment)"
+            }
+          }
+        }
+      ],
+      "audited_runs": [
+        {
+          "run_id": "17c73a48094feae52e2088c1c93dfdc4fd2ae9065cdbd985fab7db01ee29952d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.1403159731101503e-11,
+            "heat_w": 265429.9120110031,
+            "material_relative_error": 2.6543176545601454e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784316.7826889044,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.69990249029442,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895478338785084,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8061992345675658,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "2d5e154de9b0241b414f5821151b631547bc770ccc406a9e989e85b85305500d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.1418650236254575e-11,
+            "heat_w": 265442.7627251502,
+            "material_relative_error": 2.65622901451934e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784367.928485798,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.707025122618056,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452325,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4897566616988827,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.806280634119687,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "4d4e42b6f84bd7e3cd766b4c9477e5eaa2dc1d80dd7ccfb8aed037b8e12edfc5",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 4.956555194474308e-11,
+            "heat_w": 265389.40917902533,
+            "material_relative_error": 2.6522641860537988e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784263.5530145218,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.70045052751365,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999453111,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.489325751426457,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8061454827797934,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.68936683606103e-12,
+            "heat_w": 265416.0866603134,
+            "material_relative_error": 2.6543389708422183e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784315.7358489139,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.703737915205075,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895411863115458,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062130599090055,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "7f7656433176b28da2b21a392ed51051b4474267f5fb89b5038259e665154e43",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 4.958220009398826e-11,
+            "heat_w": 265402.26202247385,
+            "material_relative_error": 2.6542750219959998e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784314.6891270785,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.70757358743452,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.489534539118079,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062268843734256,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ethanol-train-sensitivities-macos-warm-cache",
+      "accepted": true,
+      "environment": "macos-jax-0.4.38-eefed80e",
+      "implementation": "normwise_linear_checks",
+      "source_sha256": "12cade90b6f92435d9c77ef43660c8de366d243ba0cdfdaf8e7c521bef80c8b2",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/ethanol-train-normwise-final/benchmark.json",
+      "original_report_sha256": "3c49f4b09589dac131dcef01de751c49e0d3c51d736d9f0a50fe598b0efaea54",
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "warm",
+        "max_rss_gb": 12.0,
+        "timeout_seconds": 3600.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "warm",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 2184.4542042230023,
+      "peak_rss_bytes": 9246113792,
+      "last_checkpoint_peak_rss_bytes": 9246113792,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "completed",
+          "seconds": 2170.317354215018,
+          "cpu_seconds": 2465.589926,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[0]",
+          "status": "completed",
+          "seconds": 463.3736062999815,
+          "cpu_seconds": 599.00643,
+          "process_peak_rss_bytes": 7993286656
+        },
+        {
+          "name": "linearization[0]",
+          "status": "completed",
+          "seconds": 1305.6466049260343,
+          "cpu_seconds": 1452.2576199999999,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "jacobian[0]",
+          "status": "completed",
+          "seconds": 21.092561087978538,
+          "cpu_seconds": 24.34754000000021,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[1]",
+          "status": "completed",
+          "seconds": 205.3923294810229,
+          "cpu_seconds": 214.92093799999975,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[2]",
+          "status": "completed",
+          "seconds": 29.625957007985562,
+          "cpu_seconds": 29.69829899999968,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[3]",
+          "status": "completed",
+          "seconds": 26.585188714030664,
+          "cpu_seconds": 26.72192499999983,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[4]",
+          "status": "completed",
+          "seconds": 31.579410220962018,
+          "cpu_seconds": 31.62797499999988,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[5]",
+          "status": "completed",
+          "seconds": 31.88140494300751,
+          "cpu_seconds": 31.957992999999988,
+          "process_peak_rss_bytes": 9246113792
+        },
+        {
+          "name": "audited_run[6]",
+          "status": "completed",
+          "seconds": 28.755346013000235,
+          "cpu_seconds": 28.859840000000077,
+          "process_peak_rss_bytes": 9246113792
+        }
+      ],
+      "study_id": "218af91472d02dc93f881af8c5a04f777dcb7080b852542992fe1605fc4f1429",
+      "case_id": "8d34d0754e6fc7f5dd3bf1ed7459f4602aac0dbfe94d3d7ae9ea3ef557e7b4d7",
+      "baseline_id": "bc3e385541dff2cdb9cb0a5ef966b3f40b5c9530bd1bfb29755d1c4b46097203",
+      "derivatives": {
+        "requested_mode": "auto",
+        "mode": "reverse",
+        "inputs": 3,
+        "outputs": 2,
+        "directions": 2,
+        "batch_size": 1,
+        "linearizations_per_evaluation": 1
+      },
+      "relative_tolerance": 0.005,
+      "derivative_numerically_accepted": true,
+      "results": [
+        {
+          "parameter": "approach",
+          "accepted": true,
+          "step_si": 0.0012000000000000001,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "d415560d8f21fb8850e648acc69dca7d55592feed498904116e2fb3d8b72464a",
+            "862f128541be1b12b7b7f46a9f72257bdf879349474e9932e99979d715954037"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": 7229.796939219962,
+              "finite_difference_si": 7229.703739576506,
+              "relative_error": 1.2891045798258172e-05,
+              "autodiff_display": 0.0072297969392199615,
+              "derivative_unit": "(MW)/(delta_K increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": 3.9637661923646815e-05,
+              "finite_difference_si": 3.963716680687364e-05,
+              "relative_error": 1.2491069077927431e-05,
+              "autodiff_display": 1250.8694799216769,
+              "derivative_unit": "(USD/yr)/(delta_K increment)"
+            }
+          }
+        },
+        {
+          "parameter": "pressure",
+          "accepted": true,
+          "step_si": 10.129999999999999,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "38d643a74988f4f170a190584a9ee00f46acabbd70a203e2166a5d411ec0b6a2",
+            "bc809d8340041957726de15ae2c55a0b14767bf759aac6b6d0c7045539e5ec1b"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": -0.40837946943760106,
+              "finite_difference_si": -0.40840171124677654,
+              "relative_error": 5.44606169929665e-05,
+              "autodiff_display": -0.04083794694376011,
+              "derivative_unit": "(MW)/(bar increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": -2.7857528150620837e-09,
+              "finite_difference_si": -2.785868092612814e-09,
+              "relative_error": 4.137940020783718e-05,
+              "autodiff_display": -8791.167303660322,
+              "derivative_unit": "(USD/yr)/(bar increment)"
+            }
+          }
+        },
+        {
+          "parameter": "reflux",
+          "accepted": true,
+          "step_si": 0.00030000000000000003,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "352f23f53b90fa247e2a30e8d04f49a1706eb8b14f27842a8ea80d21e9c6f444",
+            "3a578e0da58ca7fbbc2a89ba09088042aa64a8c875ee3c8195ae8a4f3c321a3c"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": 457475.04366973205,
+              "finite_difference_si": 457474.3850389495,
+              "relative_error": 1.4397086610022702e-06,
+              "autodiff_display": 0.457475043669732,
+              "derivative_unit": "(MW)/(1 increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": 0.0035073527230032897,
+              "finite_difference_si": 0.003507349068312265,
+              "relative_error": 1.0420084072723667e-06,
+              "autodiff_display": 110683.63429144863,
+              "derivative_unit": "(USD/yr)/(1 increment)"
+            }
+          }
+        }
+      ],
+      "audited_runs": [
+        {
+          "run_id": "352f23f53b90fa247e2a30e8d04f49a1706eb8b14f27842a8ea80d21e9c6f444",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.3968671171040925e-11,
+            "heat_w": 125309.03164652549,
+            "material_relative_error": 1.7759305137587944e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657963.0961566858,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61257218299952,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95397837481045,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9627490341765217,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45531758073195383,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09707513103203,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "38d643a74988f4f170a190584a9ee00f46acabbd70a203e2166a5d411ec0b6a2",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.1167297694894749e-11,
+            "heat_w": 125304.49001536053,
+            "material_relative_error": 1.820126271923073e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657997.1918411595,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61100435433021,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95456177481766,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.962890413832448,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45529833684864013,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09774604104032,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "3a578e0da58ca7fbbc2a89ba09088042aa64a8c875ee3c8195ae8a4f3c321a3c",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.4040292090251767e-11,
+            "heat_w": 125308.73385790852,
+            "material_relative_error": 1.369127033967743e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 658029.5062680608,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61260526162244,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.9547322662619,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.963023518807545,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45531897745222744,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09794210620119,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "862f128541be1b12b7b7f46a9f72257bdf879349474e9932e99979d715954037",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.554122068685085e-11,
+            "heat_w": 125317.56481078337,
+            "material_relative_error": 1.3633894013764802e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657997.8022726341,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.60768707270442,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95436106210214,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628949520764942,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45530960534586545,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09751522141745,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "bc3e385541dff2cdb9cb0a5ef966b3f40b5c9530bd1bfb29755d1c4b46097203",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.1179014050236275e-11,
+            "heat_w": 125308.88300864934,
+            "material_relative_error": 1.7283241504628678e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657996.3012561463,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61258858304555,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.9543553524378,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628862767436397,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45531827889176024,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09750865530347,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "bc809d8340041957726de15ae2c55a0b14767bf759aac6b6d0c7045539e5ec1b",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.3969715292439354e-11,
+            "heat_w": 125313.27527741785,
+            "material_relative_error": 1.3949374988442286e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657995.4106769603,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61417286435672,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95414894540023,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628821396137783,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.4553382197503877,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09727128721026,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "d415560d8f21fb8850e648acc69dca7d55592feed498904116e2fb3d8b72464a",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.5460888586606548e-11,
+            "heat_w": 125300.20058274013,
+            "material_relative_error": 1.7202061997068085e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657994.8002233816,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61749115190065,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.9543496423247,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628776007875193,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.4553269529280785,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.0975020886734,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ethanol-train-sensitivities-macos-cold",
+      "accepted": true,
+      "environment": "macos-jax-0.4.38-e4702e51",
+      "implementation": "prior_rowwise_backward_checks",
+      "source_sha256": "1e1e05a7240d3a469faefa86d43ca221b1d92ac294678b26883acbef6d5e90b9",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/ethanol-train-final-checked/benchmark.json",
+      "original_report_sha256": "3518d47022ac14f3fc4f89f8b0aa887e7efd6f169546c30abf3e287d867771d3",
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 12.0,
+        "timeout_seconds": 5400.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 2820.19605136296,
+      "peak_rss_bytes": 8233668608,
+      "last_checkpoint_peak_rss_bytes": 8233668608,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "completed",
+          "seconds": 2804.2721858379664,
+          "cpu_seconds": 3535.8087499999997,
+          "process_peak_rss_bytes": 8233668608
+        },
+        {
+          "name": "audited_run[0]",
+          "status": "completed",
+          "seconds": 542.5995281300275,
+          "cpu_seconds": 730.945924,
+          "process_peak_rss_bytes": 6809067520
+        },
+        {
+          "name": "linearization[0]",
+          "status": "completed",
+          "seconds": 1855.7644628550042,
+          "cpu_seconds": 2377.004166,
+          "process_peak_rss_bytes": 8201089024
+        },
+        {
+          "name": "jacobian[0]",
+          "status": "completed",
+          "seconds": 33.03838488704059,
+          "cpu_seconds": 46.101958000000195,
+          "process_peak_rss_bytes": 8201089024
+        },
+        {
+          "name": "audited_run[1]",
+          "status": "completed",
+          "seconds": 198.0658770800219,
+          "cpu_seconds": 206.9863190000001,
+          "process_peak_rss_bytes": 8233668608
+        },
+        {
+          "name": "audited_run[2]",
+          "status": "completed",
+          "seconds": 28.399261501035653,
+          "cpu_seconds": 28.443231000000196,
+          "process_peak_rss_bytes": 8233668608
+        },
+        {
+          "name": "audited_run[3]",
+          "status": "completed",
+          "seconds": 26.82161611999618,
+          "cpu_seconds": 26.942853000000014,
+          "process_peak_rss_bytes": 8233668608
+        },
+        {
+          "name": "audited_run[4]",
+          "status": "completed",
+          "seconds": 24.316882726037875,
+          "cpu_seconds": 24.458811999999853,
+          "process_peak_rss_bytes": 8233668608
+        },
+        {
+          "name": "audited_run[5]",
+          "status": "completed",
+          "seconds": 29.187691716011614,
+          "cpu_seconds": 29.224751000000197,
+          "process_peak_rss_bytes": 8233668608
+        },
+        {
+          "name": "audited_run[6]",
+          "status": "completed",
+          "seconds": 29.65004516998306,
+          "cpu_seconds": 29.717493999999988,
+          "process_peak_rss_bytes": 8233668608
+        }
+      ],
+      "study_id": "218af91472d02dc93f881af8c5a04f777dcb7080b852542992fe1605fc4f1429",
+      "case_id": "8d34d0754e6fc7f5dd3bf1ed7459f4602aac0dbfe94d3d7ae9ea3ef557e7b4d7",
+      "baseline_id": "bc3e385541dff2cdb9cb0a5ef966b3f40b5c9530bd1bfb29755d1c4b46097203",
+      "derivatives": {
+        "requested_mode": "auto",
+        "mode": "reverse",
+        "inputs": 3,
+        "outputs": 2,
+        "directions": 2,
+        "batch_size": 1,
+        "linearizations_per_evaluation": 1
+      },
+      "relative_tolerance": 0.005,
+      "derivative_numerically_accepted": true,
+      "results": [
+        {
+          "parameter": "approach",
+          "accepted": true,
+          "step_si": 0.0012000000000000001,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "d415560d8f21fb8850e648acc69dca7d55592feed498904116e2fb3d8b72464a",
+            "862f128541be1b12b7b7f46a9f72257bdf879349474e9932e99979d715954037"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": 7229.796939219962,
+              "finite_difference_si": 7229.703739576506,
+              "relative_error": 1.2891045798258172e-05,
+              "autodiff_display": 0.0072297969392199615,
+              "derivative_unit": "(MW)/(delta_K increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": 3.9637661923646815e-05,
+              "finite_difference_si": 3.963716680687364e-05,
+              "relative_error": 1.2491069077927431e-05,
+              "autodiff_display": 1250.8694799216769,
+              "derivative_unit": "(USD/yr)/(delta_K increment)"
+            }
+          }
+        },
+        {
+          "parameter": "pressure",
+          "accepted": true,
+          "step_si": 10.129999999999999,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "38d643a74988f4f170a190584a9ee00f46acabbd70a203e2166a5d411ec0b6a2",
+            "bc809d8340041957726de15ae2c55a0b14767bf759aac6b6d0c7045539e5ec1b"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": -0.40837946943760106,
+              "finite_difference_si": -0.40840171124677654,
+              "relative_error": 5.44606169929665e-05,
+              "autodiff_display": -0.04083794694376011,
+              "derivative_unit": "(MW)/(bar increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": -2.7857528150620837e-09,
+              "finite_difference_si": -2.785868092612814e-09,
+              "relative_error": 4.137940020783718e-05,
+              "autodiff_display": -8791.167303660322,
+              "derivative_unit": "(USD/yr)/(bar increment)"
+            }
+          }
+        },
+        {
+          "parameter": "reflux",
+          "accepted": true,
+          "step_si": 0.00030000000000000003,
+          "phase_regime_unchanged": true,
+          "perturbed_run_ids": [
+            "352f23f53b90fa247e2a30e8d04f49a1706eb8b14f27842a8ea80d21e9c6f444",
+            "3a578e0da58ca7fbbc2a89ba09088042aa64a8c875ee3c8195ae8a4f3c321a3c"
+          ],
+          "error": null,
+          "metrics": {
+            "reboiler_duty": {
+              "accepted": true,
+              "autodiff_si": 457475.04366973205,
+              "finite_difference_si": 457474.3850389495,
+              "relative_error": 1.4397086610022702e-06,
+              "autodiff_display": 0.457475043669732,
+              "derivative_unit": "(MW)/(1 increment)"
+            },
+            "annual_cost": {
+              "accepted": true,
+              "autodiff_si": 0.0035073527230032897,
+              "finite_difference_si": 0.003507349068312265,
+              "relative_error": 1.0420084072723667e-06,
+              "autodiff_display": 110683.63429144863,
+              "derivative_unit": "(USD/yr)/(1 increment)"
+            }
+          }
+        }
+      ],
+      "audited_runs": [
+        {
+          "run_id": "352f23f53b90fa247e2a30e8d04f49a1706eb8b14f27842a8ea80d21e9c6f444",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.3968671171040925e-11,
+            "heat_w": 125309.03164652549,
+            "material_relative_error": 1.7759305137587944e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657963.0961566858,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61257218299952,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95397837481045,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9627490341765217,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45531758073195383,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09707513103203,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "38d643a74988f4f170a190584a9ee00f46acabbd70a203e2166a5d411ec0b6a2",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.1167297694894749e-11,
+            "heat_w": 125304.49001536053,
+            "material_relative_error": 1.820126271923073e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657997.1918411595,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61100435433021,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95456177481766,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.962890413832448,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45529833684864013,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09774604104032,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "3a578e0da58ca7fbbc2a89ba09088042aa64a8c875ee3c8195ae8a4f3c321a3c",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.4040292090251767e-11,
+            "heat_w": 125308.73385790852,
+            "material_relative_error": 1.369127033967743e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 658029.5062680608,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61260526162244,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.9547322662619,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.963023518807545,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45531897745222744,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09794210620119,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "862f128541be1b12b7b7f46a9f72257bdf879349474e9932e99979d715954037",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.554122068685085e-11,
+            "heat_w": 125317.56481078337,
+            "material_relative_error": 1.3633894013764802e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657997.8022726341,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.60768707270442,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95436106210214,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628949520764942,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45530960534586545,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09751522141745,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "bc3e385541dff2cdb9cb0a5ef966b3f40b5c9530bd1bfb29755d1c4b46097203",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.1179014050236275e-11,
+            "heat_w": 125308.88300864934,
+            "material_relative_error": 1.7283241504628678e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657996.3012561463,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61258858304555,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.9543553524378,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628862767436397,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.45531827889176024,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09750865530347,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "bc809d8340041957726de15ae2c55a0b14767bf759aac6b6d0c7045539e5ec1b",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.3969715292439354e-11,
+            "heat_w": 125313.27527741785,
+            "material_relative_error": 1.3949374988442286e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657995.4106769603,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61417286435672,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95414894540023,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628821396137783,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.4553382197503877,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09727128721026,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "run_id": "d415560d8f21fb8850e648acc69dca7d55592feed498904116e2fb3d8b72464a",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.5460888586606548e-11,
+            "heat_w": 125300.20058274013,
+            "material_relative_error": 1.7202061997068085e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657994.8002233816,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61749115190065,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.9543496423247,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.9628776007875193,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.4553269529280785,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.0975020886734,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "column-64-rowwise-check-rejection",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-31ca17d4",
+      "implementation": "prior_rowwise_backward_checks",
+      "source_sha256": "4f6eaa60e8e830849eca18e4fbc46bbeee092c8c214c3fac76ee19f0616ac9bf",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/column64-final-checked/benchmark.json",
+      "original_report_sha256": "b83e3629b6b7bf068fcd1e8e9c46d5e6d372b38fb52ad3cf8a4d28918e4a2953",
+      "configuration": {
+        "scenario": "column",
+        "study": "profile",
+        "stages": 64,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 1800.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 124.0743174520012,
+      "peak_rss_bytes": 1266180096,
+      "last_checkpoint_peak_rss_bytes": 1266180096,
+      "exit_code": 2,
+      "timed_out": false,
+      "resource_limit": null,
+      "phases": [
+        {
+          "name": "column:trace_and_lower",
+          "status": "completed",
+          "seconds": 7.212830984000902,
+          "cpu_seconds": 7.871526306000001,
+          "process_peak_rss_bytes": 354168832
+        },
+        {
+          "name": "column:compile",
+          "status": "completed",
+          "seconds": 24.429988758000036,
+          "cpu_seconds": 63.276958908,
+          "process_peak_rss_bytes": 821964800
+        },
+        {
+          "name": "column:first_execution",
+          "status": "completed",
+          "seconds": 0.474471422001443,
+          "cpu_seconds": 2.2949155099999956,
+          "process_peak_rss_bytes": 821964800
+        },
+        {
+          "name": "column:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.6031501589986874,
+          "cpu_seconds": 2.4366538750000046,
+          "process_peak_rss_bytes": 821964800
+        },
+        {
+          "name": "column:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.6066837259986642,
+          "cpu_seconds": 2.475046681000009,
+          "process_peak_rss_bytes": 821964800
+        },
+        {
+          "name": "column_derivative:trace_and_lower",
+          "status": "completed",
+          "seconds": 9.410144039000443,
+          "cpu_seconds": 9.914222889000001,
+          "process_peak_rss_bytes": 838955008
+        },
+        {
+          "name": "column_derivative:compile",
+          "status": "completed",
+          "seconds": 34.71627751899905,
+          "cpu_seconds": 90.804714655,
+          "process_peak_rss_bytes": 1216471040
+        },
+        {
+          "name": "column_derivative:first_execution",
+          "status": "completed",
+          "seconds": 0.5666356040001119,
+          "cpu_seconds": 2.581111643000014,
+          "process_peak_rss_bytes": 1216471040
+        },
+        {
+          "name": "column_derivative:warm_execution[0]",
+          "status": "completed",
+          "seconds": 0.7025618999996368,
+          "cpu_seconds": 2.840190408000012,
+          "process_peak_rss_bytes": 1216471040
+        },
+        {
+          "name": "column_derivative:warm_execution[1]",
+          "status": "completed",
+          "seconds": 0.6904595220003102,
+          "cpu_seconds": 2.7136444479999966,
+          "process_peak_rss_bytes": 1216471040
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "solver": {
+        "linear_solver": "block",
+        "unknowns": 322,
+        "jacobian_directions": 17,
+        "border_reverse_directions": 2,
+        "dense_fallback": "checked"
+      },
+      "numerical": {
+        "converged": false,
+        "status": "stalled",
+        "iterations": 39,
+        "residual_norm": 1.8257282039657042e-05,
+        "step_norm": 0.0,
+        "worst_equation": 41
+      },
+      "checks": {
+        "material_error_mol_s": 0.008890505614843391,
+        "energy_error_w": 0.7081505940295756,
+        "finite_difference_relative_error": null
+      },
+      "metrics_si": [
+        5386474.472116827,
+        0.999999990201933,
+        383.81287707437116
+      ],
+      "jacobian_si": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "depropanizer-default-allocator-cold-7gb-limit",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-2a7ab6f1",
+      "implementation": "prior_rowwise_backward_checks",
+      "source_sha256": "1e1e05a7240d3a469faefa86d43ca221b1d92ac294678b26883acbef6d5e90b9",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/depropanizer-final-checked/benchmark.json",
+      "original_report_sha256": "6d85d3d83bfb408189eca59dfc29fb227dc75bfd3ba00cca624699c8679ad629",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "optimization",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 701.4001234689986,
+      "peak_rss_bytes": null,
+      "last_checkpoint_peak_rss_bytes": 6978641920,
+      "exit_code": 3,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "memory_limit",
+        "peak_rss_bytes": 7006429184,
+        "budget_bytes": 7000000000.0
+      },
+      "phases": [
+        {
+          "name": "optimization_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 265.57057783799996,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 2715418624,
+          "seconds": 169.90384076900045,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 669.084339411,
+          "name": "linearization[0]",
+          "process_peak_rss_bytes": 6602076160,
+          "seconds": 449.8472950859996,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 66.62681856100005,
+          "name": "jacobian[0]",
+          "process_peak_rss_bytes": 6614040576,
+          "seconds": 46.73130677700101,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 4.721968629999992,
+          "name": "linearization[1]",
+          "process_peak_rss_bytes": 6659411968,
+          "seconds": 3.8353784789997007,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.9064483859999655,
+          "name": "jacobian[1]",
+          "process_peak_rss_bytes": 6712889344,
+          "seconds": 0.9018326989989873,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 4.813507828999946,
+          "name": "linearization[2]",
+          "process_peak_rss_bytes": 6771462144,
+          "seconds": 3.9953754679991107,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.8988296329998775,
+          "name": "jacobian[2]",
+          "process_peak_rss_bytes": 6807195648,
+          "seconds": 0.8952836940006819,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 4.518148931000042,
+          "name": "linearization[3]",
+          "process_peak_rss_bytes": 6869192704,
+          "seconds": 3.6640804750004463,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.8788335669999014,
+          "name": "jacobian[3]",
+          "process_peak_rss_bytes": 6897766400,
+          "seconds": 0.8738191029988229,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 4.059473468000078,
+          "name": "linearization[4]",
+          "process_peak_rss_bytes": 6978641920,
+          "seconds": 3.2824117399995885,
+          "status": "completed"
+        },
+        {
+          "name": "jacobian[4]",
+          "status": "running"
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 91,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "audited_runs": [
+        {
+          "run_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.68936683606103e-12,
+            "heat_w": 265416.0866603134,
+            "material_relative_error": 2.6543389708422183e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784315.7358489139,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.703737915205075,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895411863115458,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062130599090055,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "depropanizer-forward-warm-7gb-limit",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-2a7ab6f1",
+      "implementation": "prior_rowwise_backward_checks",
+      "source_sha256": "1e1e05a7240d3a469faefa86d43ca221b1d92ac294678b26883acbef6d5e90b9",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/depropanizer-forward-pilot/benchmark.json",
+      "original_report_sha256": "1a80e16b384eb68d944163a425dd8163b5d2223331f49de0f4c4fd4a3f690bd6",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "optimization",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "forward",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "warm",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "warm",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 199.52769957099918,
+      "peak_rss_bytes": null,
+      "last_checkpoint_peak_rss_bytes": 2991435776,
+      "exit_code": 3,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "memory_limit",
+        "peak_rss_bytes": 7008444416,
+        "budget_bytes": 7000000000.0
+      },
+      "phases": [
+        {
+          "name": "optimization_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 41.375034571,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 2983579648,
+          "seconds": 39.16566588900059,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 91,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 466,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "audited_runs": [
+        {
+          "run_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.68936683606103e-12,
+            "heat_w": 265416.0866603134,
+            "material_relative_error": 2.6543389708422183e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784315.7358489139,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.703737915205075,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895411863115458,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062130599090055,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "depropanizer-two-arena-warm-7gb-limit",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-2a7ab6f1",
+      "implementation": "prior_rowwise_backward_checks",
+      "source_sha256": "1e1e05a7240d3a469faefa86d43ca221b1d92ac294678b26883acbef6d5e90b9",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/depropanizer-arena-pilot/benchmark.json",
+      "original_report_sha256": "ac139180fd340334c81f1d90fdbe703549ba73c79a3ff6257e6ca90e81595f14",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "optimization",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "warm",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "warm",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 178.76159875699886,
+      "peak_rss_bytes": null,
+      "last_checkpoint_peak_rss_bytes": 2922467328,
+      "exit_code": 3,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "memory_limit",
+        "peak_rss_bytes": 7028629504,
+        "budget_bytes": 7000000000.0
+      },
+      "phases": [
+        {
+          "name": "optimization_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 37.527200521000005,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 2922336256,
+          "seconds": 35.27046077399973,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 466,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 921,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "runtime_settings_from_invocation": {
+        "MALLOC_ARENA_MAX": "2"
+      },
+      "audited_runs": [
+        {
+          "run_id": "4e7c42797a6a290358ded7870985620a8bbbdbfe9262c873cdf74a9df335932d",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.68936683606103e-12,
+            "heat_w": 265416.0866603134,
+            "material_relative_error": 2.6543389708422183e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784315.7358489139,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.703737915205075,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452719,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895411863115458,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062130599090055,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "depropanizer-sensitivities-7gb-limit-linux",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-2a7ab6f1",
+      "implementation": "prior_output_scaled_checks",
+      "source_sha256": "29049659ce78a00eee22d52919b8e35b2605a53b7bf183f5a39c04fcd1c91bbc",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/depropanizer-sensitivities-final/benchmark.json",
+      "original_report_sha256": "b85eceae6b5dd6dc1f64018208dfeaf46a82b92cfc45d63f8500baf3606cd169",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "sensitivities",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "warm",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 2400.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "warm",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 189.0215575860002,
+      "peak_rss_bytes": null,
+      "last_checkpoint_peak_rss_bytes": 2968186880,
+      "exit_code": -9,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "cgroup_oom_kill",
+        "oom_kill_delta": 1
+      },
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 42.485835394000006,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 2966614016,
+          "seconds": 39.667732268999316,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 1376678,
+          "oom": 6,
+          "oom_kill": 6,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 1384422,
+          "oom": 7,
+          "oom_kill": 7,
+          "oom_group_kill": 0
+        }
+      },
+      "audited_runs": [
+        {
+          "run_id": "9e5d23e176871f0ab68c89225f5232917da4f9bb157a916d9e2abcbfa6e5b244",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.9411737741418655e-12,
+            "heat_w": 265416.0866597402,
+            "material_relative_error": 2.653685271525319e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 784315.7358491315,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 53.70373791777351,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 94.99999999452717,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 2.4895411863113046,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.8062130599089805,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 97.99999999999999,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ethanol-train-7gb-limit-linux",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-2a7ab6f1",
+      "implementation": "prior_output_scaled_checks",
+      "source_sha256": "ad45082d8bb05e9ee1dae06304070713dde90ba1db159903dcbd10ca5f49508e",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/ethanol-train/benchmark.json",
+      "original_report_sha256": "5bbf6a402a974d2611f5c281ad8d001e3bf2a1f4f289c90ed77a85bd66916c29",
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 7.0,
+        "timeout_seconds": 3600.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 945.5650641950006,
+      "peak_rss_bytes": null,
+      "last_checkpoint_peak_rss_bytes": 6346883072,
+      "exit_code": -9,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "cgroup_oom_kill",
+        "oom_kill_delta": 1
+      },
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 559.8022367919999,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 6346883072,
+          "seconds": 445.66568285999983,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7000000000,
+        "memory_plus_swap_limit_bytes": 7000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 1182574,
+          "oom": 4,
+          "oom_kill": 4,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 1349559,
+          "oom": 5,
+          "oom_kill": 5,
+          "oom_group_kill": 0
+        }
+      },
+      "audited_runs": [
+        {
+          "run_id": "9e800eda0ee27f10f8bf21432c9e6c5682d26acad7467b9431dc91bf6fb99424",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.6685853556206205e-11,
+            "heat_w": 125308.88313728082,
+            "material_relative_error": 2.155449152496658e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657996.3012856037,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61258857560418,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95435535273499,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.962886276874653,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.4553182788922231,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09750865573655,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ethanol-train-local-linux-vm-limit",
+      "accepted": false,
+      "environment": "linux-jax-0.10.1-2a7ab6f1",
+      "implementation": "prior_output_scaled_checks",
+      "source_sha256": "29049659ce78a00eee22d52919b8e35b2605a53b7bf183f5a39c04fcd1c91bbc",
+      "base_revision": "77227f2ad299cc4f5c50049bf37518b59cdcce0f",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/linux/ethanol-train-validated/benchmark.json",
+      "original_report_sha256": "a22650b9d6376e2cdda22c622e0df7e2d143f36b92cf29d8ab901189c02cab89",
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "eo_jacobian": "colored",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "warm",
+        "max_rss_gb": 12.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": true
+      },
+      "cache": {
+        "mode": "warm",
+        "fresh_process": true
+      },
+      "elapsed_seconds": 753.243864995,
+      "peak_rss_bytes": null,
+      "last_checkpoint_peak_rss_bytes": 7291691008,
+      "exit_code": -9,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "cgroup_oom_kill",
+        "oom_kill_delta": 1
+      },
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 151.244392848,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 7291691008,
+          "seconds": 139.34971562899955,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "container": {
+        "memory_limit_bytes": 7800000000,
+        "memory_plus_swap_limit_bytes": 9000000000,
+        "cpu_limit_nano": 4000000000,
+        "image_id": "sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea",
+        "image_tag": "python:3.12-slim",
+        "source_mount_read_only": true,
+        "vm_memory_bytes": 8218144768,
+        "vm_swap_bytes": 1073737728
+      },
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 1384422,
+          "oom": 7,
+          "oom_kill": 7,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 1457923,
+          "oom": 45,
+          "oom_kill": 8,
+          "oom_group_kill": 0
+        }
+      },
+      "limitation": "The watchdog allowed 12 GB, but the container had only 7.8 GB RAM plus 1.2 GB swap allowance and the VM had about 8.2 GB RAM plus 1.1 GB swap. This is not a test on a machine with 12 GB available to the worker.",
+      "audited_runs": [
+        {
+          "run_id": "9e800eda0ee27f10f8bf21432c9e6c5682d26acad7467b9431dc91bf6fb99424",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.6685853556206205e-11,
+            "heat_w": 125308.88313728082,
+            "material_relative_error": 2.155449152496658e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "value": 657996.3012856037,
+              "unit": "USD/yr"
+            },
+            "exchanger_area": {
+              "value": 50.61258857560418,
+              "unit": "m2"
+            },
+            "purity": {
+              "value": 80.95435535273499,
+              "unit": "%"
+            },
+            "reboiler_duty": {
+              "value": 1.962886276874653,
+              "unit": "MW"
+            },
+            "recovered_heat": {
+              "value": 0.4553182788922231,
+              "unit": "MW"
+            },
+            "recovery": {
+              "value": 93.09750865573655,
+              "unit": "%"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

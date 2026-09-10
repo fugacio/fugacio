@@ -1,0 +1,1194 @@
+{
+  "components": [
+    "methane",
+    "ethane"
+  ],
+  "economics": {
+    "cooling_price": {
+      "unit": "USD/GJ",
+      "value": 0.4
+    },
+    "electricity_price": {
+      "unit": "USD/kWh",
+      "value": 0.12
+    },
+    "heating_price": {
+      "unit": "USD/GJ",
+      "value": 8
+    },
+    "operating_time": {
+      "unit": "h",
+      "value": 8000
+    }
+  },
+  "feeds": {
+    "feed_00": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_01": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_02": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_03": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_04": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_05": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_06": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_07": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_08": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_09": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_10": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_11": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_12": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_13": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_14": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_15": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_16": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_17": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_18": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_19": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_20": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_21": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_22": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    },
+    "feed_23": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 1
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 1
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 300
+      },
+      "z": [
+        0.8,
+        0.2
+      ]
+    }
+  },
+  "metrics": {
+    "annual_cost": {
+      "expression": {
+        "plant": "annual_cost"
+      },
+      "unit": "USD/yr"
+    },
+    "duty": {
+      "expression": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_00"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_01"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_02"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_03"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_04"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_05"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_06"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_07"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                ],
+                "op": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_08"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_09"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_10"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_11"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_12"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_13"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "property": "heat",
+                            "unit": "heater_14"
+                          },
+                          {
+                            "property": "heat",
+                            "unit": "heater_15"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                ],
+                "op": "add"
+              }
+            ],
+            "op": "add"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "property": "heat",
+                        "unit": "heater_16"
+                      },
+                      {
+                        "property": "heat",
+                        "unit": "heater_17"
+                      }
+                    ],
+                    "op": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "property": "heat",
+                        "unit": "heater_18"
+                      },
+                      {
+                        "property": "heat",
+                        "unit": "heater_19"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                ],
+                "op": "add"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "property": "heat",
+                        "unit": "heater_20"
+                      },
+                      {
+                        "property": "heat",
+                        "unit": "heater_21"
+                      }
+                    ],
+                    "op": "add"
+                  },
+                  {
+                    "args": [
+                      {
+                        "property": "heat",
+                        "unit": "heater_22"
+                      },
+                      {
+                        "property": "heat",
+                        "unit": "heater_23"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                ],
+                "op": "add"
+              }
+            ],
+            "op": "add"
+          }
+        ],
+        "op": "add"
+      },
+      "unit": "kW"
+    }
+  },
+  "name": "heater-bank",
+  "parameters": {
+    "temperature_00": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.0
+    },
+    "temperature_01": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.0416666666667
+    },
+    "temperature_02": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.0833333333333
+    },
+    "temperature_03": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.125
+    },
+    "temperature_04": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.1666666666667
+    },
+    "temperature_05": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.2083333333333
+    },
+    "temperature_06": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.25
+    },
+    "temperature_07": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.2916666666667
+    },
+    "temperature_08": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.3333333333333
+    },
+    "temperature_09": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.375
+    },
+    "temperature_10": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.4166666666667
+    },
+    "temperature_11": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.4583333333333
+    },
+    "temperature_12": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.5
+    },
+    "temperature_13": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.5416666666667
+    },
+    "temperature_14": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.5833333333333
+    },
+    "temperature_15": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.625
+    },
+    "temperature_16": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.6666666666667
+    },
+    "temperature_17": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.7083333333333
+    },
+    "temperature_18": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.75
+    },
+    "temperature_19": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.7916666666667
+    },
+    "temperature_20": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.8333333333333
+    },
+    "temperature_21": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.875
+    },
+    "temperature_22": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.9166666666667
+    },
+    "temperature_23": {
+      "lower": 320,
+      "unit": "K",
+      "upper": 400,
+      "value": 350.9583333333333
+    }
+  },
+  "property_package": {
+    "method": "pr"
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "feed_00"
+      ],
+      "kind": "heater",
+      "name": "heater_00",
+      "outlets": [
+        "product_00"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_00"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_01"
+      ],
+      "kind": "heater",
+      "name": "heater_01",
+      "outlets": [
+        "product_01"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_01"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_02"
+      ],
+      "kind": "heater",
+      "name": "heater_02",
+      "outlets": [
+        "product_02"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_02"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_03"
+      ],
+      "kind": "heater",
+      "name": "heater_03",
+      "outlets": [
+        "product_03"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_03"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_04"
+      ],
+      "kind": "heater",
+      "name": "heater_04",
+      "outlets": [
+        "product_04"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_04"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_05"
+      ],
+      "kind": "heater",
+      "name": "heater_05",
+      "outlets": [
+        "product_05"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_05"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_06"
+      ],
+      "kind": "heater",
+      "name": "heater_06",
+      "outlets": [
+        "product_06"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_06"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_07"
+      ],
+      "kind": "heater",
+      "name": "heater_07",
+      "outlets": [
+        "product_07"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_07"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_08"
+      ],
+      "kind": "heater",
+      "name": "heater_08",
+      "outlets": [
+        "product_08"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_08"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_09"
+      ],
+      "kind": "heater",
+      "name": "heater_09",
+      "outlets": [
+        "product_09"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_09"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_10"
+      ],
+      "kind": "heater",
+      "name": "heater_10",
+      "outlets": [
+        "product_10"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_10"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_11"
+      ],
+      "kind": "heater",
+      "name": "heater_11",
+      "outlets": [
+        "product_11"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_11"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_12"
+      ],
+      "kind": "heater",
+      "name": "heater_12",
+      "outlets": [
+        "product_12"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_12"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_13"
+      ],
+      "kind": "heater",
+      "name": "heater_13",
+      "outlets": [
+        "product_13"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_13"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_14"
+      ],
+      "kind": "heater",
+      "name": "heater_14",
+      "outlets": [
+        "product_14"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_14"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_15"
+      ],
+      "kind": "heater",
+      "name": "heater_15",
+      "outlets": [
+        "product_15"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_15"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_16"
+      ],
+      "kind": "heater",
+      "name": "heater_16",
+      "outlets": [
+        "product_16"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_16"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_17"
+      ],
+      "kind": "heater",
+      "name": "heater_17",
+      "outlets": [
+        "product_17"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_17"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_18"
+      ],
+      "kind": "heater",
+      "name": "heater_18",
+      "outlets": [
+        "product_18"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_18"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_19"
+      ],
+      "kind": "heater",
+      "name": "heater_19",
+      "outlets": [
+        "product_19"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_19"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_20"
+      ],
+      "kind": "heater",
+      "name": "heater_20",
+      "outlets": [
+        "product_20"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_20"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_21"
+      ],
+      "kind": "heater",
+      "name": "heater_21",
+      "outlets": [
+        "product_21"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_21"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_22"
+      ],
+      "kind": "heater",
+      "name": "heater_22",
+      "outlets": [
+        "product_22"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_22"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "feed_23"
+      ],
+      "kind": "heater",
+      "name": "heater_23",
+      "outlets": [
+        "product_23"
+      ],
+      "settings": {
+        "t_out": {
+          "parameter": "temperature_23"
+        }
+      }
+    }
+  ]
+}

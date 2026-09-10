@@ -31,8 +31,14 @@ jobs:
       # needs these present.
       - name: Install Cairo/Pango for social cards
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          # These libraries come from Ubuntu. Unrelated third-party indexes
+          # (for example, Chrome) mustn't block the documentation build.
+          apt_options=(
+            -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources
+            -o Dir::Etc::sourceparts=-
+          )
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y \
             libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev \
             libz-dev libpango-1.0-0 libpangocairo-1.0-0
 

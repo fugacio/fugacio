@@ -10,6 +10,7 @@ from typing import Any
 
 from fugacio.sim.cases.examples import EXAMPLES, example_case
 from fugacio.sim.cases.jsonio import read_json, write_json
+from fugacio.sim.cases.profiling import profile
 from fugacio.sim.cases.registry import registry_schema
 from fugacio.sim.cases.results import CaseRun, compare_runs
 from fugacio.sim.cases.runtime import CaseRunner, SolverOptions
@@ -28,12 +29,18 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("registry", help="describe supported portable unit types")
     validate = commands.add_parser("validate", help="validate a case without solving")
     validate.add_argument("case")
-    for name in ("run", "sweep", "optimize", "sensitivities"):
+    diagnose = commands.add_parser(
+        "diagnose", help="inspect declared process structure without solving"
+    )
+    diagnose.add_argument("case")
+    for name in ("run", "sweep", "optimize", "sensitivities", "profile"):
         cmd = commands.add_parser(name)
         cmd.add_argument("case")
         if name != "run":
             cmd.add_argument("request", help="JSON study arguments")
         cmd.add_argument("--backend", choices=("sequential", "eo"), default="sequential")
+        cmd.add_argument("--column-solver", choices=("block", "dense"), default="block")
+        cmd.add_argument("--eo-jacobian", choices=("colored", "dense"), default="colored")
         cmd.add_argument(
             "--recycle-method", choices=("wegstein", "broyden", "newton"), default="broyden"
         )
@@ -66,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
             case = ProcessCase.load(args.case)
             CaseRunner(case)  # Validate property-package capability and inline evidence too.
             result = {"valid": True, "case_id": case.case_id, "name": case.name}
+        elif args.command == "diagnose":
+            result = CaseRunner(ProcessCase.load(args.case)).diagnose_structure()
         elif args.command == "inspect":
             result = CaseWorkspace(args.workspace).load_artifact(args.artifact_id)
             if args.report:
@@ -83,7 +92,12 @@ def main(argv: list[str] | None = None) -> int:
             workspace = CaseWorkspace(args.workspace)
             runner = CaseRunner(
                 ProcessCase.load(args.case),
-                options=SolverOptions(backend=args.backend, recycle_method=args.recycle_method),
+                options=SolverOptions(
+                    backend=args.backend,
+                    recycle_method=args.recycle_method,
+                    column_solver=args.column_solver,
+                    eo_jacobian=args.eo_jacobian,
+                ),
             )
             if args.command == "run":
                 run = runner.run(read_json(args.overrides) if args.overrides else None)
@@ -98,9 +112,13 @@ def main(argv: list[str] | None = None) -> int:
                     "sweep": sweep,
                     "optimize": optimize,
                     "sensitivities": sensitivities,
+                    "profile": profile,
                 }
                 request = read_json(args.request)
-                if not isinstance(request, dict) or {"runner", "workspace"} & request.keys():
+                if (
+                    not isinstance(request, dict)
+                    or {"runner", "workspace", "recorder"} & request.keys()
+                ):
                     raise ValueError("invalid study request")
                 study = functions[args.command](runner, workspace=workspace, **request)
                 result = study.artifact
