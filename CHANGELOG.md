@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.7.0 (2026-09-10)
+
+### Features
+
+- Scale process solves and reusable derivatives ([#23](https://github.com/fugacio/fugacio/pull/23),
+  [`1ca59b0`](https://github.com/fugacio/fugacio/commit/1ca59b0fdc3bb6f5b229fcbabc1088de03f97f5b))
+
+
 ## v0.6.0 (2026-09-08)
 
 ### Documentation
