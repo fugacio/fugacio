@@ -2,8 +2,8 @@
 
 The esterification ``acetic acid + ethanol <=> ethyl acetate + water`` is the
 canonical reactive-distillation system and is *equimolar* (no net mole change), so
-constant molar overflow is exact and the column balances close to machine
-precision. Tests check three things:
+constant molar overflow preserves the total molar material balance. It does
+not close an energy balance. Tests check three things:
 
 * :func:`reactive_flash` returns a state where the liquid simultaneously satisfies
   reaction equilibrium (activity quotient equals ``K(T)``) and the V/L material

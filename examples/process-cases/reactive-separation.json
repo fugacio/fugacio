@@ -1,0 +1,194 @@
+{
+  "components": [
+    "n-butane",
+    "isobutane"
+  ],
+  "description": "Butane isomerization demonstration. Kinetics and equipment sizes are illustrative assumptions, without empirical kinetic qualification. Reverse rates satisfy the declared ideal-gas-reference thermochemistry.",
+  "economics": {
+    "cooling_price": {
+      "unit": "USD/GJ",
+      "value": 0.4
+    },
+    "electricity_price": {
+      "unit": "USD/kWh",
+      "value": 0.12
+    },
+    "heating_price": {
+      "unit": "USD/GJ",
+      "value": 8
+    },
+    "operating_time": {
+      "unit": "h",
+      "value": 8000
+    }
+  },
+  "feeds": {
+    "feed": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 10
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 3
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 280
+      },
+      "z": [
+        0.7,
+        0.3
+      ]
+    }
+  },
+  "metrics": {
+    "annual_cost": {
+      "expression": {
+        "plant": "annual_cost"
+      },
+      "unit": "USD/yr"
+    },
+    "extent": {
+      "expression": {
+        "property": "extent",
+        "reaction": "isomerize",
+        "unit": "column"
+      },
+      "unit": "mol/s"
+    },
+    "product_isobutane": {
+      "expression": {
+        "component": "isobutane",
+        "property": "component_flow",
+        "stream": "distillate"
+      },
+      "unit": "mol/s"
+    },
+    "reactive_stage_rate": {
+      "expression": {
+        "profile": "reaction_rates",
+        "reaction": "isomerize",
+        "stage": 3,
+        "unit": "column"
+      },
+      "unit": "mol/(m3 s)"
+    }
+  },
+  "name": "reactive-separation",
+  "parameters": {
+    "kinetic_rate": {
+      "lower": 0.2,
+      "unit": "mol/(m3 s)",
+      "upper": 3,
+      "value": 1
+    },
+    "reflux": {
+      "lower": 2,
+      "unit": "1",
+      "upper": 5,
+      "value": 3
+    },
+    "volume": {
+      "lower": 0.05,
+      "unit": "m3",
+      "upper": 2,
+      "value": 0.3
+    }
+  },
+  "property_package": {
+    "method": "pr"
+  },
+  "reaction_sets": {
+    "isomerization": {
+      "phase": "liquid",
+      "rate_basis": "activity",
+      "reactions": [
+        {
+          "name": "isomerize",
+          "nu": [
+            -1,
+            1
+          ],
+          "rate": {
+            "detailed_balance": true,
+            "ea_forward": {
+              "unit": "J/mol",
+              "value": 20000
+            },
+            "k_forward": {
+              "parameter": "kinetic_rate"
+            },
+            "reference_temperature": {
+              "unit": "K",
+              "value": 300
+            }
+          }
+        }
+      ]
+    }
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "feed"
+      ],
+      "kind": "column",
+      "name": "column",
+      "outlets": [
+        "distillate",
+        "bottoms"
+      ],
+      "settings": {
+        "feed_stages": [
+          3
+        ],
+        "n_stages": 6,
+        "p": {
+          "unit": "bar",
+          "value": 3
+        },
+        "reaction_set": "isomerization",
+        "reaction_volumes": [
+          {
+            "unit": "m3",
+            "value": 0
+          },
+          {
+            "parameter": "volume"
+          },
+          {
+            "parameter": "volume"
+          },
+          {
+            "parameter": "volume"
+          },
+          {
+            "parameter": "volume"
+          },
+          {
+            "unit": "m3",
+            "value": 0
+          }
+        ],
+        "specs": [
+          {
+            "kind": "reflux_ratio",
+            "value": {
+              "parameter": "reflux"
+            }
+          },
+          {
+            "kind": "distillate_rate",
+            "value": {
+              "unit": "mol/s",
+              "value": 5
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

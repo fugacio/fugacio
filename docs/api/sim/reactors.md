@@ -13,3 +13,7 @@ See the [reactions & reactors guide](../../reactions.md) for worked examples.
 ## Reactive separations
 
 ::: fugacio.sim.reactive
+
+## Checked common-package reactors
+
+::: fugacio.sim.reaction_units

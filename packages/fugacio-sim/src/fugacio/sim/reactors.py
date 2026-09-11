@@ -16,10 +16,13 @@ Every reactor supports an **energy balance**: run it isothermally at a specified
 temperature and the heat *duty* required to hold that temperature is returned
 (it carries the heat of reaction), or run it ``adiabatic=True`` and the outlet
 temperature is solved from an adiabatic enthalpy balance. The enthalpy
-bookkeeping is the ideal-gas absolute enthalpy ``Hf_i(298) + integral Cp_i dT``
+bookkeeping in legacy calls is the ideal-gas absolute enthalpy ``Hf_i(298) + integral Cp_i dT``
 that underlies `fugacio.thermo.reactions.delta_h_rxn`, so reaction heat and
 sensible heat are accounted for consistently. Kinetic-reactor concentrations use
-the ideal-gas relation ``c_i = y_i P / (R T)``.
+the ideal-gas relation ``c_i = y_i P / (R T)`` in legacy calls. Passing a
+property package or ReactionSet to equilibrium_reactor, cstr, or pfr selects
+the checked common-package implementation with phase-specific properties.
+Its ReactionResult also retains acceptance reports and profiles.
 
 Because the underlying solves (equilibrium root-finds, the CSTR Newton system,
 the explicit RK4 marches) are differentiable, a reactor's conversion, outlet
@@ -37,6 +40,7 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
+from fugacio.sim.reaction_units import ReactionResult, reaction_reactor
 from fugacio.sim.stream import Stream
 from fugacio.thermo import component_arrays
 from fugacio.thermo.constants import P_REF, R
@@ -45,6 +49,7 @@ from fugacio.thermo.ideal import cp_ig, enthalpy_ig
 from fugacio.thermo.implicit import bracketed_root, newton_system
 from fugacio.thermo.package import HelmholtzPackage
 from fugacio.thermo.reaction_equilibrium import equilibrium
+from fugacio.thermo.reaction_system import ReactionSet
 from fugacio.thermo.reactions import (
     CpCoeffs,
     Reaction,
@@ -159,8 +164,12 @@ def _solve_adiabatic_t(
 
 def equilibrium_reactor(
     feed: Stream,
-    reactions: Reaction | Sequence[Reaction],
+    reactions: Reaction | Sequence[Reaction] | ReactionSet,
     *,
+    model: Model = None,
+    phase: str = "vapor",
+    rate_basis: str = "concentration",
+    check: bool = True,
     t_out: ArrayLike | None = None,
     adiabatic: bool = False,
     basis: str = "ideal-gas",
@@ -168,7 +177,7 @@ def equilibrium_reactor(
     kij: Array | None = None,
     tol: float = 1e-10,
     max_iter: int = 80,
-) -> ReactorResult:
+) -> ReactorResult | ReactionResult:
     """Reactor whose outlet is the chemical-equilibrium composition.
 
     Isothermal (default, or with ``t_out``): the equilibrium composition at the
@@ -188,10 +197,37 @@ def equilibrium_reactor(
         kij: Optional binary interaction matrix for the EOS.
         tol: Convergence tolerance on the reaction extents.
         max_iter: Maximum number of solver iterations.
+        model: Common property package; enables the checked reactor implementation.
+        phase: Homogeneous reaction phase for a newly constructed reaction set.
+        rate_basis: Kinetic input convention for a newly constructed reaction set.
+        check: Raise on failed concrete package-based results.
 
     Returns:
-        A `ReactorResult`.
+        A `ReactionResult` with a package or ReactionSet, otherwise a legacy `ReactorResult`.
     """
+    if (
+        model is not None
+        or isinstance(reactions, ReactionSet)
+        or phase != "vapor"
+        or basis == "phi"
+    ):
+        system = (
+            reactions
+            if isinstance(reactions, ReactionSet)
+            else ReactionSet.from_reactions(reactions, (), phase=phase, rate_basis=rate_basis)
+        )
+        selected_model = resolve_package(feed.components, model, eos=eos, kij=kij)
+        return reaction_reactor(
+            feed,
+            system,
+            kind="equilibrium",
+            model=selected_model,
+            t_out=None if adiabatic else t_out,
+            duty=0.0 if adiabatic else None,
+            check=check,
+            tol=tol,
+            max_iter=max_iter,
+        )
     comps = feed.components
     rxns = _as_reactions(reactions)
     nu = _stack_nu(rxns, comps)
@@ -330,15 +366,19 @@ def stoichiometric_reactor(
 
 def cstr(
     feed: Stream,
-    reactions: Reaction | Sequence[Reaction],
-    rate_laws: Any,
-    volume: ArrayLike,
+    reactions: Reaction | Sequence[Reaction] | ReactionSet,
+    rate_laws: Any = None,
+    volume: ArrayLike | None = None,
     *,
+    model: Model = None,
+    phase: str = "vapor",
+    rate_basis: str = "concentration",
+    check: bool = True,
     t_out: ArrayLike | None = None,
     adiabatic: bool = False,
     tol: float = 1e-10,
     max_iter: int = 100,
-) -> ReactorResult:
+) -> ReactorResult | ReactionResult:
     """Continuous stirred-tank reactor (perfectly mixed) at steady state.
 
     Solves the steady-state mole balance ``F_out = F_in + V (r . Nu)`` with the
@@ -349,13 +389,44 @@ def cstr(
     Args:
         feed: Inlet stream (``feed.n`` are molar flows, mol/s).
         reactions: Reaction(s) over ``feed.components``.
-        rate_laws: One rate law per reaction (a kinetics object with ``rate(T, c)``).
+        rate_laws: One rate law per reaction; omit when reactions is a ReactionSet.
         volume: Reactor volume (m^3).
         t_out: Isothermal temperature (K); defaults to ``feed.t``.
         adiabatic: Solve the outlet temperature from the energy balance.
         tol: Convergence tolerance on the steady-state mole balance.
         max_iter: Maximum number of Newton iterations.
+        model: Common property package; enables the checked reactor implementation.
+        phase: Homogeneous reaction phase for a newly constructed reaction set.
+        rate_basis: Kinetic input convention for a newly constructed reaction set.
+        check: Raise on failed concrete package-based results.
     """
+    if volume is None:
+        raise ValueError("volume is required")
+    if isinstance(reactions, ReactionSet) and rate_laws is not None:
+        raise ValueError("a ReactionSet already supplies its rate laws")
+    if not isinstance(reactions, ReactionSet) and rate_laws is None:
+        raise ValueError("provide rate laws or a ReactionSet")
+    if model is not None or isinstance(reactions, ReactionSet) or phase != "vapor":
+        system = (
+            reactions
+            if isinstance(reactions, ReactionSet)
+            else ReactionSet.from_reactions(
+                reactions, rate_laws, phase=phase, rate_basis=rate_basis
+            )
+        )
+        selected_model = model
+        return reaction_reactor(
+            feed,
+            system,
+            kind="cstr",
+            model=selected_model,
+            t_out=None if adiabatic else t_out,
+            duty=0.0 if adiabatic else None,
+            check=check,
+            volume=volume,
+            tol=tol,
+            max_iter=max_iter,
+        )
     comps = feed.components
     rxns = _as_reactions(reactions)
     nu = _stack_nu(rxns, comps)
@@ -427,21 +498,59 @@ def _march(
 
 def pfr(
     feed: Stream,
-    reactions: Reaction | Sequence[Reaction],
-    rate_laws: Any,
-    volume: ArrayLike,
+    reactions: Reaction | Sequence[Reaction] | ReactionSet,
+    rate_laws: Any = None,
+    volume: ArrayLike | None = None,
     *,
+    model: Model = None,
+    phase: str = "vapor",
+    rate_basis: str = "concentration",
+    check: bool = True,
+    integration_rtol: float = 1e-5,
+    integration_atol: float = 1e-8,
     t_out: ArrayLike | None = None,
     adiabatic: bool = False,
     steps: int = 200,
-) -> ReactorResult:
+) -> ReactorResult | ReactionResult:
     """Plug-flow reactor: integrate the species balances along the reactor volume.
 
     Marches ``dF_i/dV = (r . Nu)_i`` (ideal-gas concentrations, isobaric) from the
     feed to ``volume`` with explicit RK4. Isothermal by default; with
     ``adiabatic=True`` the temperature is integrated alongside via
     ``dT/dV = -(sum_j r_j DH_rxn,j) / (sum_i F_i Cp_i)``.
+
+    A package or ReactionSet selects the checked common-package path, including
+    step doubling and phase-specific caloric properties. With a ReactionSet,
+    omit rate_laws and specify volume by keyword.
     """
+    if volume is None:
+        raise ValueError("volume is required")
+    if isinstance(reactions, ReactionSet) and rate_laws is not None:
+        raise ValueError("a ReactionSet already supplies its rate laws")
+    if not isinstance(reactions, ReactionSet) and rate_laws is None:
+        raise ValueError("provide rate laws or a ReactionSet")
+    if model is not None or isinstance(reactions, ReactionSet) or phase != "vapor":
+        system = (
+            reactions
+            if isinstance(reactions, ReactionSet)
+            else ReactionSet.from_reactions(
+                reactions, rate_laws, phase=phase, rate_basis=rate_basis
+            )
+        )
+        selected_model = model
+        return reaction_reactor(
+            feed,
+            system,
+            kind="pfr",
+            model=selected_model,
+            t_out=None if adiabatic else t_out,
+            duty=0.0 if adiabatic else None,
+            check=check,
+            volume=volume,
+            steps=steps,
+            integration_rtol=integration_rtol,
+            integration_atol=integration_atol,
+        )
     comps = feed.components
     rxns = _as_reactions(reactions)
     nu = _stack_nu(rxns, comps)

@@ -14,6 +14,8 @@ EXAMPLES = (
     "measured-heater",
     "ethanol-train",
     "heater-bank",
+    "reactive-recycle",
+    "reactive-separation",
 )
 
 
@@ -38,6 +40,8 @@ def example_case(name: str = "heater") -> ProcessCase:
     """
     if name not in EXAMPLES:
         raise ValueError(f"unknown example {name!r}; choose from {EXAMPLES}")
+    if name in ("reactive-recycle", "reactive-separation"):
+        return reactive_case(separation=name == "reactive-separation")
     if name == "ethanol-train":
         return ethanol_train_case()
     if name == "heater-bank":
@@ -382,4 +386,141 @@ def heater_bank_case(count: int = 24) -> ProcessCase:
         "duty": _metric(terms[0], "kW"),
         "annual_cost": _metric({"plant": "annual_cost"}, "USD/yr"),
     }
+    return ProcessCase.from_dict(document)
+
+
+def reactive_case(*, separation: bool = False) -> ProcessCase:
+    """Illustrative butane isomerization with real-fluid reaction and energy closure.
+
+    The kinetic coefficient and equipment sizes are design demonstrations, not
+    measured catalyst data. Detailed balance derives the reverse activity rate
+    from the component formation data. The separation variant reacts in liquid
+    stage volumes; the vapor variant closes a component-selective recycle.
+    """
+    document: dict[str, Any] = {
+        "schema_version": 1,
+        "name": "reactive-separation" if separation else "reactive-recycle",
+        "description": (
+            "Butane isomerization demonstration. Kinetics and equipment sizes are "
+            "illustrative assumptions, without empirical kinetic qualification. "
+            "Reverse rates satisfy the declared ideal-gas-reference thermochemistry."
+        ),
+        "components": ["n-butane", "isobutane"],
+        "property_package": {"method": "pr"},
+        "parameters": {
+            "kinetic_rate": {"value": 1, "unit": "mol/(m3 s)", "lower": 0.2, "upper": 3},
+            "volume": {"value": 0.3 if separation else 1, "unit": "m3", "lower": 0.05, "upper": 2},
+            "temperature": {"value": 400, "unit": "K", "lower": 380, "upper": 420},
+        },
+        "reaction_sets": {
+            "isomerization": {
+                "phase": "liquid" if separation else "vapor",
+                "rate_basis": "activity",
+                "reactions": [
+                    {
+                        "name": "isomerize",
+                        "nu": [-1, 1],
+                        "rate": {
+                            "k_forward": _p("kinetic_rate"),
+                            "ea_forward": _q(20000, "J/mol"),
+                            "reference_temperature": _q(300 if separation else 400, "K"),
+                            "detailed_balance": True,
+                        },
+                    }
+                ],
+            },
+        },
+        "feeds": {
+            "feed": {
+                "flow": _q(10, "mol/s"),
+                "z": [0.7, 0.3],
+                "temperature": _q(280, "K") if separation else _p("temperature"),
+                "pressure": _q(3 if separation else 10, "bar"),
+            }
+        },
+        "units": [],
+        "metrics": {
+            "product_isobutane": _metric(
+                {
+                    "stream": "distillate" if separation else "product",
+                    "property": "component_flow",
+                    "component": "isobutane",
+                },
+                "mol/s",
+            ),
+            "extent": _metric(
+                {
+                    "unit": "column" if separation else "reactor",
+                    "property": "extent",
+                    "reaction": "isomerize",
+                },
+                "mol/s",
+            ),
+            "annual_cost": _metric({"plant": "annual_cost"}, "USD/yr"),
+        },
+        "economics": {
+            "operating_time": _q(8000, "h"),
+            "heating_price": _q(8, "USD/GJ"),
+            "cooling_price": _q(0.4, "USD/GJ"),
+            "electricity_price": _q(0.12, "USD/kWh"),
+        },
+    }
+    if separation:
+        document["parameters"].pop("temperature")
+        document["parameters"]["reflux"] = {"value": 3, "unit": "1", "lower": 2, "upper": 5}
+        document["units"] = [
+            {
+                "name": "column",
+                "kind": "column",
+                "inlets": ["feed"],
+                "outlets": ["distillate", "bottoms"],
+                "settings": {
+                    "n_stages": 6,
+                    "feed_stages": [3],
+                    "p": _q(3, "bar"),
+                    "reaction_set": "isomerization",
+                    "reaction_volumes": [
+                        _q(0, "m3"),
+                        *[_p("volume") for _ in range(4)],
+                        _q(0, "m3"),
+                    ],
+                    "specs": [
+                        {"kind": "reflux_ratio", "value": _p("reflux")},
+                        {"kind": "distillate_rate", "value": _q(5, "mol/s")},
+                    ],
+                },
+            }
+        ]
+        document["metrics"]["reactive_stage_rate"] = _metric(
+            {"unit": "column", "profile": "reaction_rates", "stage": 3, "reaction": "isomerize"},
+            "mol/(m3 s)",
+        )
+    else:
+        document["units"] = [
+            {
+                "name": "mixer",
+                "kind": "mixer",
+                "inlets": ["feed", "recycle"],
+                "outlets": ["mixed"],
+                "settings": {"t": _p("temperature")},
+            },
+            {
+                "name": "reactor",
+                "kind": "cstr",
+                "inlets": ["mixed"],
+                "outlets": ["reacted"],
+                "settings": {
+                    "reaction_set": "isomerization",
+                    "t_out": _p("temperature"),
+                    "volume": _p("volume"),
+                },
+            },
+            {
+                "name": "separator",
+                "kind": "component_separator",
+                "inlets": ["reacted"],
+                "outlets": ["recycle", "product"],
+                "settings": {"split_to_top": [0.6, 0.1]},
+            },
+        ]
     return ProcessCase.from_dict(document)

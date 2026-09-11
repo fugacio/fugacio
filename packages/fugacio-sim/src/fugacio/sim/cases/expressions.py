@@ -22,7 +22,9 @@ from fugacio.sim.cases.quantities import (
     MONEY,
     POWER,
     PRESSURE,
+    REACTION_RATE,
     TEMPERATURE,
+    VOLUME,
     CaseValidationError,
     Dimension,
     integer,
@@ -148,7 +150,7 @@ def expression_dimension(
         d = object_fields(
             expression,
             path,
-            allowed={kind, "property", "profile", "stage", "component"},
+            allowed={kind, "property", "profile", "stage", "component", "reaction"},
             required={kind},
         )
         by_name = {u.name: u for u in units}
@@ -157,22 +159,59 @@ def expression_dimension(
         unit = by_name[d[kind]]
         if ("property" in d) == ("profile" in d):
             raise CaseValidationError(path, "choose property or profile")
+        reactive = "reactions" in unit.structure
+        if "reaction" in d:
+            names = [r["name"] for r in unit.structure.get("reactions", {}).get("reactions", [])]
+            if d["reaction"] not in names:
+                raise CaseValidationError(path, "reaction must name a reaction in this unit's set")
         if "profile" in d:
             prop = d["profile"]
-            if unit.kind != "column" or not isinstance(prop, str) or prop not in _PROFILES:
+            profiles = dict(_PROFILES) if unit.kind == "column" else {}
+            if reactive and unit.kind != "reactive_flash":
+                if all("rate" in r for r in unit.structure["reactions"]["reactions"]):
+                    profiles.update(reaction_rates=REACTION_RATE)
+                if unit.kind == "column":
+                    profiles.update(generation=FLOW, reaction_heat=POWER, reaction_volumes=VOLUME)
+                elif unit.kind != "reactive_flash":
+                    profiles.update(t=TEMPERATURE, p=PRESSURE, component_flow=FLOW)
+            if not isinstance(prop, str) or prop not in profiles:
                 raise CaseValidationError(
-                    path, "profile measurements require a known column profile"
+                    path, "profile measurements require a known equipment profile"
                 )
-            integer(d.get("stage"), path + ".stage", 1, unit.structure["n_stages"])
-            if prop in ("x", "y", "k"):
+            count = (
+                unit.structure["n_stages"]
+                if unit.kind == "column"
+                else 2 * unit.structure["steps"] + 1
+                if unit.kind == "pfr"
+                else 2
+            )
+            integer(d.get("stage"), path + ".stage", 1, count)
+            if prop in ("x", "y", "k", "generation", "component_flow"):
                 component_index(
                     d.get("component"), tuple(document["components"]), path + ".component"
                 )
             elif "component" in d:
-                raise CaseValidationError(path, "component applies only to x, y, or k profiles")
-            return _PROFILES[prop]
-        if "stage" in d or "component" in d:
-            raise CaseValidationError(path, "stage/component applies only to profile measurements")
+                raise CaseValidationError(path, "this profile has no component axis")
+            if (prop == "reaction_rates") != ("reaction" in d):
+                raise CaseValidationError(
+                    path, "reaction_rates requires a reaction selector; other profiles don't"
+                )
+            return profiles[prop]
+        if reactive and d["property"] in ("extent", "generation"):
+            if "stage" in d:
+                raise CaseValidationError(path, "unit totals don't have stage selectors")
+            if d["property"] == "extent":
+                if "reaction" not in d or "component" in d:
+                    raise CaseValidationError(path, "extent requires only a reaction selector")
+            else:
+                component_index(
+                    d.get("component"), tuple(document["components"]), path + ".component"
+                )
+                if "reaction" in d:
+                    raise CaseValidationError(path, "generation requires only a component selector")
+            return FLOW
+        if any(k in d for k in ("stage", "component", "reaction")):
+            raise CaseValidationError(path, "this scalar property doesn't accept axis selectors")
         props = {"heat": POWER, "work": POWER, **UNIT_PROPERTIES.get(unit.kind, {})}
         if not isinstance(d["property"], str) or d["property"] not in props:
             raise CaseValidationError(path, f"{unit.kind} has no property {d['property']!r}")
@@ -397,9 +436,20 @@ def evaluate_expression(
         return getattr(properties, prop)(s, model=package)
     if "unit" in expression:
         unit = evaluation.units[expression["unit"]]
-        if "property" in expression:
-            return unit.quantities[expression["property"]]
-        value = unit.profiles[expression["profile"]][expression["stage"] - 1]
+        value = (
+            unit.quantities[expression["property"]]
+            if "property" in expression
+            else unit.profiles[expression["profile"]][expression["stage"] - 1]
+        )
+        if "reaction" in expression:
+            definition = next(u for u in document["units"] if u["name"] == expression["unit"])
+            names = [
+                r["name"]
+                for r in document["reaction_sets"][definition["settings"]["reaction_set"]][
+                    "reactions"
+                ]
+            ]
+            value = value[names.index(expression["reaction"])]
         if "component" in expression:
             value = value[
                 component_index(expression["component"], tuple(document["components"]), "component")

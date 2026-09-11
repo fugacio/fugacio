@@ -316,9 +316,11 @@ from fugacio.sim.properties import (
     vapor_viscosity,
     vapor_volumetric_flow,
 )
+from fugacio.sim.reaction_units import ReactionResult, reaction_reactor
 from fugacio.sim.reactive import (
     ReactiveColumnResult,
     ReactiveFlashResult,
+    reactive_column,
     reactive_distillation,
     reactive_flash,
 )
@@ -368,6 +370,7 @@ from fugacio.thermo.diagnostics import (
     SolveStatus,
     require_converged,
 )
+from fugacio.thermo.reaction_system import ReactionSet, ReferenceRate
 
 __all__ = [
     "CEPCI_DEFAULT",
@@ -440,9 +443,12 @@ __all__ = [
     "PxyDiagram",
     "QPSettings",
     "QPSolution",
+    "ReactionResult",
+    "ReactionSet",
     "ReactiveColumnResult",
     "ReactiveFlashResult",
     "ReactorResult",
+    "ReferenceRate",
     "ResidueCurve",
     "RigorousColumnResult",
     "Scales",
@@ -585,6 +591,8 @@ __all__ = [
     "purity",
     "pxy_diagram",
     "quadratic_tracking",
+    "reaction_reactor",
+    "reactive_column",
     "reactive_distillation",
     "reactive_flash",
     "reboiler_duty",

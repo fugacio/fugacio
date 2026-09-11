@@ -62,6 +62,7 @@ Schema version 1 accepts these top-level fields:
 | `components` | Ordered, canonicalized component names |
 | `property_package` | Method, explicit options, optional inline measured fit and holdout IDs |
 | `parameters` | Named scalar defaults, declared units, optional bounds |
+| `reaction_sets` | Optional named reactions, reacting phases, and dimensional kinetic coefficients |
 | `feeds` | Named flow, composition, pressure, and temperature or molar enthalpy |
 | `units` | Registered unit kinds, names, ports, and settings |
 | `metrics` | Named, dimension-checked result expressions and display units |
@@ -96,7 +97,9 @@ allowed and partitioned by the existing flowsheet engine.
 The initial registry supports mixers, splitters, heaters/coolers, valves,
 pumps, compressors, turbines, PT flashes, ideal component separators,
 two-sided heat exchangers, rigorous MESH columns, and single-reaction
-stoichiometric reactors.
+stoichiometric reactors. Common-package equilibrium reactors, CSTRs, PFRs, and
+reactive flashes share named reaction sets; columns accept reacting phase volumes.
+See [reactive workflows](reactive-workflows.md) for complete examples.
 
 Columns retain all product streams, side draws, condenser and reboiler duties,
 stage temperatures and pressures, phase compositions, K-values, and traffic.

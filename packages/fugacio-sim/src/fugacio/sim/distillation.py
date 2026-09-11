@@ -55,8 +55,10 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
+from fugacio.sim.reaction_units import reaction_parameter_validity
 from fugacio.sim.stream import Stream
 from fugacio.thermo import PR, CubicEOS, PropertyPackage
+from fugacio.thermo.acceptance import accepted_value
 from fugacio.thermo.activity.models import NRTL
 from fugacio.thermo.diagnostics import SolveReport, SolveResult, SolveStatus, require_converged
 from fugacio.thermo.implicit import (
@@ -66,6 +68,7 @@ from fugacio.thermo.implicit import (
 )
 from fugacio.thermo.linear import BlockLayout
 from fugacio.thermo.package import GammaPhiPackage
+from fugacio.thermo.reaction_system import ReactionSet
 
 ArrayLike = Array | float
 
@@ -235,6 +238,10 @@ class RigorousColumnResult(NamedTuple):
         stage_vapor: Internal vapor component flows, excluding side products.
         solver_code: Array code for the selected linear strategy, 1 for block and 0 for dense.
         jacobian_size: Scalar number of simultaneous unknowns.
+        generation: Per-stage component generation (mol/s), zero without reactions.
+        reaction_rates: Per-stage intensive reaction rates (mol/(m^3 s)).
+        reaction_heat: Formation-energy source (W); already included in stage balances.
+        reaction_volumes: Reacting-phase volume on each stage (m^3).
     """
 
     distillate: Stream
@@ -257,6 +264,10 @@ class RigorousColumnResult(NamedTuple):
     stage_vapor: Array
     solver_code: Array
     jacobian_size: Array
+    generation: Array
+    reaction_rates: Array
+    reaction_heat: Array
+    reaction_volumes: Array
 
     def warm_start(self) -> dict[str, Array]:
         """Full stage state for ``rigorous_column(..., guess=result.warm_start())``."""
@@ -317,6 +328,7 @@ class _Structure:
     spec_products: tuple[str, ...]
     spec_stages: tuple[int | None, ...]
     subcooled: bool
+    reacting: bool = False
 
     @property
     def has_condenser(self) -> bool:
@@ -450,6 +462,26 @@ def _stage_properties(
     return k, h_l, h_v
 
 
+def _reaction_sources(
+    theta: dict[str, Any],
+    t: Array,
+    p: Array,
+    x: Array,
+    y: Array,
+    st: _Structure,
+) -> tuple[Array, Array, Array]:
+    """Local reaction sources preserve the nearest-neighbor MESH sparsity."""
+    if not st.reacting:
+        return jnp.zeros_like(x), jnp.zeros((st.n, 0)), jnp.zeros(st.n)
+    system = theta["reactions"]
+    z = x if system.phase == "liquid" else y
+    rates = jax.vmap(lambda ti, pi, zi: system.rates(theta["pkg"], ti, pi, zi))(t, p, z)
+    generation = theta["reaction_volumes"][:, None] * (rates @ system.nu)
+    # With sensible/residual stream enthalpies, the formation term is -S Hf.
+    # Adding a separate heat-of-reaction correlation would count it twice.
+    return generation, rates, -generation @ system.formation_enthalpy
+
+
 def _residuals(u: Array, theta: dict[str, Any], st: _Structure) -> Array:
     """Scaled MESH residual vector plus the column specifications."""
     pkg: PropertyPackage = theta["pkg"]
@@ -477,6 +509,8 @@ def _residuals(u: Array, theta: dict[str, Any], st: _Structure) -> Array:
 
     k, h_l, h_v = _stage_properties(pkg, t, p, x, y, st)
 
+    generation, _, reaction_heat = _reaction_sources(theta, t, p, x, y, st)
+
     # Streams entering from the neighbouring stages (zero beyond the ends).
     l_above = jnp.concatenate([jnp.zeros((1, c)), liq[:-1]], axis=0)
     v_below = jnp.concatenate([v[1:], jnp.zeros((1, c))], axis=0)
@@ -486,7 +520,9 @@ def _residuals(u: Array, theta: dict[str, Any], st: _Structure) -> Array:
     h_v_below = jnp.concatenate([h_v[1:], jnp.zeros(1)])
 
     # M: component material balances (scaled by the total feed).
-    mat = (l_above + v_below + f - (1.0 + s_l)[:, None] * liq - (1.0 + s_v)[:, None] * v) / f_total
+    mat = (
+        l_above + v_below + f + generation - (1.0 + s_l)[:, None] * liq - (1.0 + s_v)[:, None] * v
+    ) / f_total
 
     # E: Murphree-corrected equilibrium in log form. The vapour from below is
     # the composition leaving the stage underneath; the bottom stage has none, so
@@ -516,6 +552,7 @@ def _residuals(u: Array, theta: dict[str, Any], st: _Structure) -> Array:
         + big_v_below * h_v_below
         + hf
         + q
+        + reaction_heat
         - (1.0 + s_l) * big_l * h_l
         - (1.0 + s_v) * big_v * h_v
     ) / (f_total * _H_MOLAR_SCALE)
@@ -835,19 +872,24 @@ def _solve(
     if (
         homotopy
         and max_iter > 0
-        and isinstance(pkg, GammaPhiPackage)
-        and isinstance(pkg.activity, NRTL)
+        and (st.reacting or (isinstance(pkg, GammaPhiPackage) and isinstance(pkg.activity, NRTL)))
     ):
         feed_seed = jax.lax.stop_gradient(feeds)
 
         def softened(fraction: Array) -> dict[str, Any]:
             target = theta_seed["pkg"]
-            activity = jax.tree_util.tree_map(lambda a: fraction * a, target.activity)
-            model = replace(target, activity=activity)
+            if isinstance(target, GammaPhiPackage) and isinstance(target.activity, NRTL):
+                activity = jax.tree_util.tree_map(lambda a: fraction * a, target.activity)
+                model = replace(target, activity=activity)
+            else:
+                model = target
             hf = jnp.zeros(st.n)
             for feed, stage in zip(feed_seed, st.feed_stages, strict=True):
                 hf = hf.at[stage].add(feed.total * molar_enthalpy(feed, model=model))
-            return {**theta_seed, "pkg": model, "hf": hf}
+            softened_theta = {**theta_seed, "pkg": model, "hf": hf}
+            if st.reacting:
+                softened_theta["reaction_volumes"] = fraction * theta_seed["reaction_volumes"]
+            return softened_theta
 
         def cond(state: tuple[Array, SolveResult, SolveResult]) -> Array:
             attempt, direct, _ = state
@@ -857,8 +899,8 @@ def _solve(
             state: tuple[Array, SolveResult, SolveResult],
         ) -> tuple[Array, SolveResult, SolveResult]:
             attempt, direct, previous = state
-            # Attempt 0 uses the original model. If it fails, restart at ideal
-            # activity, then restore NRTL in four increments through attempt 5.
+            # Attempt 0 uses the original model. If it fails, start from ideal
+            # NRTL activity and zero reaction volume, then restore both through attempt 5.
             th = jax.lax.cond(
                 attempt == 0,
                 lambda _: theta_seed,
@@ -935,6 +977,8 @@ def rigorous_column(
     stage_duties: Sequence[StageDuty] = (),
     efficiency: ArrayLike = 1.0,
     reflux_temperature: ArrayLike | None = None,
+    reactions: ReactionSet | None = None,
+    reaction_volumes: ArrayLike = 0.0,
     model: Model = None,
     eos: CubicEOS = PR,
     kij: Array | None = None,
@@ -969,6 +1013,11 @@ def rigorous_column(
         efficiency: Murphree vapour efficiency, a scalar or one value per stage.
         reflux_temperature: Subcooled reflux temperature (K) for a total
             condenser; ``None`` returns saturated reflux.
+        reactions: Optional validated kinetic reaction set. Local reaction sources
+            enter material and energy equations without changing MESH unknowns.
+        reaction_volumes: Reacting-phase volumes (m^3). A scalar applies to interior
+            stages; an n_stages vector explicitly selects every stage. Vapor-phase
+            reaction in a total condenser is rejected.
         model: Property package (see `fugacio.sim.models.package_for`); defaults
             to Peng-Robinson.
         eos: Cubic EOS for the default package.
@@ -980,8 +1029,8 @@ def rigorous_column(
         check: Raise for a failed concrete solve; compiled failures return NaNs.
         tol: Maximum accepted scaled equation residual.
         max_iter: Iteration cap for each Newton solve, including homotopy increments.
-        homotopy: Retry a failed NRTL solve by gradually restoring activity effects
-            from an ideal-activity solution. The final report checks the original model.
+        homotopy: Retry by gradually restoring NRTL activity effects and reaction
+            volumes. The final report checks the original full model.
         linear_solver: ``"block"`` uses colored stage Jacobians and checked block
             elimination with a pivoted dense fallback. ``"dense"`` selects the
             original dense reference equations and linearization.
@@ -1023,6 +1072,10 @@ def rigorous_column(
         raise ValueError("reflux_temperature applies to a total condenser only")
 
     pkg = resolve_package(components, model, eos=eos, kij=kij)
+    if reactions is not None:
+        if reactions.components != components or not reactions.rate_laws:
+            raise ValueError("column reactions need matching components and kinetic laws")
+        reactions.check_package(pkg)
     n, c = n_stages, len(components)
     st = _Structure(
         n=n,
@@ -1041,6 +1094,7 @@ def rigorous_column(
             None if sp.stage is None else _stage_index(sp.stage, n, "spec") for sp in specs
         ),
         subcooled=reflux_temperature is not None,
+        reacting=reactions is not None,
     )
 
     # Pressure profile.
@@ -1095,6 +1149,17 @@ def rigorous_column(
         ),
     }
 
+    raw_volumes = jnp.asarray(reaction_volumes, dtype=float)
+    volumes = raw_volumes
+    if volumes.ndim == 0:
+        volumes = jnp.full(n, volumes).at[0].set(0.0).at[-1].set(0.0)
+    if volumes.shape != (n,):
+        raise ValueError("reaction_volumes must be a scalar or one value per stage")
+    if reactions is not None:
+        theta.update(reactions=reactions, reaction_volumes=volumes)
+    elif not isinstance(raw_volumes, jax.core.Tracer) and bool(jnp.any(raw_volumes != 0)):
+        raise ValueError("reaction volumes require a reaction set")
+
     # Seed (detached: the iteration's starting point carries no gradient).
     hints = dict(guess or {})
     for sp in specs:
@@ -1118,6 +1183,17 @@ def rigorous_column(
     u_star, solve_report = _solve(
         theta, canon, hints, st, sweeps, tol, max_iter, homotopy, linear_solver
     )
+    valid = jnp.all(jnp.isfinite(raw_volumes)) & jnp.all(raw_volumes >= 0)
+    if reactions is not None:
+        valid &= reaction_parameter_validity(reactions)
+        if reactions.phase == "vapor" and condenser == "total":
+            valid &= volumes[0] == 0
+    else:
+        valid &= jnp.all(raw_volumes == 0)
+    solve_report = solve_report._replace(
+        status=jnp.where(valid, solve_report.status, SolveStatus.INVALID_INPUT)
+    )
+    u_star = accepted_value(u_star, solve_report.converged)
     if check:
         labels = tuple(
             [f"stage {stage + 1}: material {comp}" for stage in range(n) for comp in components]
@@ -1169,6 +1245,7 @@ def rigorous_column(
                 vapor_n=flows if side_draws[kdx].phase == "vapor" else jnp.zeros_like(flows),
             )
         )
+    generation, rates, reaction_heat = _reaction_sources(theta, un.t, p_prof, x, y, st)
     return RigorousColumnResult(
         distillate=distillate,
         bottoms=bottoms,
@@ -1190,6 +1267,10 @@ def rigorous_column(
         stage_vapor=v,
         solver_code=jnp.asarray(int(linear_solver == "block")),
         jacobian_size=jnp.asarray(st.n_unknowns),
+        generation=generation,
+        reaction_rates=rates,
+        reaction_heat=reaction_heat,
+        reaction_volumes=volumes,
     )
 
 

@@ -3,7 +3,7 @@
 Real separation equipment often runs *with* a reaction happening inside it: the
 whole point of reactive distillation is to push a reaction past its equilibrium
 limit by continuously pulling products into a different phase. This module adds
-two such units on top of the gamma-phi property system:
+common-package units alongside the legacy gamma-phi approximation:
 
 * `reactive_flash`: an isothermal flash in which the liquid simultaneously
   reaches **chemical** equilibrium (one or more reactions) and **phase**
@@ -11,14 +11,17 @@ two such units on top of the gamma-phi property system:
   solved together, reusing the validated gamma-phi flash and the ideal-gas
   reaction thermochemistry. Works for any net mole change.
 
-* `reactive_distillation`: a rigorous multistage column (Wang-Henke
+* `reactive_column`: energy-balanced MESH with a common property package and
+  volumetric rates on a declared liquid or vapor phase.
+
+* `reactive_distillation`: a legacy multistage approximation (Wang-Henke
   bubble-point, constant molar overflow) with a **rate-based** reaction source on
   each reactive stage: ``S_{j,i} = H_j * sum_r nu_{r,i} * rate_r(T_j, a_j)`` with
   the liquid-phase activities ``a_i = x_i gamma_i`` and a per-stage molar holdup
   ``H_j``. For an equimolar reaction (``sum_i nu_i = 0``, the dominant reactive
   distillation class: esterification, transesterification, metathesis,
-  isomerisation) the source conserves total moles, so constant molar overflow is
-  exact and the model is rigorous.
+  isomerisation) the source conserves total moles. Constant molar overflow remains
+  a material-balance approximation; it does not establish energy closure.
 
 The reaction equilibrium constant ``K(T)`` comes from the ideal-gas formation data
 in `fugacio.thermo.reactions`; at vapour-liquid equilibrium the component
@@ -34,19 +37,31 @@ parameters.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
 from jax import Array
 
+from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
+from fugacio.sim.reaction_units import reaction_parameter_validity
 from fugacio.sim.stream import Stream
+from fugacio.thermo.acceptance import accepted_value
 from fugacio.thermo.constants import P_REF, R
+from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged
 from fugacio.thermo.gammaphi import gamma_phi_k_values
-from fugacio.thermo.implicit import bracketed_root, newton_system
+from fugacio.thermo.implicit import (
+    bracketed_root_with_info,
+    newton_system_with_info,
+)
+from fugacio.thermo.package import flash_pt_with_info
 from fugacio.thermo.phase import GammaPhiModel
-from fugacio.thermo.reactions import Reaction, delta_g_rxn, reaction_arrays
+from fugacio.thermo.reaction_system import ReactionSet
+from fugacio.thermo.reactions import Reaction, delta_g_rxn
 from fugacio.thermo.reference import liquid_reference_fugacity
+
+if TYPE_CHECKING:
+    from fugacio.sim.distillation import ColumnFeed, RigorousColumnResult
 
 ArrayLike = Array | float
 
@@ -107,92 +122,183 @@ class ReactiveFlashResult(NamedTuple):
         liquid: Liquid product `Stream`.
         beta: Vapour fraction (mol vapour / mol after reaction).
         extent: Equilibrium extent of each reaction (mol/s), shape ``(n_reactions,)``.
+        duty: External heat input, including formation energy exactly once (W).
+        generation: Component generation (mol/s).
+        report: Chemical solve and final phase-solve acceptance.
+        phase_report: Actual final PT flash iteration report.
     """
 
     vapor: Stream
     liquid: Stream
     beta: Array
     extent: Array
+    duty: Array
+    generation: Array
+    report: SolveReport
+    phase_report: SolveReport
 
 
 def reactive_flash(
     feed: Stream,
-    reactions: Reaction | Sequence[Reaction],
+    reactions: Reaction | Sequence[Reaction] | ReactionSet,
     t: ArrayLike,
     p: ArrayLike,
-    model: GammaPhiModel,
+    model: Model,
     *,
-    tol: float = 1e-11,
-    max_iter: int = 80,
+    tol: float = 1e-9,
+    max_iter: int = 100,
+    check: bool = True,
 ) -> ReactiveFlashResult:
-    """Isothermal flash with simultaneous chemical and phase equilibrium.
+    """Solve isothermal chemical equilibrium coupled to a package PT flash.
 
-    Solves for the reaction extents that satisfy chemical equilibrium *while* the
-    mixture is split by a gamma-phi vapour-liquid flash at ``(T, P)``. The reaction
-    equilibrium is imposed on the liquid activities (equivalently the equal vapour
-    fugacities), so it is consistent across the whole vapour-fraction range; it
-    even pins the bubble/dew composition when the flash is single-phase.
+    All property and thermochemical parameters pass explicitly through the
+    implicit solve, including under JIT, JVP, and VJP. The reaction quotient
+    uses the liquid fugacity when liquid is present, otherwise the vapor
+    fugacity. Absent phases never determine chemical equilibrium. Formation
+    enthalpy is included once in the reported heat input (W).
 
     Args:
-        feed: Inlet stream; reactions must be defined over ``feed.components``.
-        reactions: One reaction or several over the feed's component ordering.
-        t: Temperature (K).
-        p: Pressure (Pa).
-        model: A `GammaPhiModel` (activity liquid + EOS/ideal
-            vapour), the right tool for the non-ideal mixtures reactive flashes
-            target.
-        tol: Convergence tolerance on the reaction/flash residual.
-        max_iter: Maximum number of solver iterations.
+        feed: Inlet material and thermal state.
+        reactions: One reaction, a sequence, or a validated ReactionSet.
+        t: Drum temperature (K).
+        p: Drum pressure (Pa).
+        model: Common property package or compatible equilibrium model.
+        tol: Chemical-equilibrium residual tolerance.
+        max_iter: Root iteration cap.
+        check: Raise for failed concrete solves; compiled callers inspect report.
 
     Returns:
-        A `ReactiveFlashResult`. Differentiable in the feed, ``(T, P)``, the
-        activity-model parameters, and the reaction thermochemistry.
+        Products preserving phase inventories, reaction extents, heat input,
+        generation, and the actual chemical solve report. Process-case audits
+        independently assess product equilibrium, stability, and balances.
     """
-    comps = feed.components
-    rxns = _as_reactions(reactions)
-    nu = _stack_nu(rxns, comps)
-    n_rxn = nu.shape[0]
-    hf, gf, coeffs = reaction_arrays(list(comps))
-    n_feed = feed.n
-    t_arr = jnp.asarray(t, dtype=float)
-    p_arr = jnp.asarray(p, dtype=float)
+    if not isinstance(reactions, ReactionSet):
+        _stack_nu(_as_reactions(reactions), feed.components)
+    system = (
+        reactions if isinstance(reactions, ReactionSet) else ReactionSet.from_reactions(reactions)
+    )
+    pkg = resolve_package(feed.components, model)
+    system.check_package(pkg)
+    if system.components != feed.components:
+        raise ValueError("reaction and feed component order differs")
+    nu = system.nu
+    nr = nu.shape[0]
+    tt, pp = jnp.asarray(t, dtype=float), jnp.asarray(p, dtype=float)
+    theta = {"feed": feed.n, "t": tt, "p": pp, "package": pkg, "system": system}
 
-    reactant = nu < 0.0
-    product = nu > 0.0
-    cap_r = jnp.where(reactant, n_feed[None, :] / jnp.where(reactant, -nu, 1.0), jnp.inf)
-    cap_p = jnp.where(product, n_feed[None, :] / jnp.where(product, nu, 1.0), jnp.inf)
-    xi_hi = jnp.min(cap_r, axis=1)
-    xi_lo = -jnp.min(cap_p, axis=1)
-
-    def reaction_residual(xi: Array, theta: tuple[Array, Array, Array]) -> Array:
-        nf, tt, pp = theta
-        n = nf + xi @ nu
+    def residual(xi: Array, th: Any) -> Array:
+        rx, package = th["system"], th["package"]
+        n = th["feed"] + xi @ rx.nu
         z = n / jnp.sum(n)
-        res = model.flash_pt(tt, pp, z)
-        ln_a = _ln_activity_liquid(model, tt, pp, res.x)
-        return nu @ ln_a - _ln_k(nu, tt, hf, gf, coeffs)
+        phases = package.flash_pt(th["t"], th["p"], z)
 
-    theta = (n_feed, t_arr, p_arr)
-    if n_rxn == 1:
-        span = xi_hi[0] - xi_lo[0]
+        def log_activity(phase: str, composition: Array) -> Array:
+            return (
+                jnp.log(jnp.maximum(composition, 1e-300))
+                + package.ln_phi(th["t"], th["p"], composition, phase=phase)
+                + jnp.log(th["p"] / P_REF)
+            )
 
-        def scalar(xi_s: Array, th: tuple[Array, Array, Array]) -> Array:
-            return reaction_residual(jnp.reshape(xi_s, (1,)), th)[0]
-
-        xi_star = bracketed_root(
-            scalar, theta, xi_lo[0] + 1e-6 * span, xi_hi[0] - 1e-6 * span, tol, max_iter
+        ln_a = jax.lax.cond(
+            phases.beta < 1.0,
+            lambda _: log_activity("liquid", phases.x),
+            lambda _: log_activity("vapor", phases.y),
+            None,
         )
-        extent = jnp.reshape(xi_star, (1,))
-    else:
-        extent = newton_system(reaction_residual, jnp.zeros(n_rxn), theta, tol, max_iter)
+        return rx.nu @ ln_a - rx.ln_equilibrium_constants(th["t"])
 
-    n = n_feed + extent @ nu
-    total = jnp.sum(n)
-    z = n / total
-    res = model.flash_pt(t_arr, p_arr, z)
-    vapor = Stream(res.y * res.beta * total, t_arr, p_arr, comps)
-    liquid = Stream(res.x * (1.0 - res.beta) * total, t_arr, p_arr, comps)
-    return ReactiveFlashResult(vapor=vapor, liquid=liquid, beta=res.beta, extent=extent)
+    if nr == 1:
+        row = nu[0]
+        hi = jnp.min(jnp.where(row < 0, feed.n / jnp.where(row < 0, -row, 1), jnp.inf))
+        lo = -jnp.min(jnp.where(row > 0, feed.n / jnp.where(row > 0, row, 1), jnp.inf))
+        epsilon = 1e-10 * (hi - lo)
+        solved = bracketed_root_with_info(
+            lambda x, th: residual(jnp.atleast_1d(x), th)[0],
+            theta,
+            lo + epsilon,
+            hi - epsilon,
+            tol * 1e-3,
+            max_iter,
+            residual_tol=tol,
+        )
+        extent = jnp.atleast_1d(solved.value)
+    else:
+        # Log component flows keep trial compositions positive; extents enforce
+        # stoichiometry and the final equation residual verifies both systems.
+        c = len(feed.components)
+        scale = jnp.maximum(feed.total, 1.0)
+        theta = {**theta, "scale": scale}
+
+        def joint(u: Array, th: Any) -> Array:
+            n = jnp.exp(u[:c]) * th["scale"]
+            xi = u[c:] * th["scale"]
+            # Evaluate chemical equations on the positive global mole coordinates.
+            chemical = residual(jnp.zeros(nr), {**th, "feed": n})
+            balance = (n - th["feed"] - xi @ th["system"].nu) / th["scale"]
+            return jnp.concatenate([balance, chemical])
+
+        seed = jnp.concatenate([jnp.log(jnp.maximum(feed.n / scale, 1e-3)), jnp.zeros(nr)])
+        solved = newton_system_with_info(
+            joint,
+            seed,
+            theta,
+            tol,
+            max_iter,
+            lower=jnp.concatenate([jnp.full(c, -70.0), jnp.full(nr, -jnp.inf)]),
+            upper=jnp.concatenate([jnp.full(c, 20.0), jnp.full(nr, jnp.inf)]),
+        )
+        extent = solved.value[c:] * scale
+    n = feed.n + extent @ nu
+    valid = (
+        reaction_parameter_validity(system)
+        & jnp.all(n >= 0)
+        & (jnp.sum(n) > 0)
+        & (tt > 0)
+        & (pp > 0)
+        & feed.report.converged
+    )
+    report = solved.report._replace(
+        status=jnp.where(valid, solved.report.status, SolveStatus.INVALID_INPUT)
+    )
+    detached = jax.lax.stop_gradient((pkg, tt, pp, n / jnp.sum(n)))
+    phase_report = flash_pt_with_info(*detached).report
+    report = report._replace(
+        status=jnp.where(report.converged, phase_report.status, report.status),
+        residual_norm=jnp.maximum(report.residual_norm, phase_report.residual_norm),
+    )
+    if check:
+        require_converged(report, "reactive flash")
+    extent = accepted_value(extent, report.converged)
+    n = feed.n + extent @ nu
+    phases = pkg.flash_pt(tt, pp, n / jnp.sum(n))
+    nv, nl = phases.y * phases.beta * jnp.sum(n), phases.x * (1 - phases.beta) * jnp.sum(n)
+    vapor = Stream(nv, tt, pp, feed.components, nv)
+    liquid = Stream(nl, tt, pp, feed.components, jnp.zeros_like(nl))
+    # Single-phase primitives avoid asking an empty product for a composition.
+    hout = jax.lax.cond(
+        phases.beta > 0,
+        lambda _: jnp.sum(nv) * pkg.enthalpy(tt, pp, phases.y, phase="vapor"),
+        lambda _: jnp.asarray(0.0),
+        None,
+    )
+    hout += jax.lax.cond(
+        phases.beta < 1,
+        lambda _: jnp.sum(nl) * pkg.enthalpy(tt, pp, phases.x, phase="liquid"),
+        lambda _: jnp.asarray(0.0),
+        None,
+    )
+
+    hin = feed.total * molar_enthalpy(feed, model=pkg)
+    duty = hout - hin + (extent @ nu) @ system.formation_enthalpy
+    finite = jnp.isfinite(duty) & jnp.all(jnp.isfinite(nv)) & jnp.all(jnp.isfinite(nl))
+    report = report._replace(status=jnp.where(finite, report.status, SolveStatus.NONFINITE))
+    if check:
+        require_converged(report, "reactive flash")
+    vapor, liquid, beta, extent, duty = jax.tree_util.tree_map(
+        lambda value: accepted_value(value, report.converged),
+        (vapor, liquid, phases.beta, extent, duty),
+    )
+    return ReactiveFlashResult(vapor, liquid, beta, extent, duty, extent @ nu, report, phase_report)
 
 
 class ReactiveColumnResult(NamedTuple):
@@ -249,9 +355,9 @@ def reactive_distillation(
     products and profiles are differentiable with respect to ``reflux``,
     ``distillate_rate``, ``holdup``, the feed, and the model/kinetic parameters.
 
-    For an equimolar reaction the source conserves total moles and constant molar
-    overflow is exact. (Non-equimolar reactions also run, but the constant-overflow
-    traffic then neglects the reaction's volume change.)
+    This legacy screening model has no stage energy equations. Equimolar
+    stoichiometry does not establish energy closure. Use reactive_column for
+    energy-balanced design and non-equimolar reactions.
 
     Args:
         feed: Feed stream.
@@ -390,9 +496,32 @@ def reactive_distillation(
     )
 
 
+def reactive_column(
+    feeds: Sequence[ColumnFeed],
+    n_stages: int,
+    reactions: ReactionSet,
+    reaction_volumes: ArrayLike,
+    **kwargs: Any,
+) -> RigorousColumnResult:
+    """Solve reactive MESH distillation with formation-consistent stage energy.
+
+    Arguments follow rigorous_column. Volumes are reacting-phase m^3; a scalar
+    selects interior stages and a vector explicitly selects each stage. This
+    rigorous entry point replaces CMO assumptions for process design. The older
+    reactive_distillation function retains its historical molar-holdup screening
+    convention and should only be used for comparisons with those old examples.
+    """
+    from fugacio.sim.distillation import rigorous_column
+
+    return rigorous_column(
+        feeds, n_stages, reactions=reactions, reaction_volumes=reaction_volumes, **kwargs
+    )
+
+
 __all__ = [
     "ReactiveColumnResult",
     "ReactiveFlashResult",
+    "reactive_column",
     "reactive_distillation",
     "reactive_flash",
 ]

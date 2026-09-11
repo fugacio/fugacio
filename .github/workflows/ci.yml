@@ -101,6 +101,8 @@ jobs:
           - utility-reliability
           - copilot
           - cases
+          - reactive-kernels
+          - reactive-workflows
           - case-plant
           - case-gradient
           - case-optimization
@@ -168,6 +170,10 @@ jobs:
                 packages/fugacio-sim/tests/test_flowsheet.py
                 packages/fugacio-sim/tests/test_heat_exchanger.py
                 packages/fugacio-sim/tests/test_plants.py
+                packages/fugacio-sim/tests/test_reaction_units.py
+                packages/fugacio-sim/tests/test_reactive_flash_derivatives.py
+                packages/fugacio-sim/tests/test_reactive_mesh.py
+                packages/fugacio-sim/tests/test_cases_reactions.py
                 packages/fugacio-sim/tests/test_cases_schema.py
                 packages/fugacio-sim/tests/test_cases_runtime.py
                 packages/fugacio-sim/tests/test_cases_studies.py
@@ -217,6 +223,19 @@ jobs:
               run packages/fugacio-copilot/tests/test_steam_tools.py
               run packages/fugacio-copilot/tests \
                 --ignore=packages/fugacio-copilot/tests/test_steam_tools.py
+              ;;
+            reactive-kernels)
+              run packages/fugacio-sim/tests/test_reaction_units.py
+              run packages/fugacio-sim/tests/test_reactive_flash_derivatives.py
+              run packages/fugacio-sim/tests/test_reactive_mesh.py
+              ;;
+            reactive-workflows)
+              # Isolate complete reaction/recycle and reactive-column study graphs.
+              run 'packages/fugacio-sim/tests/test_cases_reactions.py::test_reactive_workflow_end_to_end[reactive-recycle]'
+              run 'packages/fugacio-sim/tests/test_cases_reactions.py::test_reactive_workflow_end_to_end[reactive-separation]'
+              run packages/fugacio-sim/tests/test_cases_reactions.py::test_reactive_recycle_eo_matches_sequential
+              run packages/fugacio-sim/tests/test_cases_reactions.py::test_reactive_separation_eo_retains_reaction_profiles
+              run packages/fugacio-sim/tests/test_cases_reactions.py -k 'not workflow and not eo'
               ;;
             cases)
               run packages/fugacio-sim/tests/test_cases_schema.py

@@ -29,7 +29,15 @@ def case_format() -> dict[str, Any]:
         "unit_types": registry_schema(),
         "example": example_case("heater").to_dict(),
         "examples": list(EXAMPLES),
+        "reaction_example": example_case("reactive-recycle").to_dict(),
         "rules": [
+            "Named reaction_sets declare phase and activity or normalized_concentration inputs. "
+            "Kinetic coefficients use mol/(m3 s), activation energies J/mol, "
+            "and explicit reference K.",
+            "Extent metrics require a reaction name; generation metrics require a component. "
+            "Column reaction_volumes declare one reacting-phase volume in m3 per stage.",
+            "Kinetic assumptions aren't empirical qualification. Use the retained phase, balance, "
+            "integration, and solver reports when assessing a reactive design.",
             "Dimensional values require {value, unit}; parameter references use {parameter: name}.",
             (
                 "Feeds and unit outlets have one producer and at most one "
@@ -291,6 +299,7 @@ class DesignSession:
             "metrics": {k: d["metrics"][k] for k in metrics},
             "comparison": comparison,
             "qualification": d["qualification"],
+            **({"reaction_evidence": d["reaction_evidence"]} if "reaction_evidence" in d else {}),
             "report": run.markdown(),
         }
         self.pending = result

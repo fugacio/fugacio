@@ -47,3 +47,22 @@ independently.
 
 See the [process cases guide](../../docs/process-cases.md) for the format,
 acceptance criteria, backend differences, and accountable copilot workflow.
+
+The `reactive-recycle` and `reactive-separation` examples share butane
+isomerization thermochemistry. Their phase-specific kinetics, reacting volumes,
+and reverse-rate convention are explicit. Kinetic coefficients and equipment
+sizes are illustrative assumptions, without measured catalyst qualification.
+The recycle uses a vapor CSTR; the separation uses liquid reaction volumes in
+energy-balanced MESH stages.
+
+```bash
+uv run fugacio run examples/process-cases/reactive-recycle.json --report reactive-recycle.md
+uv run fugacio sensitivities examples/process-cases/reactive-recycle.json examples/process-cases/reactive-recycle-sensitivities.json
+uv run fugacio optimize examples/process-cases/reactive-recycle.json examples/process-cases/reactive-recycle-optimization.json
+uv run fugacio run examples/process-cases/reactive-separation.json --report reactive-separation.md
+uv run fugacio sensitivities examples/process-cases/reactive-separation.json examples/process-cases/reactive-separation-sensitivities.json
+uv run fugacio optimize examples/process-cases/reactive-separation.json examples/process-cases/reactive-separation-optimization.json
+```
+
+See [reactive workflows](../../docs/reactive-workflows.md) for rate units,
+thermal references, phase restrictions, numerical acceptance, and API migration.

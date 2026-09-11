@@ -16,3 +16,7 @@ See the [reactions & reactors guide](../../reactions.md) for worked examples.
 ## Kinetics
 
 ::: fugacio.thermo.kinetics
+
+## Reusable reaction sets
+
+::: fugacio.thermo.reaction_system

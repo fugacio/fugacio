@@ -124,6 +124,9 @@ API reference generated from package docstrings.
   [rigorous MESH distillation](docs/distillation.md),
   [reactors and reactive separations](docs/reactions.md), and simultaneous
   [equation-oriented flowsheet solving](docs/equation-oriented.md).
+  [Reactive workflows](docs/reactive-workflows.md) share validated reaction sets
+  across package-based reactors and reactive MESH columns, with saved reaction/recycle
+  and liquid reactive-separation examples, checked derivatives, and design studies.
 - **Process design:** Differentiable constrained optimization, design
   specifications, equipment sizing, and screening economics are covered in the
   [optimization guide](docs/optimization.md).

@@ -1,0 +1,12 @@
+{
+  "parameters": [
+    "volume",
+    "kinetic_rate"
+  ],
+  "metrics": [
+    "extent",
+    "product_isobutane"
+  ],
+  "relative_step": 0.0001,
+  "relative_tolerance": 0.002
+}

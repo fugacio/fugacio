@@ -50,7 +50,9 @@ def arrhenius(t: ArrayLike, a: ArrayLike, ea: ArrayLike) -> Array:
     return jnp.asarray(a) * jnp.exp(-jnp.asarray(ea) / (R * jnp.asarray(t)))
 
 
-def arrhenius_ref(t: ArrayLike, k_ref: ArrayLike, ea: ArrayLike, t_ref: float = T_REF) -> Array:
+def arrhenius_ref(
+    t: ArrayLike, k_ref: ArrayLike, ea: ArrayLike, t_ref: float | Array = T_REF
+) -> Array:
     """Reference-temperature Arrhenius form ``k(T) = k_ref exp(-Ea/R (1/T - 1/T_ref))``.
 
     Numerically better conditioned than `arrhenius` for regression, because

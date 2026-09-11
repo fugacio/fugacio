@@ -22,7 +22,7 @@ def test_default_registry_exposes_portable_case_tools():
     schema = registry["case_format"].run()
     assert schema["schema_version"] == 1
     assert "delta_K" in schema["units"]
-    assert len(schema["unit_types"]) == 12
+    assert len(schema["unit_types"]) == 16
 
 
 def test_design_solver_choices_structure_and_profile_evidence(tmp_path):
@@ -177,3 +177,19 @@ def test_literal_metrics_arent_submitted_as_computed_performance(tmp_path):
     assert run["metrics"]["claimed_cost"]["source"] == "declared_input"
     with pytest.raises(ValueError, match="literal inputs"):
         session.submit_design(run["artifact_id"], ["claimed_cost"])
+
+
+def test_reactive_design_submission_retains_extent_and_kinetic_evidence(tmp_path):
+    case = example_case("reactive-recycle").to_dict()
+    reactor = case["units"][1]
+    reactor.update(inlets=["feed"], outlets=["product"])
+    case["units"] = [reactor]
+    session = DesignSession(CaseWorkspace(tmp_path))
+    identity = session.create_case(case)["case_id"]
+    result = session.run_case(identity)
+    assert result["accepted"]
+    submitted = session.submit_design(result["artifact_id"], ["extent", "product_isobutane"])
+    assert submitted["metrics"]["extent"]["value_si"] > 0
+    assert submitted["reaction_evidence"]["kinetic_qualification"] == "not_evaluated"
+    assert "don't validate kinetics" in submitted["report"]
+    assert session.inspect(result["artifact_id"])["computed_in_session"]
