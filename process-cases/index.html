@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -630,6 +632,34 @@
     
   
     Reactions & reactors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reactive-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactive process workflows
   
 
     
@@ -2674,6 +2704,10 @@ the complete run in its <code>run</code> attribute.</p>
 <td>Named scalar defaults, declared units, optional bounds</td>
 </tr>
 <tr>
+<td><code>reaction_sets</code></td>
+<td>Optional named reactions, reacting phases, and dimensional kinetic coefficients</td>
+</tr>
+<tr>
 <td><code>feeds</code></td>
 <td>Named flow, composition, pressure, and temperature or molar enthalpy</td>
 </tr>
@@ -2718,7 +2752,9 @@ allowed and partitioned by the existing flowsheet engine.</p>
 <p>The initial registry supports mixers, splitters, heaters/coolers, valves,
 pumps, compressors, turbines, PT flashes, ideal component separators,
 two-sided heat exchangers, rigorous MESH columns, and single-reaction
-stoichiometric reactors.</p>
+stoichiometric reactors. Common-package equilibrium reactors, CSTRs, PFRs, and
+reactive flashes share named reaction sets; columns accept reacting phase volumes.
+See <a href="../reactive-workflows/">reactive workflows</a> for complete examples.</p>
 <p>Columns retain all product streams, side draws, condenser and reboiler duties,
 stage temperatures and pressures, phase compositions, K-values, and traffic.
 Column specifications use component names and explicit physical quantities.

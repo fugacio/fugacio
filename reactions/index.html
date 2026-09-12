@@ -18,7 +18,7 @@
         <link rel="prev" href="../physical-properties/">
       
       
-        <link rel="next" href="../optimization/">
+        <link rel="next" href="../reactive-workflows/">
       
       
         
@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -751,6 +753,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reactive-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactive process workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2562,10 +2592,13 @@
 <h1 id="reactions-reactors">Reactions &amp; reactors<a class="headerlink" href="#reactions-reactors" title="Permanent link">&para;</a></h1>
 <p>Fugacio models chemical reactions end to end: standard-state thermochemistry and
 the equilibrium constant <code>K(T)</code>, chemical-equilibrium composition, reaction
-kinetics, ideal reactor unit operations, and reactive separations. Like the rest
+kinetics, reactor unit operations, and reactive separations. Like the rest
 of the stack everything is written in JAX, so conversions, yields, and duties are
 differentiable with respect to temperature, pressure, feed, <em>and</em> the underlying
 thermochemical / kinetic parameters.</p>
+<p>For common-package reactors, reactive MESH columns, saved cases, and checked
+design studies, start with <a href="../reactive-workflows/">reactive process workflows</a>.
+The examples below also document the retained ideal-gas interfaces.</p>
 <h2 id="stoichiometry-thermochemistry">Stoichiometry &amp; thermochemistry<a class="headerlink" href="#stoichiometry-thermochemistry" title="Permanent link">&para;</a></h2>
 <p>A <code>Reaction</code> is a stoichiometric vector over an ordered component list. Build one
 from an equation string or from reactant/product maps:</p>
@@ -2622,8 +2655,8 @@ The temperature dependence is the <code>Arrhenius</code> form (<code>arrhenius</
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">law</span> <span class="o">=</span> <span class="n">PowerLaw</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">1.0e7</span><span class="p">),</span> <span class="n">ea</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">75_000.0</span><span class="p">),</span> <span class="n">orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
 </span></code></pre></div>
 <h2 id="reactors">Reactors<a class="headerlink" href="#reactors" title="Permanent link">&para;</a></h2>
-<p>The <code>fugacio.sim</code> layer turns reactions into energy-balanced unit operations on a
-differentiable <code>Stream</code>. Every reactor accepts one or more reactions and runs
+<p>The legacy <code>fugacio.sim.reactors</code> interfaces turn reactions into ideal-gas unit
+operations on a differentiable <code>Stream</code>. These examples accept reactions and run
 either <em>isothermal</em> (reporting the heat <code>duty</code> to hold <code>t_out</code>) or <em>adiabatic</em>
 (<code>adiabatic=True</code>, solving for the outlet temperature). All return a
 <code>ReactorResult</code> with <code>outlet</code>, <code>duty</code>, and <code>extent</code>.</p>
@@ -2679,14 +2712,17 @@ either <em>isothermal</em> (reporting the heat <code>duty</code> to hold <code>t
 </span></code></pre></div>
 <h2 id="reactive-separations">Reactive separations<a class="headerlink" href="#reactive-separations" title="Permanent link">&para;</a></h2>
 <p>When reaction and phase separation happen together, use the <code>fugacio.sim</code>
-reactive units, which couple kinetics / chemical equilibrium to a <code>GammaPhiModel</code>:</p>
+reactive units. The preferred MESH and flash APIs accept a common property package:</p>
 <ul>
 <li><code>reactive_flash</code>: simultaneous chemical <em>and</em> vapour-liquid equilibrium in a
   single drum (liquid-activity reaction quotient), returning vapour/liquid
   products, the vapour fraction <code>beta</code>, and the extents.</li>
-<li><code>reactive_distillation</code>: a rate-based column that adds per-stage reaction source
+<li><code>reactive_column</code>: material- and energy-balanced MESH with volumetric kinetics,
+  retaining the structured column solver and differentiable reaction parameters.</li>
+<li><code>reactive_distillation</code>: a legacy approximation that adds per-stage reaction source
   terms (kinetics × molar holdup) to the Wang-Henke mass balances, returning the
-  stage profiles, products, and the net <code>generation</code> on every stage.</li>
+  stage profiles, products, and the net <code>generation</code> on every stage. Constant
+  molar overflow does not establish an energy balance.</li>
 </ul>
 <p>These make classic reaction-separation processes (e.g. esterification with in-situ
 water removal) tractable while staying differentiable through the coupled solve.</p>

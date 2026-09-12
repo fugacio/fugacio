@@ -12,13 +12,13 @@
         <meta name="author" content="Owen Carey">
       
       
-        <link rel="canonical" href="https://fugacio.com/flowsheeting/">
+        <link rel="canonical" href="https://fugacio.com/reactive-workflows/">
       
       
-        <link rel="prev" href="../distillation/">
+        <link rel="prev" href="../reactions/">
       
       
-        <link rel="next" href="../equation-oriented/">
+        <link rel="next" href="../optimization/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Flowsheeting, tears & exchangers - Fugacio</title>
+        <title>Reactive process workflows - Fugacio</title>
       
     
     
@@ -67,17 +67,17 @@
     
   
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Flowsheeting, tears & exchangers - Fugacio" />
+<meta property="og:title" content="Reactive process workflows - Fugacio" />
 <meta property="og:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
-<meta property="og:image" content="https://fugacio.com/assets/images/social/flowsheeting.png" />
+<meta property="og:image" content="https://fugacio.com/assets/images/social/reactive-workflows.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://fugacio.com/flowsheeting/" />
+<meta property="og:url" content="https://fugacio.com/reactive-workflows/" />
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:title" content="Flowsheeting, tears & exchangers - Fugacio" />
+<meta property="twitter:title" content="Reactive process workflows - Fugacio" />
 <meta property="twitter:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
-<meta property="twitter:image" content="https://fugacio.com/assets/images/social/flowsheeting.png" />
+<meta property="twitter:image" content="https://fugacio.com/assets/images/social/reactive-workflows.png" />
 </head>
   
   
@@ -97,7 +97,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#flowsheeting-partitioning-tears-and-exchangers" class="md-skip">
+        <a href="#reactive-process-workflows" class="md-skip">
           Skip to content
         </a>
       
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Flowsheeting, tears & exchangers
+              Reactive process workflows
             
           </span>
         </div>
@@ -649,10 +649,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../reactive-workflows/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactive process workflows
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -668,6 +695,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run-the-complete-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run the complete examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaction-references-and-rate-units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reaction references and rate units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-package-reactor-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common-package reactor API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reactive-mesh-and-flash" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reactive MESH and flash
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#portable-definitions-and-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Portable definitions and measurements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -761,37 +863,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Flowsheeting, tears & exchangers
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../flowsheeting/" class="md-nav__link">
         
   
   
@@ -807,98 +882,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#declare-units-not-an-order" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Declare units, not an order
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tear-methods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tear methods
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#two-sided-heat-exchanger" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Two-sided heat exchanger
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#a-plant-with-a-recycle-a-column-and-an-economizer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        A plant with a recycle, a column, and an economizer
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="A plant with a recycle, a column, and an economizer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#compile-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compile time
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#equation-oriented-alternative" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Equation-oriented alternative
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2497,10 +2480,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#declare-units-not-an-order" class="md-nav__link">
+  <a href="#run-the-complete-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare units, not an order
+        Run the complete examples
       
     </span>
   </a>
@@ -2508,10 +2491,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tear-methods" class="md-nav__link">
+  <a href="#reaction-references-and-rate-units" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tear methods
+        Reaction references and rate units
       
     </span>
   </a>
@@ -2519,10 +2502,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#two-sided-heat-exchanger" class="md-nav__link">
+  <a href="#common-package-reactor-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Two-sided heat exchanger
+        Common-package reactor API
       
     </span>
   </a>
@@ -2530,38 +2513,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a-plant-with-a-recycle-a-column-and-an-economizer" class="md-nav__link">
+  <a href="#reactive-mesh-and-flash" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A plant with a recycle, a column, and an economizer
+        Reactive MESH and flash
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="A plant with a recycle, a column, and an economizer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#compile-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compile time
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#equation-oriented-alternative" class="md-nav__link">
+  <a href="#portable-definitions-and-measurements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Equation-oriented alternative
+        Portable definitions and measurements
       
     </span>
   </a>
@@ -2585,7 +2551,7 @@
 
 
   
-    <a href="https://github.com/fugacio/fugacio/edit/main/docs/flowsheeting.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/fugacio/fugacio/edit/main/docs/reactive-workflows.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
     </a>
@@ -2594,180 +2560,212 @@
     
       
     
-    <a href="https://github.com/fugacio/fugacio/raw/main/docs/flowsheeting.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/fugacio/fugacio/raw/main/docs/reactive-workflows.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5"/></svg>
     </a>
   
 
 
-<h1 id="flowsheeting-partitioning-tears-and-exchangers">Flowsheeting: partitioning, tears, and exchangers<a class="headerlink" href="#flowsheeting-partitioning-tears-and-exchangers" title="Permanent link">&para;</a></h1>
-<p>A flowsheet is a set of units connected by named streams. When a stream fed to
-a unit depends on that unit's own output, the loop has to be <em>torn</em>: one stream
-is guessed, the loop is evaluated, and the guess is corrected until the stream
-reproduces itself. <code>fugacio.sim.Flowsheet</code> does the bookkeeping for you: it
-finds the loops, chooses where to tear them, orders the calculation, converges
-every loop with a choice of accelerated fixed-point or quasi-Newton methods,
-and keeps the converged plant differentiable in its parameters.</p>
-<h2 id="declare-units-not-an-order">Declare units, not an order<a class="headerlink" href="#declare-units-not-an-order" title="Permanent link">&para;</a></h2>
-<p>Register feeds and units; each unit is a plain function of its input streams
-and the shared parameter pytree <code>theta</code>, returning one stream or a tuple of
-streams matched to <code>outputs</code>. The order you register units in doesn't matter.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flowsheet</span><span class="p">,</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">flash_drum</span><span class="p">,</span> <span class="n">heater</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">splitter</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">comps</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;ethane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span><span class="n">comps</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">]),</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">Flowsheet</span><span class="p">()</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;mixer&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">mix</span><span class="p">([</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">],</span> <span class="n">t</span><span class="o">=</span><span class="mf">300.0</span><span class="p">),</span>            <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="s2">&quot;recycle&quot;</span><span class="p">),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;mixed&quot;</span><span class="p">,))</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;cooler&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">heater</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;T_flash&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">outlet</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;mixed&quot;</span><span class="p">,),</span>  <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,))</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;flash&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">[</span><span class="s2">&quot;T_flash&quot;</span><span class="p">],</span> <span class="mf">20e5</span><span class="p">),</span>   <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,),</span>   <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vapor&quot;</span><span class="p">,</span> <span class="s2">&quot;liquid&quot;</span><span class="p">))</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;split&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">splitter</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;purge&quot;</span><span class="p">],</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">th</span><span class="p">[</span><span class="s2">&quot;purge&quot;</span><span class="p">]])),</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vapor&quot;</span><span class="p">,),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;purge&quot;</span><span class="p">,</span> <span class="s2">&quot;recycle&quot;</span><span class="p">))</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">streams</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;T_flash&quot;</span><span class="p">:</span> <span class="mf">250.0</span><span class="p">,</span> <span class="s2">&quot;purge&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">)</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">streams</span><span class="p">[</span><span class="s2">&quot;recycle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">total</span>
+<h1 id="reactive-process-workflows">Reactive process workflows<a class="headerlink" href="#reactive-process-workflows" title="Permanent link">&para;</a></h1>
+<p>A <code>ReactionSet</code> supplies one component basis, stoichiometry, thermochemistry,
+kinetics, and reacting phase to reactors, reactive flashes, and MESH columns.
+Saved cases carry the same definition through simulation, sensitivity studies,
+bounded optimization, persistence, and copilot submission.</p>
+<h2 id="run-the-complete-examples">Run the complete examples<a class="headerlink" href="#run-the-complete-examples" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>reactive-recycle<span class="w"> </span>reactive-recycle.json
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>reactive-recycle.json<span class="w"> </span>--output<span class="w"> </span>recycle-run.json<span class="w"> </span>--report<span class="w"> </span>recycle-report.md
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>reactive-separation<span class="w"> </span>reactive-separation.json
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>reactive-separation.json<span class="w"> </span>--output<span class="w"> </span>separation-run.json<span class="w"> </span>--report<span class="w"> </span>separation-report.md
 </span></code></pre></div>
-<p><code>partition()</code> exposes the calculation order the solver derived:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">fs</span><span class="o">.</span><span class="n">partition</span><span class="p">():</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">units</span><span class="p">,</span> <span class="n">block</span><span class="o">.</span><span class="n">cyclic</span><span class="p">,</span> <span class="n">block</span><span class="o">.</span><span class="n">tears</span><span class="p">)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># (&#39;mixer&#39;, &#39;cooler&#39;, &#39;flash&#39;, &#39;split&#39;)  True  (&#39;recycle&#39;,)</span>
+<p>The committed cases and study requests are in <code>examples/process-cases/</code>.
+<code>reactive-recycle</code> uses Peng-Robinson properties for vapor-phase butane
+isomerization in a CSTR, followed by a specified component separator and a
+recycle. The separator's component splits and required heat are explicit
+assumptions. <code>reactive-separation</code> uses six MESH stages, four liquid reaction
+volumes, a total condenser, and a kettle reboiler. These cases demonstrate
+numerical workflows. Their kinetic coefficients and equipment sizes are
+illustrative; neither case establishes catalyst performance or empirical
+kinetic qualification.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">CaseWorkspace</span><span class="p">,</span> <span class="n">optimize</span><span class="p">,</span> <span class="n">sensitivities</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">example_case</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">example_case</span><span class="p">(</span><span class="s2">&quot;reactive-recycle&quot;</span><span class="p">))</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">workspace</span> <span class="o">=</span> <span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">baseline</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">workspace</span><span class="o">.</span><span class="n">save_run</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">sensitivity</span> <span class="o">=</span> <span class="n">sensitivities</span><span class="p">(</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">runner</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">,</span> <span class="s2">&quot;kinetic_rate&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;extent&quot;</span><span class="p">],</span> <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">design</span> <span class="o">=</span> <span class="n">optimize</span><span class="p">(</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">runner</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">],</span> <span class="s2">&quot;product_isobutane&quot;</span><span class="p">,</span> <span class="n">sense</span><span class="o">=</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="k">assert</span> <span class="n">sensitivity</span><span class="o">.</span><span class="n">accepted</span> <span class="ow">and</span> <span class="n">design</span><span class="o">.</span><span class="n">accepted</span>
 </span></code></pre></div>
-<p>Units are grouped into strongly connected components (Tarjan's algorithm), the
-blocks are ordered so every block's inputs are known before it runs, and inside
-each cyclic block tear streams are chosen greedily to break every cycle with as
-few tears as possible, preferring streams that flow <em>backwards</em> in the order
-the units were declared (which is almost always the recycle you had in mind).
-The units within a block are then ordered topologically with the tears treated
-as known. Acyclic blocks run once; cyclic blocks are converged.</p>
-<p>You can still tear by hand. <code>fs.tear("recycle", guess)</code> is honored by
-<code>partition</code> (and supplemented if it leaves a cycle unbroken), and it's also the
-way to give a starting guess for a tear whose component list differs from the
-feeds', which the automatic seed (one pass of the loop with an empty recycle)
-can't infer.</p>
-<h2 id="tear-methods">Tear methods<a class="headerlink" href="#tear-methods" title="Permanent link">&para;</a></h2>
-<p><code>Flowsheet.solve</code> forwards its keyword arguments to <code>tear_solve</code>, which
-accepts three <code>method</code>s (see <code>fugacio.sim.TEAR_METHODS</code>):</p>
+<p>Sensitivity acceptance compares automatic derivatives with centered differences
+of independently accepted runs. Optimization acceptance additionally requires
+optimizer termination, bounds and constraints, and an accepted final process.
+The volume-only demonstration maximizes product flow within declared bounds;
+it doesn't represent a capital-cost optimum. The same cases accept
+<code>SolverOptions(backend="eo")</code> for equation-oriented flowsheet solving.</p>
+<h2 id="reaction-references-and-rate-units">Reaction references and rate units<a class="headerlink" href="#reaction-references-and-rate-units" title="Permanent link">&para;</a></h2>
+<p><code>ReactionSet.from_reactions</code> checks the ordered components, element conservation,
+independent reaction vectors, kinetic dimensions implied by the input convention,
+and the shapes of the bundled reference-rate coefficients. Each reaction must
+have reactants and products. A homogeneous set declares <code>phase="vapor"</code> or
+<code>phase="liquid"</code>.</p>
+<p>The standard chemical potential uses ideal-gas formation data at 298.15 K and
+1 bar, corrected with the component heat-capacity correlations. Activities for
+chemical equilibrium and activity-based kinetics are dimensionless fugacities:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ln(a_i) = ln(z_i) + ln(phi_i) + ln(P / P_REF)
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ln(K_r) = -delta_G_r(T) / (R T)
+</span></code></pre></div>
+<p>The package supplies phase-specific fugacities, density, and sensible/residual
+enthalpy. Liquid activity inputs include the liquid reference fugacity; they
+aren't simply <code>x * gamma</code>. Energy balances add the component formation enthalpies
+exactly once. Reference Helmholtz packages with a different energy datum are
+rejected for these reactions.</p>
+<p><code>ReferenceRate</code> uses a reference-temperature Arrhenius expression. Its forward
+and reverse coefficients have units of <code>mol/(m3 s)</code> at unit dimensionless inputs.
+It accepts these two input conventions:</p>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>What it does</th>
-<th>Use when</th>
+<th>Convention</th>
+<th>Input</th>
+<th>Required reference</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>"wegstein"</code> (default)</td>
-<td>bounded secant acceleration of direct substitution, per component</td>
-<td>loops that are already contracting; cheap per iteration</td>
+<td><code>activity</code></td>
+<td>Component fugacity divided by 1 bar</td>
+<td>Thermochemical standard state</td>
 </tr>
 <tr>
-<td><code>"broyden"</code></td>
-<td>quasi-Newton with a rank-one Jacobian update</td>
-<td>strongly coupled or slowly converging loops (heat integration around a column)</td>
-</tr>
-<tr>
-<td><code>"newton"</code></td>
-<td>full Newton with the autodiff Jacobian of the loop map</td>
-<td>small tears with a badly conditioned loop, or when quadratic convergence is worth a Jacobian per step</td>
+<td><code>normalized_concentration</code></td>
+<td><code>z / (molar_volume * reference_concentration)</code></td>
+<td>Positive concentration in <code>mol/m3</code></td>
 </tr>
 </tbody>
 </table>
-<p>Whichever method converges the loop, differentiation is by the implicit
-function theorem at the fixed point: the adjoint solves one dense system against
-(I - \partial g/\partial x), where (g) is the loop map, so
-<code>jax.grad(lambda th: fs.solve(th)["product"].n[0])</code> costs about one extra pass
-through the loop regardless of how many iterations the forward solve took. The
-three methods agree on the converged values and on the gradient to solver
-tolerance.</p>
-<h2 id="two-sided-heat-exchanger">Two-sided heat exchanger<a class="headerlink" href="#two-sided-heat-exchanger" title="Permanent link">&para;</a></h2>
-<p><code>fugacio.sim.heat_exchanger</code> couples a hot and a cold stream through a
-countercurrent (or parallel) exchanger with rigorous enthalpy curves on both
-sides. Each side may use its own property package, so steam or a refrigerant
-from a reference-fluid package can heat a hydrocarbon on a cubic EOS.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">heat_exchanger</span><span class="p">,</span> <span class="n">package_for</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">steam</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">]),</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">430.0</span><span class="p">,</span> <span class="mf">3e5</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">res</span> <span class="o">=</span> <span class="n">heat_exchanger</span><span class="p">(</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">steam</span><span class="p">,</span> <span class="n">process</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">t_cold_out</span><span class="o">=</span><span class="mf">380.0</span><span class="p">,</span>                    <span class="c1"># exactly one closing spec</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">zones</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>                             <span class="c1"># discretise the T-Q curves for LMTD</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">model_hot</span><span class="o">=</span><span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="s2">&quot;iapws&quot;</span><span class="p">),</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">res</span><span class="o">.</span><span class="n">duty</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">ua</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">lmtd</span>             <span class="c1"># W, W/K, K</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">res</span><span class="o">.</span><span class="n">hot_out</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cold_out</span>              <span class="c1"># both outlet streams (PH-flashed)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">res</span><span class="o">.</span><span class="n">approach_hot_end</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">approach_cold_end</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">min_approach</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">res</span><span class="o">.</span><span class="n">hot_curve</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cold_curve</span>          <span class="c1"># temperature at the zone boundaries</span>
+<p>Independent reverse coefficients specify empirical kinetics. They don't imply
+thermodynamic consistency. With <code>detailed_balance=True</code>, the reverse coefficient
+is derived from <code>K(T)</code> and the forward coefficient. This requires fugacity
+activities and elementary stoichiometric orders. Saved cases reject separately
+specified reverse coefficients in this mode.</p>
+<p>Python also accepts existing <code>PowerLaw</code>, <code>MassActionReversible</code>, and <code>LHHW</code>
+objects with <code>rate_basis="concentration"</code>. Their dimensional concentration
+inputs are in <code>mol/m3</code>, and coefficient dimensions depend on reaction order.
+Saved cases use <code>ReferenceRate</code> and explicit dimensionless input conventions so
+coefficient units remain unambiguous.</p>
+<h2 id="common-package-reactor-api">Common-package reactor API<a class="headerlink" href="#common-package-reactor-api" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReactionSet</span><span class="p">,</span> <span class="n">ReferenceRate</span><span class="p">,</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">reaction_reactor</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Reaction</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">jax</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;jax_enable_x64&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">components</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;n-butane&quot;</span><span class="p">,</span> <span class="s2">&quot;isobutane&quot;</span><span class="p">)</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">reaction</span> <span class="o">=</span> <span class="n">Reaction</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]))</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">law</span> <span class="o">=</span> <span class="n">ReferenceRate</span><span class="p">(</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">k_forward</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span> <span class="n">ea_forward</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">20000.0</span><span class="p">),</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">forward_orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]),</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">k_reverse</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">0.0</span><span class="p">),</span> <span class="n">ea_reverse</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">0.0</span><span class="p">),</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="n">reverse_orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">reference_temperature</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">400.0</span><span class="p">),</span> <span class="n">detailed_balance</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">)</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">system</span> <span class="o">=</span> <span class="n">ReactionSet</span><span class="o">.</span><span class="n">from_reactions</span><span class="p">(</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="n">reaction</span><span class="p">,</span> <span class="p">[</span><span class="n">law</span><span class="p">],</span> <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;vapor&quot;</span><span class="p">,</span> <span class="n">rate_basis</span><span class="o">=</span><span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;isomerize&quot;</span><span class="p">]</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="p">)</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">400.0</span><span class="p">,</span> <span class="mf">1e6</span><span class="p">)</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="n">result</span> <span class="o">=</span> <span class="n">reaction_reactor</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cstr&quot;</span><span class="p">,</span> <span class="n">volume</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="mf">400.0</span><span class="p">)</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="n">result</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
 </span></code></pre></div>
-<p>The closing specification is any one of <code>duty</code>, <code>t_hot_out</code>, <code>t_cold_out</code>,
-<code>min_approach</code> (the exchanger sized to a pinch), or <code>ua</code> (a rating calculation:
-the duty that a given (UA) delivers, found as the root of the zone-integrated
-(UA) requirement with a bracketed solve). Both outlets are obtained by PH
-flashes, so a condensing or boiling side shows its saturation plateau on the
-T-Q curve. A temperature spec that would violate the second law (cold outlet
-above the hot inlet) is capped at the feasible duty rather than producing a
-temperature cross. Every output is differentiable in the inlet states, the
-spec, and the package parameters, including the duty with respect to <code>ua</code>.</p>
-<h2 id="a-plant-with-a-recycle-a-column-and-an-economizer">A plant with a recycle, a column, and an economizer<a class="headerlink" href="#a-plant-with-a-recycle-a-column-and-an-economizer" title="Permanent link">&para;</a></h2>
-<p>The pieces compose. This is the depropanizer from the test suite: an
-economizer preheats the feed against the column bottoms, which closes a
-heat-integration loop <em>around</em> a rigorous column.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnFeed</span><span class="p">,</span> <span class="n">purity</span><span class="p">,</span> <span class="n">recovery</span><span class="p">,</span> <span class="n">rigorous_column</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">comps</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-butane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-pentane&quot;</span><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span><span class="n">comps</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.40</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">]),</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">16e5</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">specs</span> <span class="o">=</span> <span class="p">[</span><span class="n">recovery</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mf">0.98</span><span class="p">),</span> <span class="n">purity</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">)]</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">economiser</span><span class="p">(</span><span class="n">cold</span><span class="p">,</span> <span class="n">hot</span><span class="p">,</span> <span class="n">th</span><span class="p">):</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">hx</span> <span class="o">=</span> <span class="n">heat_exchanger</span><span class="p">(</span><span class="n">hot</span><span class="p">,</span> <span class="n">cold</span><span class="p">,</span> <span class="n">min_approach</span><span class="o">=</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">])</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="k">return</span> <span class="n">hx</span><span class="o">.</span><span class="n">cold_out</span><span class="p">,</span> <span class="n">hx</span><span class="o">.</span><span class="n">hot_out</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">column</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">):</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">res</span> <span class="o">=</span> <span class="n">rigorous_column</span><span class="p">([</span><span class="n">ColumnFeed</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">8</span><span class="p">)],</span> <span class="mi">16</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">16e5</span><span class="p">,</span> <span class="n">specs</span><span class="o">=</span><span class="n">specs</span><span class="p">)</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">distillate</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">bottoms</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">Flowsheet</span><span class="p">()</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;economiser&quot;</span><span class="p">,</span> <span class="n">economiser</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms&quot;</span><span class="p">),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;preheated&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms_cooled&quot;</span><span class="p">))</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;preheated&quot;</span><span class="p">,),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms&quot;</span><span class="p">))</span>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="n">s</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;dt&quot;</span><span class="p">:</span> <span class="mf">15.0</span><span class="p">},</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="n">s</span><span class="p">[</span><span class="s2">&quot;preheated&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">t</span>              <span class="c1"># heat recovered from the bottoms</span>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="n">s</span><span class="p">[</span><span class="s2">&quot;distillate&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>          <span class="c1"># 0.95, the purity spec</span>
+<p><code>kind</code> selects <code>equilibrium</code>, <code>cstr</code>, or <code>pfr</code>. The default package is
+Peng-Robinson; <code>model</code> accepts the common package interface. Supply <code>t_out</code> for
+isothermal operation, or <code>duty</code> in W for a specified heat input. <code>duty=0</code> is
+adiabatic. These specifications are mutually exclusive. When both are omitted,
+the reactor retains the inlet temperature. Positive <code>dp</code> represents pressure
+loss. PFR pressure loss and specified heat are distributed uniformly in volume.</p>
+<p><code>ReactionResult</code> retains the outlet, extent vector, component generation,
+external duty, solver report, normalized material/element/energy errors,
+homogeneous-phase error, and component/temperature/pressure/rate profiles.
+CSTR and equilibrium profiles contain inlet and outlet points. Rate profiles
+have an empty reaction axis when no kinetic laws are supplied. The isothermal
+PFR starts its profile at the specified reactor temperature; the reported duty
+also includes conditioning the incoming feed to that temperature.</p>
+<p>PFRs compare RK4 integrations on <code>steps</code> and <code>2 * steps</code> meshes. The returned
+profile uses the refined mesh. <code>integration_error</code> is the maximum normalized
+step-doubling error divided by 15 and must be at most one. Intermediate RK
+inventories must remain nonnegative, and the final energy balance is audited
+separately. Increase <code>steps</code> when refinement fails. This implementation doesn't
+provide an adaptive stiff integrator or certify phase behavior between mesh
+points.</p>
+<p>These reactors require the declared homogeneous phase at the audited states.
+Use a reactive flash or column when reaction and phase separation occur
+together. <code>check=False</code> retains failed primals and reports. Failed outputs and
+profiles have nonfinite derivatives; callers must inspect acceptance before
+using a design gradient. A finite PT flash alone isn't a global stability proof.
+Saved runs add the existing finite-start stability audit to process streams.</p>
+<h2 id="reactive-mesh-and-flash">Reactive MESH and flash<a class="headerlink" href="#reactive-mesh-and-flash" title="Permanent link">&para;</a></h2>
+<p><code>rigorous_column(..., reactions=system, reaction_volumes=volumes)</code> adds
+volumetric sources to its existing material and energy equations. The
+<code>reactive_column</code> convenience function delegates to the same solver. Each stage
+uses its declared liquid or vapor composition and temperature. Material sources
+are <code>volume * rate @ nu</code>; reaction heat is <code>-generation @ formation_enthalpy</code>.
+This supports net mole changes without a constant-molar-overflow assumption.</p>
+<p>A scalar volume applies to interior stages; the end stages have zero reacting
+volume. An explicit array supplies one volume per stage, including the ends.
+Volumes must be nonnegative. A total condenser cannot have reacting vapor
+volume. Reboiler and liquid-condenser reactions require explicit end volumes.
+The case format always requires the full array, with physical volume units.</p>
+<p>Reaction sources remain local to each stage, preserving the existing bordered
+block solver and implicit derivatives. Dense solving remains available for
+comparison. Nonlinear homotopy can reduce reaction volumes before solving the
+full system. Returned profiles include generation, rates, reaction heat, and
+reacting volumes as well as the usual MESH quantities. The column report checks
+the solved equations; saved cases independently audit products and overall
+balances. Internal stages don't receive an independent global-stability proof.</p>
+<p><code>reactive_flash</code> solves chemical equilibrium together with the package's PT
+flash. Its quotient uses a phase that's present, and its two products preserve
+phase inventories. The result contains duty, generation, a combined acceptance
+report, and the final PT <code>phase_report</code>. Property and thermochemical parameters
+pass explicitly through the implicit root, including under JIT differentiation.</p>
+<p>The older <code>reactive_distillation</code> function remains a constant-molar-overflow
+approximation with molar holdup and liquid <code>x * gamma</code> kinetic inputs. Its
+holdup isn't a volume, and its material closure doesn't establish energy
+closure. Use the MESH API for the saved workflows described here. Legacy
+<code>equilibrium_reactor</code>, <code>cstr</code>, and <code>pfr</code> calls without a package or <code>ReactionSet</code>
+retain their ideal-gas behavior. Supplying either selects the checked common
+implementation. The batch API remains separate.</p>
+<h2 id="portable-definitions-and-measurements">Portable definitions and measurements<a class="headerlink" href="#portable-definitions-and-measurements" title="Permanent link">&para;</a></h2>
+<p>A case declares reusable sets under <code>reaction_sets</code>, then references a set by
+name in each unit's <code>settings.reaction_set</code>. Each set contains <code>phase</code>,
+<code>rate_basis</code>, optional <code>reference_concentration</code>, and a list of named reactions
+with <code>nu</code> vectors. An optional <code>rate</code> object holds the <code>ReferenceRate</code> fields.
+Kinetic units require rates for every reaction; equilibrium units can omit them.
+Every set is validated, including unused definitions.</p>
+<p>Registered kinds are <code>equilibrium_reactor</code>, <code>cstr</code>, <code>pfr</code>, and <code>reactive_flash</code>.
+Columns retain kind <code>column</code> and add <code>reaction_set</code> and <code>reaction_volumes</code>.
+PFR cases may specify a fixed <code>steps</code> count. Parameters can reference rate
+coefficients, activation energies, reference temperatures/concentrations,
+orders, operating temperatures, and volumes. Their bindings remain dynamic
+when compiled units share a template.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reactor&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;extent&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;reaction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isomerize&quot;</span><span class="p">}</span>
 </span></code></pre></div>
-<p>The <code>Flowsheet</code> finds the single cyclic block, tears <code>bottoms</code>, seeds it by one
-pass with an empty recycle (an empty hot side exchanges nothing), and converges
-the loop with Broyden. Because the column is itself an implicit solve, the loop
-map is smooth in the tear and differentiable in <code>dt</code> and the spec values, so
-<code>jax.grad</code> of the reboiler duty with respect to the approach temperature passes
-through the exchanger, the column, and the closed loop together.</p>
-<p>The <a href="https://github.com/fugacio/fugacio/tree/main/packages/fugacio-sim/tests">test suite</a>
-carries two more plants under the <code>plant</code> marker: an HDA-lite toluene
-hydrodealkylation loop (mixer, furnace, fixed-conversion reactor, cooler,
-flash, purge, automatically partitioned, followed by a stabilizer and a
-benzene/toluene column) and an ethanol/water train on NRTL whose bottoms heat
-is recovered into the feed.</p>
-<h3 id="compile-time">Compile time<a class="headerlink" href="#compile-time" title="Permanent link">&para;</a></h3>
-<p>Every column and exchanger is compiled once per <em>structure</em> (stage count,
-component list, spec kinds, package type) and then reused, so a unit evaluated
-repeatedly inside a recycle iteration or an optimization pays the compile once.
-The first call is where the time goes: a Peng-Robinson column or exchanger
-compiles in tens of seconds, while a gamma-phi package (whose every K-value and
-liquid enthalpy carries an EOS saturation-pressure solve per component) takes a
-few minutes. Run the quick suite with <code>just test-fast</code> to skip the <code>plant</code>
-case studies.</p>
-<h2 id="equation-oriented-alternative">Equation-oriented alternative<a class="headerlink" href="#equation-oriented-alternative" title="Permanent link">&para;</a></h2>
-<p>For flowsheets where every unit can be written as residual equations, the
-<a href="../equation-oriented/">equation-oriented engine</a> solves the plant as one Newton
-system with no tears at all. It now includes <code>HeatExchanger</code>,
-<code>StoichiometricReactor</code>, and <code>Column</code> blocks and takes the same property
-packages through <code>EOFlowsheet(model=...)</code>. The two engines share the same
-physics and agree on any flowsheet both can express; the sequential-modular
-<code>Flowsheet</code> remains the more forgiving of the two for large recycles with poor
-initial guesses.</p>
+<p>Extent measurements require a reaction name. Component generation measurements
+use <code>"property": "generation"</code> with a component name. Both use mol/s. Column and
+reactor rate profiles use <code>"profile": "reaction_rates"</code>, a one-based <code>stage</code>, and
+a reaction name, with units <code>mol/(m3 s)</code>. For PFRs, <code>stage</code> indexes a retained axial
+sample, from 1 through <code>2 * steps + 1</code>. Component-flow, temperature, and pressure
+profiles use the same indexing. These expressions work in metrics, studies,
+and copilot submissions.</p>
+<p>Run artifacts include <code>reaction_evidence</code> separately from property-package
+qualification. It records the chemical reference, declared phase/input basis,
+and the absence of measured kinetic qualification. Accepted numerics don't
+turn illustrative coefficients into measured data.</p>
 
 
 

@@ -425,6 +425,8 @@
       
         
       
+        
+      
     
     
     
@@ -627,6 +629,34 @@
     
   
     Reactions & reactors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reactive-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reactive process workflows
   
 
     
@@ -2720,6 +2750,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.cases.examples.reactive_case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;reactive_case
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4376,6 +4417,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;heater_bank_case
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.sim.cases.examples.reactive_case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;reactive_case
       
     </span>
   </a>
@@ -8010,6 +8062,14 @@ regardless of speed. Peak RSS includes every prior allocation in the process.</p
                 </div>
               </td>
             </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;reactive_case&lt;/span&gt; (&lt;code&gt;fugacio.sim.cases.examples.reactive_case&lt;/code&gt;)" href="#fugacio.sim.cases.examples.reactive_case">reactive_case</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Illustrative butane isomerization with real-fluid reaction and energy closure.</p>
+                </div>
+              </td>
+            </tr>
       </tbody>
     </table>
 
@@ -8106,6 +8166,35 @@ This performance example makes no new measured qualification claim.</p>
 heat and annual cost depend on every variable, so a reverse derivative
 measures the cost of increasing the parameter count without adding an
 artificial optimization objective.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.sim.cases.examples.reactive_case" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">reactive_case</span>
+
+
+<a href="#fugacio.sim.cases.examples.reactive_case" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">reactive_case</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">separation</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ProcessCase&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;fugacio.sim.cases.schema.ProcessCase&lt;/code&gt;)" href="#fugacio.sim.cases.schema.ProcessCase">ProcessCase</a></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Illustrative butane isomerization with real-fluid reaction and energy closure.</p>
+<p>The kinetic coefficient and equipment sizes are design demonstrations, not
+measured catalyst data. Detailed balance derives the reverse activity rate
+from the component formation data. The separation variant reacts in liquid
+stage volumes; the vapor variant closes a component-selective recycle.</p>
 
 
     </div>
