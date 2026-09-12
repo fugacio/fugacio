@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.8.0 (2026-09-12)
+
+### Features
+
+- Add end-to-end reactive process workflows ([#24](https://github.com/fugacio/fugacio/pull/24),
+  [`4c554b0`](https://github.com/fugacio/fugacio/commit/4c554b0509a9461634fb46b62810d8cc74321385))
+
+
 ## v0.7.0 (2026-09-10)
 
 ### Features
