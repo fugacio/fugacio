@@ -71,6 +71,7 @@ nav:
     - Reference fluids & steam tables: reference-fluids.md
     - Physical & transport properties: physical-properties.md
     - Reactions & reactors: reactions.md
+    - Reactive process workflows: reactive-workflows.md
     - Optimization, design & economics: optimization.md
     - Saved process cases & design studies: process-cases.md
     - Rigorous distillation: distillation.md

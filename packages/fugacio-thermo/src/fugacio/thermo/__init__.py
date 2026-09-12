@@ -284,6 +284,7 @@ from fugacio.thermo.properties import (
     speed_of_sound_ideal,
     stable_phase,
 )
+from fugacio.thermo.reaction_system import ReactionSet, ReferenceRate
 from fugacio.thermo.reactions import (
     Reaction,
     ReactionProperties,
@@ -445,6 +446,8 @@ __all__ = [
     "R",
     "Reaction",
     "ReactionProperties",
+    "ReactionSet",
+    "ReferenceRate",
     "RegularSolution",
     "ResidualProperties",
     "SAFTModel",

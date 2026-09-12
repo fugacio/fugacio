@@ -191,7 +191,9 @@ def build_run(
         streams[name]["vapor_fraction"] = (
             float(_vapor_fraction(s, runner.package)) if structural and not empty else None
         )
-    reactive = any(u.kind == "stoichiometric_reactor" for u in runner.units)
+    reactive = any(
+        u.kind == "stoichiometric_reactor" or "reactions" in u.structure for u in runner.units
+    )
     formation = jnp.zeros(len(runner.case.components))
     atom_matrix = None
     if reactive:
@@ -349,7 +351,19 @@ def build_run(
         ):
             issues.append("Compression equipment requires outlet pressure at least inlet pressure.")
         if (
-            definition.kind in ("valve", "turbine", "flash", "mixer", "column")
+            definition.kind
+            in (
+                "valve",
+                "turbine",
+                "flash",
+                "mixer",
+                "column",
+                "reactive_flash",
+                "equilibrium_reactor",
+                "cstr",
+                "pfr",
+                "stoichiometric_reactor",
+            )
             and max(outlet_pressures) > min(inlet_pressures) + 1e-4
         ):
             issues.append(
@@ -423,6 +437,28 @@ def build_run(
             "checks": checks,
             "parameter_evidence": runner.package.evidence.to_dict(),
             "qualification": runner.qualification,
+            **(
+                {
+                    "reaction_evidence": {
+                        "kinetic_qualification": "not_evaluated",
+                        "thermochemical_reference": (
+                            "ideal-gas formation data at 298.15 K and 1 bar"
+                        ),
+                        "scope": "Numerical closure and derivatives don't validate kinetics. "
+                        "No measured catalyst or reaction-rate evidence has been supplied.",
+                        "sets": {
+                            name: {
+                                "phase": source["phase"],
+                                "rate_basis": source.get("rate_basis", "activity"),
+                                "reactions": [r["name"] for r in source["reactions"]],
+                            }
+                            for name, source in runner.document.get("reaction_sets", {}).items()
+                        },
+                    }
+                }
+                if runner.document.get("reaction_sets")
+                else {}
+            ),
         },
     )
     return CaseRun.from_dict(payload)
@@ -501,6 +537,8 @@ def render_report(run: CaseRun) -> str:
         ),
         "",
     ]
+    if "reaction_evidence" in d:
+        lines += [d["reaction_evidence"]["scope"], ""]
     lines += ["- " + _cell(a) for a in d["parameter_evidence"].get("assumptions", [])]
     lines += ["- " + _cell(u["assumption"]) for u in d["units"].values() if "assumption" in u]
     return "\n".join(lines) + "\n"

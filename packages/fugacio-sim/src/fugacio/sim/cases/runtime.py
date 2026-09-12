@@ -63,6 +63,13 @@ def _unit_template(definition: UnitDefinition) -> tuple[UnitDefinition, dict[str
         ):
             for item in structure[group]:
                 item[field] = convert(item[field])
+    if "reactions" in structure:
+        reaction = structure["reactions"]
+        reaction["reference_concentration"] = convert(reaction["reference_concentration"])
+        for item in reaction["reactions"]:
+            for field, value in item.get("rate", {}).items():
+                if field != "detailed_balance":
+                    item["rate"][field] = convert(value)
     return replace(
         definition,
         name="unit",
@@ -150,10 +157,15 @@ class CaseRunner:
         self.parameters = self.case.parameters
         self.defaults = {k: jnp.asarray(p.value) for k, p in self.parameters.items()}
         self.feeds = parse_feeds(self.document["feeds"], self.case.components, self.parameters)
-        self.units = parse_units(self.document["units"], self.case.components, self.parameters)
+        self.units = parse_units(
+            self.document["units"],
+            self.case.components,
+            self.parameters,
+            self.document.get("reaction_sets", {}),
+        )
         self.package, self.qualification = build_package(self.document)
         if self.document["property_package"]["method"] == "iapws" and any(
-            u.kind == "stoichiometric_reactor" for u in self.units
+            u.kind == "stoichiometric_reactor" or "reactions" in u.structure for u in self.units
         ):
             raise CaseValidationError(
                 "units",

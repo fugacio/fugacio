@@ -24,6 +24,8 @@ MOLAR_ENERGY: Dimension = (1, 2, -2, -1, 0, 0)
 LENGTH: Dimension = (0, 1, 0, 0, 0, 0)
 AREA: Dimension = (0, 2, 0, 0, 0, 0)
 VOLUME: Dimension = (0, 3, 0, 0, 0, 0)
+CONCENTRATION: Dimension = (0, -3, 0, 1, 0, 0)
+REACTION_RATE: Dimension = (0, -3, -1, 1, 0, 0)
 TIME: Dimension = (0, 0, 1, 0, 0, 0)
 MONEY: Dimension = (0, 0, 0, 0, 0, 1)
 CONDUCTANCE: Dimension = (1, 2, -3, 0, -1, 0)
@@ -79,6 +81,11 @@ UNITS: dict[str, Unit] = {
     "ft2": Unit(AREA, 0.09290304),
     "m3": Unit(VOLUME),
     "L": Unit(VOLUME, 1e-3),
+    "mol/m3": Unit(CONCENTRATION),
+    "kmol/m3": Unit(CONCENTRATION, 1e3),
+    "mol/L": Unit(CONCENTRATION, 1e3),
+    "mol/(m3 s)": Unit(REACTION_RATE),
+    "kmol/(m3 h)": Unit(REACTION_RATE, 1e3 / 3600),
     "s": Unit(TIME),
     "min": Unit(TIME, 60.0),
     "h": Unit(TIME, 3600.0),

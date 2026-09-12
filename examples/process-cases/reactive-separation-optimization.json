@@ -1,0 +1,8 @@
+{
+  "variables": [
+    "volume"
+  ],
+  "objective": "product_isobutane",
+  "sense": "max",
+  "max_iterations": 20
+}

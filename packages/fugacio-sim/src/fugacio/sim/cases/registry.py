@@ -8,7 +8,6 @@ energy transfers, equipment quantities, stage profiles, and reaction sources.
 
 from __future__ import annotations
 
-import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
@@ -24,6 +23,7 @@ from fugacio.sim.cases.quantities import (
     POWER,
     PRESSURE,
     TEMPERATURE,
+    VOLUME,
     CaseValidationError,
     Dimension,
     integer,
@@ -192,6 +192,8 @@ UNIT_TYPES: dict[str, UnitType] = {
             "reboiler",
             "side_draws",
             "stage_duties",
+            "reaction_set",
+            "reaction_volumes",
         ),
         description="Rigorous MESH column with complete products and stage profiles.",
     ),
@@ -213,6 +215,37 @@ UNIT_TYPES: dict[str, UnitType] = {
         ),
     ),
 }
+
+for _kind in ("equilibrium_reactor", "cstr", "pfr"):
+    UNIT_TYPES[_kind] = UnitType(
+        _kind,
+        (1, 1),
+        (1, 1),
+        {
+            "t_out": _TEMPERATURE,
+            "duty": ScalarSetting(POWER),
+            "dp": _DROP,
+            **(
+                {"volume": ScalarSetting(VOLUME, positive=True)}
+                if _kind != "equilibrium_reactor"
+                else {}
+            ),
+        },
+        required=("reaction_set",) + (("volume",) if _kind != "equilibrium_reactor" else ()),
+        exactly_one=("t_out", "duty"),
+        structural=("reaction_set",) + (("steps",) if _kind == "pfr" else ()),
+        description="Homogeneous package reactor with generation and phase/energy checks.",
+    )
+UNIT_TYPES["reactive_flash"] = UnitType(
+    "reactive_flash",
+    (1, 1),
+    (2, 2),
+    {"t": _TEMPERATURE, "p": _PRESSURE},
+    required=("t", "p", "reaction_set"),
+    structural=("reaction_set",),
+    description="Chemical and phase equilibrium with vapor/liquid products and heat duty.",
+)
+
 
 _COLUMN_SPEC_DIMS = {
     "reflux_ratio": DIMENSIONLESS,
@@ -259,41 +292,12 @@ def component_index(name: Any, components: tuple[str, ...], path: str) -> int:
 
 def element_matrix(components: tuple[str, ...]) -> tuple[tuple[str, ...], list[list[float]]]:
     """Read exact element counts from the component formulas, including parentheses."""
+    from fugacio.thermo.reaction_system import element_matrix as shared_elements
 
-    def atoms(formula: str) -> dict[str, float]:
-        tokens = re.findall(r"[A-Z][a-z]?|\d+|[()]", formula)
-        if "".join(tokens) != formula:
-            raise CaseValidationError("reaction", f"unsupported component formula {formula!r}")
-        stack: list[dict[str, float]] = [defaultdict(float)]
-        i = 0
-        while i < len(tokens):
-            token = tokens[i]
-            if token == "(":
-                stack.append(defaultdict(float))
-                i += 1
-                continue
-            if token == ")":
-                if len(stack) == 1:
-                    raise CaseValidationError("reaction", f"unbalanced formula {formula!r}")
-                group = stack.pop()
-            elif token[0].isalpha():
-                group = {token: 1.0}
-            else:
-                raise CaseValidationError("reaction", f"unsupported component formula {formula!r}")
-            multiplier = 1
-            if i + 1 < len(tokens) and tokens[i + 1].isdigit():
-                multiplier = int(tokens[i + 1])
-                i += 1
-            for element, count in group.items():
-                stack[-1][element] += multiplier * count
-            i += 1
-        if len(stack) != 1:
-            raise CaseValidationError("reaction", f"unbalanced formula {formula!r}")
-        return stack[0]
-
-    compositions = [atoms(get(name).formula) for name in components]
-    elements = tuple(sorted({e for row in compositions for e in row}))
-    return elements, [[row.get(e, 0.0) for row in compositions] for e in elements]
+    try:
+        return shared_elements(components)
+    except ValueError as exc:
+        raise CaseValidationError("reaction", str(exc)) from exc
 
 
 def _column_structure(
@@ -396,9 +400,17 @@ def _column_structure(
 
 
 def parse_units(
-    raw: Any, components: tuple[str, ...], parameters: dict[str, Parameter]
+    raw: Any,
+    components: tuple[str, ...],
+    parameters: dict[str, Parameter],
+    reaction_sets: Any = None,
 ) -> tuple[UnitDefinition, ...]:
     """Compile registered unit specifications with strict port and setting validation."""
+    from fugacio.sim.cases.reactions import REACTOR_KINDS, parse_reaction_sets
+
+    sets = parse_reaction_sets(
+        {} if reaction_sets is None else reaction_sets, components, parameters
+    )
     result = []
     for i, value in enumerate(sequence(raw, "units", minimum=1, maximum=500)):
         path = f"units[{i}]"
@@ -486,6 +498,33 @@ def parse_units(
             if any(abs(sum(a * b for a, b in zip(row, nu, strict=True))) > 1e-8 for row in matrix):
                 raise CaseValidationError(sp + ".nu", "reaction must conserve every element")
             structure = {"nu": nu, "key": key_index}
+        if "reaction_set" in source:
+            selected = source["reaction_set"]
+            if not isinstance(selected, str) or selected not in sets:
+                raise CaseValidationError(sp + ".reaction_set", "reference a declared reaction set")
+            structure["reactions"] = sets[selected]
+            structure["components"] = components
+            if kind in ("column", "cstr", "pfr") and any(
+                "rate" not in r for r in sets[selected]["reactions"]
+            ):
+                raise CaseValidationError(
+                    sp, "kinetic equipment requires a rate for every reaction"
+                )
+            if kind == "column":
+                n = structure["n_stages"]
+                settings["reaction_volumes"] = [
+                    value_spec(v, VOLUME, parameters, sp + ".reaction_volumes")
+                    for v in sequence(
+                        source.get("reaction_volumes"),
+                        sp + ".reaction_volumes",
+                        minimum=n,
+                        maximum=n,
+                    )
+                ]
+            if kind == "pfr":
+                structure["steps"] = integer(source.get("steps", 64), sp + ".steps", 1, 4096)
+        elif kind in REACTOR_KINDS or "reaction_volumes" in source:
+            raise CaseValidationError(sp, "reactive equipment requires a reaction_set")
         result.append(UnitDefinition(name, kind, ins, outs, settings, structure))
     if len({u.name for u in result}) != len(result):
         raise CaseValidationError("units", "unit names must be unique")
@@ -561,6 +600,25 @@ def validate_unit_values(units: tuple[UnitDefinition, ...], parameters: dict[str
                         path + "." + key,
                         "fractions must be in [0, 1]; splitter fractions must sum to one",
                     )
+        if "reactions" in unit.structure:
+            from fugacio.sim.cases.reactions import validate_reaction_values
+
+            validate_reaction_values(
+                unit.structure["reactions"],
+                parameters,
+                unit.structure["components"],
+                path + ".reaction_set",
+            )
+        if "reaction_volumes" in unit.settings:
+            volumes = [r(v) for v in unit.settings["reaction_volumes"]]
+            if any(v < 0 for v in volumes):
+                raise CaseValidationError(path, "reaction volumes must be nonnegative")
+            if (
+                unit.structure["condenser"] == "total"
+                and unit.structure["reactions"]["phase"] == "vapor"
+                and volumes[0] > 0
+            ):
+                raise CaseValidationError(path, "total condensers have no reacting vapor volume")
         if unit.kind == "column":
             for spec in unit.structure["specs"]:
                 value = r(spec["value"])
@@ -609,10 +667,16 @@ def evaluate_unit(
     """Evaluate a registered unit using the existing public numerical kernels."""
     from fugacio.sim import distillation as dist
     from fugacio.sim import units as ops
+    from fugacio.sim.cases.reactions import REACTOR_KINDS, build_reaction_set
     from fugacio.sim.heat_exchanger import heat_exchanger
     from fugacio.sim.properties import enthalpy_flow
 
     kind = definition.kind
+    system = (
+        build_reaction_set(definition.structure["reactions"], inputs[0].components, parameters)
+        if "reactions" in definition.structure
+        else None
+    )
     kw = {k: resolve_value(v, parameters) for k, v in definition.settings.items()}
     zero = jnp.asarray(0.0)
     heat, work = zero, zero
@@ -695,9 +759,22 @@ def evaluate_unit(
             check=False,
             guess=guess,
             linear_solver=column_solver,
+            reactions=system,
             **kw,
         )
         outputs = (result.distillate, result.bottoms, *result.side_draws)
+        generation = jnp.sum(result.generation, axis=0)
+        if system is not None:
+            quantities["extent"] = jnp.sum(
+                result.reaction_volumes[:, None] * result.reaction_rates, axis=0
+            )
+            quantities["generation"] = generation
+            profiles.update(
+                generation=result.generation,
+                reaction_rates=result.reaction_rates,
+                reaction_heat=result.reaction_heat,
+                reaction_volumes=result.reaction_volumes,
+            )
         heat_terms = jnp.array(
             [result.condenser_duty, result.reboiler_duty, *(s.duty for s in duties)]
         )
@@ -726,6 +803,41 @@ def evaluate_unit(
                 )
             }
         )
+    elif kind in REACTOR_KINDS:
+        assert system is not None
+        from fugacio.sim.reaction_units import reaction_reactor
+        from fugacio.sim.reactive import reactive_flash
+
+        if kind == "reactive_flash":
+            result = reactive_flash(inputs[0], system, model=package, check=False, **kw)
+            outputs = (result.vapor, result.liquid)
+        else:
+            result = reaction_reactor(
+                inputs[0],
+                system,
+                kind="equilibrium" if kind == "equilibrium_reactor" else kind,
+                model=package,
+                check=False,
+                **kw,
+                **({"steps": definition.structure["steps"]} if kind == "pfr" else {}),
+            )
+            outputs = (result.outlet,)
+            profiles.update(
+                coordinate=result.coordinate,
+                component_flow=result.component_profile,
+                t=result.temperature_profile,
+                p=result.pressure_profile,
+                reaction_rates=result.rate_profile,
+            )
+            quantities.update(
+                material_error=result.material_error,
+                element_error=result.element_error,
+                energy_error=result.energy_error,
+                phase_error=result.phase_error,
+                integration_error=result.integration_error,
+            )
+        heat, generation, report = result.duty, result.generation, result.report
+        quantities.update(extent=result.extent, generation=result.generation)
     elif kind == "stoichiometric_reactor":
         from fugacio.thermo.reactions import reaction_arrays
 

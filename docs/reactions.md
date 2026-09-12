@@ -2,10 +2,14 @@
 
 Fugacio models chemical reactions end to end: standard-state thermochemistry and
 the equilibrium constant `K(T)`, chemical-equilibrium composition, reaction
-kinetics, ideal reactor unit operations, and reactive separations. Like the rest
+kinetics, reactor unit operations, and reactive separations. Like the rest
 of the stack everything is written in JAX, so conversions, yields, and duties are
 differentiable with respect to temperature, pressure, feed, *and* the underlying
 thermochemical / kinetic parameters.
+
+For common-package reactors, reactive MESH columns, saved cases, and checked
+design studies, start with [reactive process workflows](reactive-workflows.md).
+The examples below also document the retained ideal-gas interfaces.
 
 ## Stoichiometry & thermochemistry
 
@@ -78,8 +82,8 @@ law = PowerLaw(a=jnp.asarray(1.0e7), ea=jnp.asarray(75_000.0), orders=jnp.array(
 
 ## Reactors
 
-The `fugacio.sim` layer turns reactions into energy-balanced unit operations on a
-differentiable `Stream`. Every reactor accepts one or more reactions and runs
+The legacy `fugacio.sim.reactors` interfaces turn reactions into ideal-gas unit
+operations on a differentiable `Stream`. These examples accept reactions and run
 either *isothermal* (reporting the heat `duty` to hold `t_out`) or *adiabatic*
 (`adiabatic=True`, solving for the outlet temperature). All return a
 `ReactorResult` with `outlet`, `duty`, and `extent`.
@@ -117,14 +121,17 @@ conversion(feed, out.outlet, 0)   # fractional N2 conversion
 ## Reactive separations
 
 When reaction and phase separation happen together, use the `fugacio.sim`
-reactive units, which couple kinetics / chemical equilibrium to a `GammaPhiModel`:
+reactive units. The preferred MESH and flash APIs accept a common property package:
 
 - `reactive_flash`: simultaneous chemical *and* vapour-liquid equilibrium in a
   single drum (liquid-activity reaction quotient), returning vapour/liquid
   products, the vapour fraction `beta`, and the extents.
-- `reactive_distillation`: a rate-based column that adds per-stage reaction source
+- `reactive_column`: material- and energy-balanced MESH with volumetric kinetics,
+  retaining the structured column solver and differentiable reaction parameters.
+- `reactive_distillation`: a legacy approximation that adds per-stage reaction source
   terms (kinetics × molar holdup) to the Wang-Henke mass balances, returning the
-  stage profiles, products, and the net `generation` on every stage.
+  stage profiles, products, and the net `generation` on every stage. Constant
+  molar overflow does not establish an energy balance.
 
 These make classic reaction-separation processes (e.g. esterification with in-situ
 water removal) tractable while staying differentiable through the coupled solve.

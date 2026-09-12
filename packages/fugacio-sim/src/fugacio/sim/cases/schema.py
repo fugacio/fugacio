@@ -354,6 +354,7 @@ class ProcessCase:
                 "metrics",
                 "specifications",
                 "economics",
+                "reaction_sets",
             },
             required={"schema_version", "name", "components", "property_package", "feeds", "units"},
         )
@@ -381,7 +382,7 @@ class ProcessCase:
         validate_feed_values(feeds, values)
         from fugacio.sim.cases.registry import parse_units, validate_topology, validate_unit_values
 
-        units = parse_units(d["units"], canonical, params)
+        units = parse_units(d["units"], canonical, params, d.get("reaction_sets", {}))
         validate_topology(feeds, units)
         validate_unit_values(units, values)
         from fugacio.sim.cases.expressions import validate_metrics, validate_specifications
