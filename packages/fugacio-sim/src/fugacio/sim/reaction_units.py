@@ -146,9 +146,10 @@ def _complete(
         & jnp.all(ps > 0)
     )
     domain &= feed.report.converged & reaction_parameter_validity(system)
+    vapor_n = jnp.asarray(feed.vapor_n)
     expected_vapor = feed.n if system.phase == "vapor" else jnp.zeros_like(feed.n)
     domain &= jnp.where(
-        feed.phase_known, jnp.max(jnp.abs(feed.vapor_n - expected_vapor)) <= 1e-7 * scale, True
+        feed.phase_known, jnp.max(jnp.abs(vapor_n - expected_vapor)) <= 1e-7 * scale, True
     )
     acceptance = jnp.array(
         [
