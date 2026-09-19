@@ -7,9 +7,10 @@ of the stack everything is written in JAX, so conversions, yields, and duties ar
 differentiable with respect to temperature, pressure, feed, *and* the underlying
 thermochemical / kinetic parameters.
 
-For common-package reactors, reactive MESH columns, saved cases, and checked
-design studies, start with [reactive process workflows](reactive-workflows.md).
-The examples below also document the retained ideal-gas interfaces.
+For reaction sets, reactive MESH columns, saved cases, and checked design
+studies, start with [reactive process workflows](reactive-workflows.md). This
+page covers the thermochemistry, the gas-phase equilibrium solver, rate laws,
+and the reactor unit operations.
 
 ## Stoichiometry & thermochemistry
 
@@ -38,10 +39,12 @@ and `equilibrium_constant`.
 ## Chemical-reaction equilibrium
 
 `equilibrium` solves for the extents of reaction that make every reaction's
-activity quotient equal to its `K(T)`. A single reaction is solved by a robust
+activity quotient equal to its `K(T)`. A single reaction is solved by a checked
 bracketed root; several simultaneous reactions by a damped Newton system. Both
 differentiate the converged composition with respect to `T`, `P`, and the feed by
-the implicit function theorem.
+the implicit function theorem. The result's `report` records convergence. A
+failed solve returns NaN fields, and a composition with a negative amount is
+reported as `INFEASIBLE`.
 
 ```python
 import jax
@@ -56,6 +59,7 @@ feed = jnp.array([1.0, 3.0, 0.0])
 res = equilibrium(rxn, feed, 700.0, 100e5)
 res.y          # equilibrium mole fractions
 res.extent     # extent of each reaction
+res.report     # solve report; the fields are NaN if it failed
 
 # Le Chatelier, exactly: ammonia yield rises with pressure (Delta_n = -2).
 jax.grad(lambda p: equilibrium(rxn, feed, 700.0, p).y[2])(100e5)  # > 0
@@ -82,24 +86,29 @@ law = PowerLaw(a=jnp.asarray(1.0e7), ea=jnp.asarray(75_000.0), orders=jnp.array(
 
 ## Reactors
 
-The legacy `fugacio.sim.reactors` interfaces turn reactions into ideal-gas unit
-operations on a differentiable `Stream`. These examples accept reactions and run
-either *isothermal* (reporting the heat `duty` to hold `t_out`) or *adiabatic*
-(`adiabatic=True`, solving for the outlet temperature). All return a
-`ReactorResult` with `outlet`, `duty`, and `extent`.
+The `fugacio.sim` reactors turn reactions into unit operations on a
+differentiable `Stream`. Their energy balances use the property package's
+enthalpy plus the formation enthalpies, so the heat of reaction is carried
+automatically. `model=` selects the package; the default is Peng-Robinson over
+the feed's components. Each reactor takes one energy specification: `t_out` for
+an isothermal outlet (the result reports the `duty` that holds it) or `duty` for
+a specified heat input, where `duty=0.0` is adiabatic and the outlet
+temperature is solved.
 
-| Unit | Model |
-| --- | --- |
-| `equilibrium_reactor` | Outlet at chemical equilibrium (Gibbs / `K(T)`). |
-| `stoichiometric_reactor` | Specified `extent` **or** fractional `conversion`. |
-| `cstr` | Continuous stirred tank, kinetics balanced over a `volume`. |
-| `pfr` | Plug-flow tubular reactor (RK4 integration along the volume). |
-| `batch_reactor` | Constant-volume batch over a reaction `time`. |
+| Unit | Model | Result |
+| --- | --- | --- |
+| `equilibrium_reactor` | Outlet at chemical equilibrium: `K(T)` from formation data, with activities from the package's fugacities | `ReactionResult` |
+| `stoichiometric_reactor` | Specified `extent` or fractional `conversion` | `StoichiometricResult` |
+| `cstr` | Continuous stirred tank, kinetics balanced over a reacting `volume` | `ReactionResult` |
+| `pfr` | Plug flow, RK4 along the volume with step-doubling error control | `ReactionResult` |
+| `batch_reactor` | Closed, constant-volume ideal-gas batch over a reaction `time` | `BatchResult` |
 
 ```python
 import jax.numpy as jnp
-from fugacio.sim import Stream, equilibrium_reactor, cstr, conversion
-from fugacio.thermo import PowerLaw, Reaction
+from fugacio.sim import (
+    ReactionSet, ReferenceRate, Stream, conversion, cstr, equilibrium_reactor,
+)
+from fugacio.thermo import Reaction
 
 feed = Stream.from_fractions(
     ("nitrogen", "hydrogen", "ammonia"),
@@ -108,33 +117,76 @@ feed = Stream.from_fractions(
 )
 rxn = Reaction.parse("nitrogen + 3 hydrogen = 2 ammonia", feed.components)
 
-# Isothermal equilibrium reactor: outlet composition + the cooling duty.
+# Isothermal equilibrium reactor: outlet composition and the heat to hold 700 K.
 eq = equilibrium_reactor(feed, rxn, t_out=700.0)
-eq.outlet.z, eq.duty
+eq.outlet.z, eq.duty             # about [0.198, 0.595, 0.206] and -915 kW
 
-# Adiabatic CSTR sized by volume, with a power-law rate:
-law = PowerLaw(a=jnp.asarray(5.0e3), ea=jnp.asarray(40_000.0), orders=jnp.array([1.0, 1.0, 0.0]))
-out = cstr(feed, rxn, law, volume=10.0, adiabatic=True)
-conversion(feed, out.outlet, 0)   # fractional N2 conversion
+# Adiabatic (duty=0): the outlet temperature is solved with the equilibrium.
+hot = equilibrium_reactor(feed, rxn, duty=0.0)
+hot.outlet.t                     # about 820 K
+
+# A CSTR needs kinetics consistent with K(T). Detailed balance derives the
+# reverse rate from the equilibrium constant, on fugacity activities.
+law = ReferenceRate(
+    k_forward=jnp.asarray(1e-7), ea_forward=jnp.asarray(80_000.0),
+    forward_orders=jnp.array([1.0, 3.0, 0.0]),
+    k_reverse=jnp.asarray(0.0), ea_reverse=jnp.asarray(0.0),
+    reverse_orders=jnp.array([0.0, 0.0, 2.0]),
+    reference_temperature=jnp.asarray(700.0), detailed_balance=True,
+)
+system = ReactionSet.from_reactions(rxn, [law], phase="vapor", rate_basis="activity")
+out = cstr(feed, system, 10.0, t_out=700.0)    # 10 m^3 of reacting vapor
+conversion(feed, out.outlet, 0)                # about 0.215 fractional N2 conversion
 ```
+
+The CSTR stays below the 700 K equilibrium conversion (about 0.34) because its
+volume limits the reaction. The kinetic coefficients here are illustrative.
+
+An eager reactor solve that fails raises `ConvergenceError`. A traced one can't
+raise; it records the failure in its `report` and has nonfinite derivatives
+(see the [reliability guide](reliability.md#the-failure-contract)). An
+irreversible `PowerLaw` has no reverse term, so it can't respect `K(T)` for
+this equilibrium-limited reaction, and an adiabatic CSTR on one stalls. It
+raises `ConvergenceError` rather than returning negative flows:
+
+```python
+from fugacio.thermo import PowerLaw
+
+irreversible = PowerLaw(
+    a=jnp.asarray(5.0e3), ea=jnp.asarray(40_000.0), orders=jnp.array([1.0, 1.0, 0.0])
+)
+cstr(feed, rxn, 10.0, irreversible, duty=0.0)   # ConvergenceError: reactor failed: stalled ...
+```
+
+With `check=False`, the result keeps the failed report and its best iterate for
+diagnosis, with nonfinite derivatives. See
+[reactive process workflows](reactive-workflows.md#common-package-reactor-api)
+for the full `ReactionResult`, including balances and axial profiles.
+
+`stoichiometric_reactor` applies a specified `extent` or key-reactant
+`conversion` exactly and raises `ValueError` for an extent that consumes more of
+a reactant than the feed holds. `batch_reactor` treats `feed.n` as initial moles
+in a rigid, closed vessel and returns `BatchResult(contents, heat, extent)`.
+With `adiabatic=True` it conserves internal energy, not enthalpy; otherwise it
+holds the temperature and returns the heat `Q = Delta U`. The final pressure of
+`contents` is the ideal-gas `N R T / V`.
 
 ## Reactive separations
 
 When reaction and phase separation happen together, use the `fugacio.sim`
-reactive units. The preferred MESH and flash APIs accept a common property package:
+reactive units. Both take a property package:
 
-- `reactive_flash`: simultaneous chemical *and* vapour-liquid equilibrium in a
-  single drum (liquid-activity reaction quotient), returning vapour/liquid
-  products, the vapour fraction `beta`, and the extents.
-- `reactive_column`: material- and energy-balanced MESH with volumetric kinetics,
+- `reactive_flash`: simultaneous chemical *and* vapor-liquid equilibrium in a
+  single drum, returning vapor and liquid products, the vapor fraction `beta`,
+  the extents, and the duty. The reaction quotient uses the liquid fugacity
+  when a liquid is present, otherwise the vapor fugacity.
+- `reactive_column`: material- and energy-balanced MESH with volumetric kinetics.
+  It delegates to `rigorous_column(..., reactions=system, reaction_volumes=...)`,
   retaining the structured column solver and differentiable reaction parameters.
-- `reactive_distillation`: a legacy approximation that adds per-stage reaction source
-  terms (kinetics × molar holdup) to the Wang-Henke mass balances, returning the
-  stage profiles, products, and the net `generation` on every stage. Constant
-  molar overflow does not establish an energy balance.
 
-These make classic reaction-separation processes (e.g. esterification with in-situ
-water removal) tractable while staying differentiable through the coupled solve.
+These make classic reaction-separation processes (for example, esterification
+with in-situ water removal) tractable while staying differentiable through the
+coupled solve.
 
 ## Validation
 

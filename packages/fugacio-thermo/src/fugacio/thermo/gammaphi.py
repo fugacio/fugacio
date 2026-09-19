@@ -23,13 +23,16 @@ zero-``kij`` cubic cannot. The richer reference (saturation fugacity coefficient
 Poynting, see `fugacio.thermo.reference`) and an EOS vapour are available via
 keyword flags.
 
-Every routine here, K-values, the four saturation calculations (bubble/dew at
-fixed ``T`` or ``P``), and the isothermal flash, is a fixed point or a
-bracketed root solved by the implicit-diff primitives in
-`fugacio.thermo.implicit`, so each output is differentiable end-to-end with
-respect to ``T``, ``P``, composition, *and* the activity-model parameters. That
-last point is what turns parameter regression (`fugacio.thermo.regression`)
-into plain gradient descent.
+The saturation-based reference exists only below each component's critical
+temperature. Every calculation here reports ``OUT_OF_DOMAIN`` when a component
+present in the relevant phase is supercritical, instead of returning a number
+built on an extrapolated vapour pressure; absent components are harmless.
+
+Each routine has a checked ``_with_info`` form and a value-only form that
+returns NaN on failure. Converged results are differentiable end-to-end with
+respect to ``T``, ``P``, composition, *and* the activity-model parameters, which
+turns parameter regression (`fugacio.thermo.regression`) into plain gradient
+descent.
 """
 
 from __future__ import annotations
@@ -41,10 +44,19 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.thermo.activity.models import ActivityModel
+from fugacio.thermo.diagnostics import SolveReport, SolveStatus, nan_unless_converged, with_status
 from fugacio.thermo.eos import PR, CubicEOS, ln_phi_mixture
-from fugacio.thermo.equilibrium import FlashResult, FlashSolveResult, rachford_rice
-from fugacio.thermo.implicit import bracketed_root, fixed_point, fixed_point_with_info
-from fugacio.thermo.reference import liquid_reference_fugacity, saturation_pressures
+from fugacio.thermo.equilibrium import (
+    FlashResult,
+    FlashSolveResult,
+    SaturationResult,
+    SaturationSolveResult,
+    input_report,
+    phase_compositions,
+    rachford_rice,
+)
+from fugacio.thermo.implicit import fixed_point_with_info, gate_tree, scanned_root_with_info
+from fugacio.thermo.reference import liquid_reference_fugacity, saturation_pressures_with_info
 
 ArrayLike = Array | float
 
@@ -67,6 +79,14 @@ def _ln_phi_vapor(
         ln_phi, _ = ln_phi_mixture(eos, t, p, y, tc, pc, omega, phase="vapor", kij=kij)
         return ln_phi
     raise ValueError(f"unknown vapor model {vapor!r}; use 'ideal' or 'eos'")
+
+
+def reference_domain(
+    t: ArrayLike, composition: Array, tc: Array, eos: CubicEOS, pc: Array, omega: Array
+) -> Array:
+    """Whether every component present in ``composition`` has a saturation reference at ``t``."""
+    _, converged = saturation_pressures_with_info(eos, t, tc, pc, omega)
+    return jax.lax.stop_gradient(jnp.all(jnp.where(jnp.asarray(composition) > 0, converged, True)))
 
 
 def gamma_phi_k_values(
@@ -103,7 +123,8 @@ def gamma_phi_k_values(
         phi_saturation: Include the saturation fugacity coefficient in the reference.
 
     Returns:
-        K-values aligned with ``x``.
+        K-values aligned with ``x``. Supercritical components carry values built
+        on an extrapolated vapour pressure; see `reference_domain`.
     """
     f_ref, _ = liquid_reference_fugacity(
         eos, t, p, tc, pc, omega, poynting=poynting, phi_saturation=phi_saturation
@@ -113,7 +134,21 @@ def gamma_phi_k_values(
     return jnp.exp(ln_gamma) * f_ref / (jnp.exp(ln_phi_v) * jnp.asarray(p))
 
 
-def bubble_pressure_gamma(
+def _domain_report(
+    report: SolveReport,
+    t: ArrayLike,
+    composition: Array,
+    tc: Array,
+    eos: CubicEOS,
+    pc: Array,
+    omega: Array,
+) -> SolveReport:
+    """Mark a report out of domain when a present component lacks a reference."""
+    valid = reference_domain(t, composition, tc, eos, pc, omega)
+    return with_status(report, ~valid, SolveStatus.OUT_OF_DOMAIN)
+
+
+def bubble_pressure_gamma_with_info(
     model: ActivityModel,
     t: ArrayLike,
     x: Array,
@@ -128,15 +163,14 @@ def bubble_pressure_gamma(
     phi_saturation: bool = False,
     tol: float = 1e-12,
     max_iter: int = 200,
-) -> tuple[Array, Array]:
+) -> SaturationSolveResult:
     """Bubble-point pressure and incipient vapour composition at fixed ``T``, ``x``.
 
     Solved as a coupled fixed point in ``(ln P, y)``: K-values give an unnormalised
-    vapour ``y* = K x`` whose sum scales the pressure until it is one. Returns
-    ``(P, y)``, differentiable in ``T``, ``x`` and the model parameters.
+    vapour ``y* = K x`` whose sum scales the pressure until it is one.
     """
     x = jnp.asarray(x)
-    psat = saturation_pressures(eos, t, tc, pc, omega)
+    psat, _ = saturation_pressures_with_info(eos, t, tc, pc, omega)
     gamma0 = jnp.exp(model.ln_gamma(x, t))
     p0 = jnp.sum(x * gamma0 * psat)
     y0 = x * gamma0 * psat / p0
@@ -166,11 +200,22 @@ def bubble_pressure_gamma(
         s = jnp.sum(y_unnorm)
         return jnp.concatenate([(state[0] + jnp.log(s))[None], y_unnorm / s])
 
-    state = fixed_point(g, state0, theta, tol, max_iter)
-    return jnp.exp(state[0]), state[1:]
+    solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+    report = _domain_report(solved.report, t, x, tc, eos, pc, omega)
+    report = with_status(report, ~input_report(t, 1.0, x), SolveStatus.INVALID_INPUT)
+    value = SaturationResult(jnp.exp(solved.value[0]), solved.value[1:])
+    return SaturationSolveResult(gate_tree(value, report.converged), report)
 
 
-def dew_pressure_gamma(
+def bubble_pressure_gamma(
+    model: ActivityModel, t: ArrayLike, x: Array, *args: Any, **kwargs: Any
+) -> SaturationResult:
+    """Bubble pressure and incipient vapour ``(P, y)``; NaN on failure."""
+    solved = bubble_pressure_gamma_with_info(model, t, x, *args, **kwargs)
+    return nan_unless_converged(solved.value, solved.report)
+
+
+def dew_pressure_gamma_with_info(
     model: ActivityModel,
     t: ArrayLike,
     y: Array,
@@ -185,15 +230,15 @@ def dew_pressure_gamma(
     phi_saturation: bool = False,
     tol: float = 1e-12,
     max_iter: int = 200,
-) -> tuple[Array, Array]:
+) -> SaturationSolveResult:
     """Dew-point pressure and incipient liquid composition at fixed ``T``, ``y``.
 
     Coupled fixed point in ``(ln P, x)``: with ``x_i = y_i / K_i`` (and the
     activity coefficients re-evaluated at the updated ``x``), the pressure is
-    scaled until the liquid sums to one. Returns ``(P, x)``.
+    scaled until the liquid sums to one.
     """
     y = jnp.asarray(y)
-    psat = saturation_pressures(eos, t, tc, pc, omega)
+    psat, _ = saturation_pressures_with_info(eos, t, tc, pc, omega)
     p0 = 1.0 / jnp.sum(y / psat)
     x0 = y * p0 / psat
     x0 = x0 / jnp.sum(x0)
@@ -223,71 +268,57 @@ def dew_pressure_gamma(
         s = jnp.sum(x_unnorm)
         return jnp.concatenate([(state[0] - jnp.log(s))[None], x_unnorm / s])
 
-    state = fixed_point(g, state0, theta, tol, max_iter)
-    return jnp.exp(state[0]), state[1:]
+    solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+    report = _domain_report(solved.report, t, y, tc, eos, pc, omega)
+    report = with_status(report, ~input_report(t, 1.0, y), SolveStatus.INVALID_INPUT)
+    value = SaturationResult(jnp.exp(solved.value[0]), solved.value[1:])
+    return SaturationSolveResult(gate_tree(value, report.converged), report)
 
 
-def _bubble_temperature_residual_factory(
-    model: ActivityModel,
-    x: Array,
-    tc: Array,
-    pc: Array,
-    omega: Array,
-    eos: CubicEOS,
-    kij: Array | None,
-    vapor: str,
-    poynting: bool,
-    phi_saturation: bool,
+def dew_pressure_gamma(
+    model: ActivityModel, t: ArrayLike, y: Array, *args: Any, **kwargs: Any
+) -> SaturationResult:
+    """Dew pressure and incipient liquid ``(P, x)``; NaN on failure."""
+    solved = dew_pressure_gamma_with_info(model, t, y, *args, **kwargs)
+    return nan_unless_converged(solved.value, solved.report)
+
+
+def default_temperature_bracket(tc: Array, composition: Array) -> tuple[Array, Array]:
+    """A saturation-temperature bracket from the present components' critical points.
+
+    ``[0.2 min Tc, max Tc]`` over the components present in ``composition``: wide
+    enough for cryogenic and heavy systems, and scanned for the first finite
+    sign change rather than assumed valid.
+    """
+    present = jnp.asarray(composition) > 0
+    tc = jnp.asarray(tc)
+    lo = 0.2 * jnp.min(jnp.where(present, tc, jnp.inf))
+    hi = jnp.max(jnp.where(present, tc, -jnp.inf))
+    return jax.lax.stop_gradient(lo), jax.lax.stop_gradient(hi)
+
+
+def _incipient_vapor(
+    model_: Any,
+    t: Array,
+    p_: Array,
+    x_: Array,
+    tc_: Array,
+    pc_: Array,
+    omega_: Array,
+    options: dict[str, Any],
     inner_iter: int,
-) -> Any:
-    """Build ``sum_i K_i x_i - 1`` as a function of ``(T, params)`` for the T-bracket."""
+) -> Array:
+    """Incipient vapour at ``(T, P, x)``, settled by ``inner_iter`` sweeps for an EOS vapour."""
 
-    def residual(t: Array, params: Any) -> Array:
-        model_, p_, x_, tc_, pc_, omega_ = params
-        # Inner sweep for the incipient vapour (needed only for an EOS vapour).
-        y = x_
+    def step(_: int, y_cur: Array) -> Array:
+        k = gamma_phi_k_values(model_, t, p_, x_, y_cur, tc_, pc_, omega_, **options)
+        yn = k * x_
+        return yn / jnp.sum(yn)
 
-        def step(_: int, y_cur: Array) -> Array:
-            k = gamma_phi_k_values(
-                model_,
-                t,
-                p_,
-                x_,
-                y_cur,
-                tc_,
-                pc_,
-                omega_,
-                eos=eos,
-                kij=kij,
-                vapor=vapor,
-                poynting=poynting,
-                phi_saturation=phi_saturation,
-            )
-            yn = k * x_
-            return yn / jnp.sum(yn)
-
-        y = jax.lax.fori_loop(0, inner_iter, step, y)
-        k = gamma_phi_k_values(
-            model_,
-            t,
-            p_,
-            x_,
-            y,
-            tc_,
-            pc_,
-            omega_,
-            eos=eos,
-            kij=kij,
-            vapor=vapor,
-            poynting=poynting,
-            phi_saturation=phi_saturation,
-        )
-        return jnp.sum(k * x_) - 1.0
-
-    return residual
+    return jax.lax.fori_loop(0, inner_iter, step, step(0, x_))
 
 
-def bubble_temperature_gamma(
+def bubble_temperature_gamma_with_info(
     model: ActivityModel,
     p: ArrayLike,
     x: Array,
@@ -300,46 +331,62 @@ def bubble_temperature_gamma(
     vapor: str = "ideal",
     poynting: bool = False,
     phi_saturation: bool = False,
-    t_min: float = 150.0,
-    t_max: float = 700.0,
+    t_min: ArrayLike | None = None,
+    t_max: ArrayLike | None = None,
     tol: float = 1e-9,
     max_iter: int = 200,
-    inner_iter: int = 0,
-) -> tuple[Array, Array]:
+    inner_iter: int | None = None,
+) -> SaturationSolveResult:
     """Bubble-point temperature and incipient vapour at fixed ``P``, ``x``.
 
-    The bubble temperature is the root of ``sum_i K_i(T) x_i = 1`` (the saturation
-    sum is monotone in ``T``), found with the bracketed solver and differentiated
-    by the implicit function theorem. Returns ``(T, y)``. For an ideal vapour the
-    K-values are independent of ``y`` and ``inner_iter`` can stay zero; raise it
-    for an EOS vapour so the incipient ``y`` settles before the bracket step.
+    The bubble temperature is the root of ``sum_i K_i(T) x_i = 1`` (monotone in
+    ``T``), located by `fugacio.thermo.implicit.scanned_root_with_info` on
+    ``[t_min, t_max]`` (by default `default_temperature_bracket`) and
+    differentiated by the implicit function theorem. For an EOS vapour the
+    incipient ``y`` is settled by ``inner_iter`` sweeps (default 30) at every
+    trial temperature; an ideal vapour needs none.
     """
     x = jnp.asarray(x)
-    residual = _bubble_temperature_residual_factory(
-        model, x, tc, pc, omega, eos, kij, vapor, poynting, phi_saturation, inner_iter
-    )
+    options: dict[str, Any] = {
+        "eos": eos,
+        "kij": kij,
+        "vapor": vapor,
+        "poynting": poynting,
+        "phi_saturation": phi_saturation,
+    }
+    sweeps = (0 if vapor == "ideal" else 30) if inner_iter is None else inner_iter
+    lo, hi = default_temperature_bracket(tc, x)
+    lo = lo if t_min is None else jnp.asarray(t_min, dtype=float)
+    hi = hi if t_max is None else jnp.asarray(t_max, dtype=float)
+
+    def residual(t: Array, params: Any) -> Array:
+        model_, p_, x_, tc_, pc_, omega_ = params
+        y = _incipient_vapor(model_, t, p_, x_, tc_, pc_, omega_, options, sweeps)
+        k = gamma_phi_k_values(model_, t, p_, x_, y, tc_, pc_, omega_, **options)
+        # Undefined wherever a present component has no saturation reference.
+        valid = reference_domain(t, x_, tc_, eos, pc_, omega_)
+        return jnp.where(valid, jnp.log(jnp.sum(k * x_)), jnp.nan)
+
     params = (model, jnp.asarray(p, dtype=float), x, tc, pc, omega)
-    t_star = bracketed_root(residual, params, jnp.asarray(t_min), jnp.asarray(t_max), tol, max_iter)
-    k = gamma_phi_k_values(
-        model,
-        t_star,
-        p,
-        x,
-        x,
-        tc,
-        pc,
-        omega,
-        eos=eos,
-        kij=kij,
-        vapor=vapor,
-        poynting=poynting,
-        phi_saturation=phi_saturation,
+    solved = scanned_root_with_info(residual, params, lo, hi, tol, max_iter)
+    t_star = solved.value
+    y = _incipient_vapor(
+        model, t_star, jnp.asarray(p, dtype=float), x, tc, pc, omega, options, sweeps
     )
-    y_unnorm = k * x
-    return t_star, y_unnorm / jnp.sum(y_unnorm)
+    report = _domain_report(solved.report, t_star, x, tc, eos, pc, omega)
+    report = with_status(report, ~input_report(1.0, p, x), SolveStatus.INVALID_INPUT)
+    return SaturationSolveResult(gate_tree(SaturationResult(t_star, y), report.converged), report)
 
 
-def dew_temperature_gamma(
+def bubble_temperature_gamma(
+    model: ActivityModel, p: ArrayLike, x: Array, *args: Any, **kwargs: Any
+) -> SaturationResult:
+    """Bubble temperature and incipient vapour ``(T, y)``; NaN on failure."""
+    solved = bubble_temperature_gamma_with_info(model, p, x, *args, **kwargs)
+    return nan_unless_converged(solved.value, solved.report)
+
+
+def dew_temperature_gamma_with_info(
     model: ActivityModel,
     p: ArrayLike,
     y: Array,
@@ -352,42 +399,39 @@ def dew_temperature_gamma(
     vapor: str = "ideal",
     poynting: bool = False,
     phi_saturation: bool = False,
-    t_min: float = 150.0,
-    t_max: float = 700.0,
+    t_min: ArrayLike | None = None,
+    t_max: ArrayLike | None = None,
     tol: float = 1e-9,
     max_iter: int = 200,
     inner_iter: int = 30,
-) -> tuple[Array, Array]:
+) -> SaturationSolveResult:
     """Dew-point temperature and incipient liquid at fixed ``P``, ``y``.
 
     Root of ``sum_i (y_i / K_i(T)) = 1`` in ``T`` with an inner sweep that settles
     the incipient liquid ``x`` (on which the activity coefficients depend) at each
-    trial temperature. Returns ``(T, x)``.
+    trial temperature, on a scanned bracket (see
+    `bubble_temperature_gamma_with_info`).
     """
     y = jnp.asarray(y)
+    options: dict[str, Any] = {
+        "eos": eos,
+        "kij": kij,
+        "vapor": vapor,
+        "poynting": poynting,
+        "phi_saturation": phi_saturation,
+    }
+    lo, hi = default_temperature_bracket(tc, y)
+    lo = lo if t_min is None else jnp.asarray(t_min, dtype=float)
+    hi = hi if t_max is None else jnp.asarray(t_max, dtype=float)
 
     def liquid_at(t: Array, params: Any) -> Array:
         model_, p_, y_, tc_, pc_, omega_ = params
-        psat = saturation_pressures(eos, t, tc_, pc_, omega_)
+        psat, _ = saturation_pressures_with_info(eos, t, tc_, pc_, omega_)
         x = y_ * (1.0 / jnp.sum(y_ / psat)) / psat
         x = x / jnp.sum(x)
 
         def step(_: int, x_cur: Array) -> Array:
-            k = gamma_phi_k_values(
-                model_,
-                t,
-                p_,
-                x_cur,
-                y_,
-                tc_,
-                pc_,
-                omega_,
-                eos=eos,
-                kij=kij,
-                vapor=vapor,
-                poynting=poynting,
-                phi_saturation=phi_saturation,
-            )
+            k = gamma_phi_k_values(model_, t, p_, x_cur, y_, tc_, pc_, omega_, **options)
             xn = y_ / k
             return xn / jnp.sum(xn)
 
@@ -396,62 +440,34 @@ def dew_temperature_gamma(
     def residual(t: Array, params: Any) -> Array:
         model_, p_, y_, tc_, pc_, omega_ = params
         x = liquid_at(t, params)
-        k = gamma_phi_k_values(
-            model_,
-            t,
-            p_,
-            x,
-            y_,
-            tc_,
-            pc_,
-            omega_,
-            eos=eos,
-            kij=kij,
-            vapor=vapor,
-            poynting=poynting,
-            phi_saturation=phi_saturation,
-        )
-        return jnp.sum(y_ / k) - 1.0
+        k = gamma_phi_k_values(model_, t, p_, x, y_, tc_, pc_, omega_, **options)
+        valid = reference_domain(t, y_, tc_, eos, pc_, omega_)
+        # ln(sum y/K) decreases with T; negate it so the root is a rising crossing.
+        return jnp.where(valid, -jnp.log(jnp.sum(y_ / k)), jnp.nan)
 
     params = (model, jnp.asarray(p, dtype=float), y, tc, pc, omega)
-    t_star = bracketed_root(residual, params, jnp.asarray(t_min), jnp.asarray(t_max), tol, max_iter)
-    return t_star, liquid_at(t_star, params)
+    solved = scanned_root_with_info(residual, params, lo, hi, tol, max_iter)
+    t_star = solved.value
+    x = liquid_at(t_star, params)
+    report = _domain_report(solved.report, t_star, y, tc, eos, pc, omega)
+    report = with_status(report, ~input_report(1.0, p, y), SolveStatus.INVALID_INPUT)
+    return SaturationSolveResult(gate_tree(SaturationResult(t_star, x), report.converged), report)
+
+
+def dew_temperature_gamma(
+    model: ActivityModel, p: ArrayLike, y: Array, *args: Any, **kwargs: Any
+) -> SaturationResult:
+    """Dew temperature and incipient liquid ``(T, x)``; NaN on failure."""
+    solved = dew_temperature_gamma_with_info(model, p, y, *args, **kwargs)
+    return nan_unless_converged(solved.value, solved.report)
 
 
 def flash_pt_gamma(
-    model: ActivityModel,
-    t: ArrayLike,
-    p: ArrayLike,
-    z: Array,
-    tc: Array,
-    pc: Array,
-    omega: Array,
-    *,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
-    vapor: str = "ideal",
-    poynting: bool = False,
-    phi_saturation: bool = False,
-    tol: float = 1e-12,
-    max_iter: int = 300,
+    model: ActivityModel, t: ArrayLike, p: ArrayLike, z: Array, *args: Any, **kwargs: Any
 ) -> FlashResult:
-    """Isothermal flash value; use flash_pt_gamma_with_info for numerical status."""
-    return flash_pt_gamma_with_info(
-        model,
-        t,
-        p,
-        z,
-        tc,
-        pc,
-        omega,
-        eos=eos,
-        kij=kij,
-        vapor=vapor,
-        poynting=poynting,
-        phi_saturation=phi_saturation,
-        tol=tol,
-        max_iter=max_iter,
-    ).value
+    """Isothermal flash value; NaN when `flash_pt_gamma_with_info` reports failure."""
+    solved = flash_pt_gamma_with_info(model, t, p, z, *args, **kwargs)
+    return nan_unless_converged(solved.value, solved.report)
 
 
 def flash_pt_gamma_with_info(
@@ -471,15 +487,16 @@ def flash_pt_gamma_with_info(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashSolveResult:
-    """Isothermal-isobaric gamma-phi flash by accelerated successive substitution.
+    """Isothermal-isobaric gamma-phi flash by successive substitution.
 
     Iterates the gamma-phi K-values to a fixed point in ``ln K`` with the
     Rachford-Rice material balance closing the phase split at each step. The
     converged ``beta``, ``x``, ``y`` are differentiable with respect to
-    ``(T, P, z)`` and the activity-model parameters.
+    ``(T, P, z)`` and the activity-model parameters. A present supercritical
+    component is ``OUT_OF_DOMAIN``.
     """
     z = jnp.asarray(z)
-    psat = saturation_pressures(eos, t, tc, pc, omega)
+    psat, _ = saturation_pressures_with_info(eos, t, tc, pc, omega)
     gamma0 = jnp.exp(model.ln_gamma(z, t))
     k0 = gamma0 * psat / jnp.asarray(p)
     theta = (model, jnp.asarray(t, dtype=float), jnp.asarray(p, dtype=float), z, tc, pc, omega)
@@ -488,9 +505,10 @@ def flash_pt_gamma_with_info(
         model_, t_, p_, z_, tc_, pc_, omega_ = theta
         k = jnp.exp(ln_k)
         beta = rachford_rice(z_, k)
-        denom = 1.0 + beta * (k - 1.0)
-        x = z_ / denom
-        y = k * x
+        # Normalized trial phases (a no-op at an interior root); activity
+        # coefficients are only defined for mole fractions.
+        x, y = phase_compositions(z_, k, beta)
+        x, y = x / jnp.sum(x), y / jnp.sum(y)
         k_new = gamma_phi_k_values(
             model_,
             t_,
@@ -509,10 +527,9 @@ def flash_pt_gamma_with_info(
         return jnp.log(k_new)
 
     solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
-    ln_k_star = solved.value
-    k = jnp.exp(ln_k_star)
+    k = jnp.exp(solved.value)
     beta = rachford_rice(z, k)
-    denom = 1.0 + beta * (k - 1.0)
-    x = z / denom
-    y = k * x
-    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), solved.report)
+    x, y = phase_compositions(z, k, beta)
+    report = _domain_report(solved.report, t, z, tc, eos, pc, omega)
+    report = with_status(report, ~input_report(t, p, z), SolveStatus.INVALID_INPUT)
+    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), report)

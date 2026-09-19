@@ -81,8 +81,10 @@ def flory_huggins_ln_gamma(x: Array, volume: Array) -> Array:
         ``ln(gamma)`` of shape ``(n,)`` (the combinatorial part, non-positive).
     """
     x = jnp.asarray(x)
-    phi = volume_fractions(x, volume)
-    return jnp.log(phi / x) + 1.0 - phi / x
+    volume = jnp.asarray(volume)
+    # phi_i / x_i = v_i / sum_j x_j v_j exactly, finite at infinite dilution.
+    phi_over_x = volume / jnp.sum(x * volume)
+    return jnp.log(phi_over_x) + 1.0 - phi_over_x
 
 
 def flory_huggins_gamma(x: Array, volume: Array) -> Array:

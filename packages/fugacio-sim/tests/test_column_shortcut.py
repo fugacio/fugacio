@@ -12,7 +12,6 @@ from fugacio.sim.column import (
     shortcut_column,
     underwood_min_reflux,
 )
-from fugacio.thermo import PR, component_arrays
 
 
 def test_fenske_matches_hand_calculation() -> None:
@@ -71,10 +70,11 @@ def test_kirkbride_feed_stage_within_column() -> None:
 
 
 def test_relative_volatility_orders_by_volatility() -> None:
-    components = ("methane", "propane", "n-pentane")
-    arr = component_arrays(list(components))
+    from fugacio.sim import package_for
+
     z = jnp.array([0.4, 0.3, 0.3])
-    alpha = relative_volatility(PR, 300.0, 10e5, z, arr["tc"], arr["pc"], arr["omega"], ref=2)
+    pkg = package_for(("methane", "propane", "n-pentane"), "pr")
+    alpha = relative_volatility(pkg, 300.0, 10e5, z, ref=2)
     assert float(alpha[2]) == pytest.approx(1.0)  # reference component
     assert float(alpha[0]) > float(alpha[1]) > float(alpha[2])  # methane > propane > pentane
 

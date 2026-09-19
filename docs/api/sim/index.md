@@ -20,14 +20,16 @@ from fugacio.sim import Stream, flash_drum, tear_solve, linear_mpc, pinch_analys
 | Area | Page | Key symbols |
 | --- | --- | --- |
 | Streams & properties | [Streams & properties](streams.md) | `Stream`, `enthalpy_flow`, `molar_enthalpy`, `liquid_density` |
-| Unit operations | [Unit operations](units.md) | `flash_drum`, `heater`, `pump`, `compressor`, `mix`, `splitter`, `flash_vle` |
-| Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `FlowsheetResult`, `tear_solve_with_info`, `continuation_solve` |
+| Unit operations | [Unit operations](units.md) | `flash_drum`, `adiabatic_flash`, `heater`, `pump`, `compressor`, `mix`, `decanter`, `unit_limits`, `enable_compilation_cache` |
+| Flowsheet & recycle | [Flowsheet & recycle](flowsheet.md) | `Flowsheet`, `FlowsheetResult`, `UnitRecord`, `tear_solve_with_info`, `continuation_solve` |
+| Process acceptance | [Process acceptance](acceptance.md) | `audit_stream`, `flash_drum_checked`, `audit_flowsheet`, `BalanceBoundary` |
+| Process cases & studies | [Process cases & studies](cases.md) | `ProcessCase`, `CaseRunner`, `SolverOptions`, `sweep`, `optimize`, `sensitivities` |
 | Two-sided heat exchanger | [Two-sided heat exchanger](heat_exchanger.md) | `heat_exchanger`, `HeatExchangerResult` |
 | Equation-oriented flowsheeting | [Equation-oriented flowsheeting](eo.md) | `EOFlowsheet`, `Flash`, `HeatExchanger`, `Column`, `optimize_flowsheet_eo` |
-| Thermodynamic models | [Thermodynamic models](models.md) | `package_for`, `METHODS`, `eos_model_for`, `nrtl_model_for`, `unifac_model_for` |
+| Thermodynamic models | [Thermodynamic models](models.md) | `package_for`, `METHODS`, `helmholtz_package_for`, `UnifacModel` |
 | Rigorous distillation | [Rigorous distillation](distillation.md) | `rigorous_column`, `ColumnFeed`, `reflux_ratio`, `purity`, `absorber`, `stripper` |
-| Distillation & diagrams | [Distillation & diagrams](columns.md) | `shortcut_column`, `solve_column`, `pxy_diagram`, `residue_curve_map` |
-| Reactors | [Reactors & reactive separations](reactors.md) | `equilibrium_reactor`, `cstr`, `pfr`, `reactive_flash`, `reactive_distillation` |
+| Distillation & diagrams | [Distillation & diagrams](columns.md) | `shortcut_column`, `relative_volatility`, `pxy_diagram`, `residue_curve_map` |
+| Reactors | [Reactors & reactive separations](reactors.md) | `equilibrium_reactor`, `cstr`, `pfr`, `stoichiometric_reactor`, `reactive_flash`, `reactive_column` |
 | Optimization & design | [Optimization & design](optimization.md) | `minimize`, `argmin`, `meet_spec`, `optimize_flowsheet` |
 | Economics & sizing | [Economics & sizing](economics.md) | `heat_exchanger_area`, `bare_module_cost`, `total_annual_cost`, `npv` |
 | Dynamics & control | [Dynamics & control](dynamics.md) | `odeint`, `integrate`, `PID`, `DynamicFlowsheet`, `tune_pid` |

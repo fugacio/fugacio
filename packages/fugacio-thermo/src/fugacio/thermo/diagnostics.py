@@ -16,7 +16,13 @@ from jax import Array
 
 
 class SolveStatus(IntEnum):
-    """Stable, machine-readable termination codes."""
+    """Stable, machine-readable termination codes.
+
+    ``OUT_OF_DOMAIN`` marks a well-posed request outside a model's domain (for
+    example, a saturation pressure above the critical temperature).
+    ``TRIVIAL`` marks an equilibrium iteration that collapsed onto identical
+    phases where a distinct phase was required.
+    """
 
     CONVERGED = 0
     MAX_ITERATIONS = 1
@@ -25,6 +31,8 @@ class SolveStatus(IntEnum):
     STALLED = 4
     INVALID_INPUT = 5
     INFEASIBLE = 6
+    OUT_OF_DOMAIN = 7
+    TRIVIAL = 8
 
 
 class SolveReport(NamedTuple):
@@ -71,6 +79,45 @@ class SolveResult(NamedTuple):
 
     value: Array
     report: SolveReport
+
+
+def nan_unless_converged(value: Any, report: SolveReport) -> Any:
+    """Replace every leaf of ``value`` with NaN when ``report`` did not converge.
+
+    This is the value-only contract of Fugacio's public equilibrium calls: a
+    failed solve never returns a finite number. The selection is on the primal,
+    so a zero cotangent through a discarded failure stays zero in reverse mode.
+    """
+    ok = report.converged
+
+    def gate(leaf: Any) -> Any:
+        leaf = jnp.asarray(leaf)
+        if not jnp.issubdtype(leaf.dtype, jnp.inexact):
+            return leaf
+        return jnp.where(ok, leaf, jnp.nan)
+
+    return jax.tree_util.tree_map(gate, value)
+
+
+def with_status(report: SolveReport, failed: Array, status: SolveStatus | Array) -> SolveReport:
+    """Override a report's status with ``status`` (a code or a status array) where ``failed``."""
+    return report._replace(status=jnp.where(failed, status, report.status))
+
+
+def canonical_report(report: SolveReport) -> SolveReport:
+    """Give every report field a fixed dtype.
+
+    Reports assembled on different code paths can differ in integer width or
+    JAX weak typing; `jax.lax.cond` and `jax.lax.switch` require identical
+    branch outputs, so branches return canonical reports.
+    """
+    return SolveReport(
+        status=jnp.asarray(report.status, dtype=jnp.int32),
+        iterations=jnp.asarray(report.iterations, dtype=jnp.int32),
+        residual_norm=jnp.asarray(report.residual_norm, dtype=float),
+        step_norm=jnp.asarray(report.step_norm, dtype=float),
+        worst_equation=jnp.asarray(report.worst_equation, dtype=jnp.int32),
+    )
 
 
 class ConvergenceError(RuntimeError):

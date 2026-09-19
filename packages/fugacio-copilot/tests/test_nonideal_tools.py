@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import pytest
 
 from fugacio.copilot import call_tool, tool_schemas
-from fugacio.sim import nrtl_model_for
+from fugacio.sim import package_for
 
 
 def test_new_nonideal_tools_are_registered() -> None:
@@ -147,7 +147,7 @@ def test_solvent_screening_ranks_ascending() -> None:
 
 def test_fit_activity_parameters_recovers_low_residual() -> None:
     # Generate synthetic bubble-pressure data from the curated NRTL, then refit.
-    model = nrtl_model_for(["ethanol", "water"])
+    model = package_for(["ethanol", "water"], "nrtl")
     x1 = [0.2, 0.4, 0.6, 0.8]
     t = 343.15
     p_data = [float(model.bubble_pressure(t, jnp.array([x, 1.0 - x]))[0]) for x in x1]

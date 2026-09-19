@@ -1,35 +1,45 @@
-"""Phase equilibrium: K-values, Rachford-Rice, flash, saturation, and stability.
+"""Phase equilibrium on a cubic equation of state: flash and saturation.
 
 This module turns the cubic equation of state (`fugacio.thermo.eos`) into
-the equilibrium calculations a process simulator actually calls:
+the equilibrium calculations a process simulator calls:
 
 * `wilson_k`: the classic K-value initial guess;
 * `rachford_rice`: the material-balance root for the vapour fraction;
-* `flash_pt`: an isothermal-isobaric two-phase flash;
-* `psat_eos`: pure-component saturation pressure by equifugacity;
-* `bubble_pressure_eos` / `dew_pressure_eos`: phase envelopes;
-* `stability_analysis`: Michelsen's tangent-plane-distance test.
+* `flash_pt_with_info`: an isothermal-isobaric vapour-liquid flash;
+* `psat_eos_with_info`: pure-component saturation pressure by equifugacity;
+* `bubble_pressure_eos_with_info` / `dew_pressure_eos_with_info`: mixture
+  saturation pressures and incipient-phase compositions.
 
-Every iterative result is differentiable end-to-end: the scalar solves carry
-hand-written implicit-function-theorem rules (`jax.custom_jvp`) and the
-flash/saturation loops reuse `fugacio.thermo.implicit.fixed_point`. You can
-therefore take a gradient of *any* equilibrium output with respect to ``T``,
-``P``, composition, or model parameters, the property that makes Fugacio a
-differentiable core rather than just another flash package.
+Every calculation has a checked ``_with_info`` form that returns its best state
+together with a `fugacio.thermo.diagnostics.SolveReport`, and a value-only form
+that returns NaN whenever that report fails. A failed solve therefore never
+returns a finite number. Converged results carry implicit-function-theorem
+derivatives with respect to temperature, pressure, composition, and the model
+constants; failed results have nonfinite derivatives.
+
+A two-phase flash can't detect a second liquid. Whether a feed splits at all is
+answered by the tangent-plane search in `fugacio.thermo.stability`, which every
+property package exposes as ``stability``.
 """
 
 from __future__ import annotations
 
-from functools import partial
 from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.thermo.diagnostics import SolveReport
+from fugacio.thermo.diagnostics import (
+    SolveReport,
+    SolveResult,
+    SolveStatus,
+    nan_unless_converged,
+    residual_report,
+    with_status,
+)
 from fugacio.thermo.eos import CubicEOS, ln_phi_mixture, ln_phi_pure
-from fugacio.thermo.implicit import fixed_point, fixed_point_with_info
+from fugacio.thermo.implicit import fixed_point_with_info, gate_tree, implicit_solution
 
 ArrayLike = Array | float
 
@@ -39,8 +49,8 @@ class FlashResult(NamedTuple):
 
     Attributes:
         beta: Vapour molar fraction (mol vapour / mol feed).
-        x: Liquid-phase mole fractions.
-        y: Vapour-phase mole fractions.
+        x: Liquid-phase mole fractions (the incipient liquid when ``beta == 1``).
+        y: Vapour-phase mole fractions (the incipient vapour when ``beta == 0``).
         k: Equilibrium ratios ``K_i = y_i / x_i`` at the solution.
     """
 
@@ -51,22 +61,30 @@ class FlashResult(NamedTuple):
 
 
 class FlashSolveResult(NamedTuple):
-    """PT flash and the actual fixed-point iteration report."""
+    """PT flash and the report of its fixed-point iteration."""
 
     value: FlashResult
     report: SolveReport
 
 
-class StabilityResult(NamedTuple):
-    """Result of a tangent-plane stability analysis.
+class SaturationResult(NamedTuple):
+    """A saturation point and the composition of the incipient phase.
 
     Attributes:
-        stable: ``True`` if the feed is single-phase stable.
-        tpd: The smallest (most negative) modified tangent-plane distance found.
+        value: Saturation pressure (Pa) or temperature (K).
+        composition: Incipient-phase mole fractions: the vapour of a bubble
+            point or the liquid of a dew point.
     """
 
-    stable: Array
-    tpd: Array
+    value: Array
+    composition: Array
+
+
+class SaturationSolveResult(NamedTuple):
+    """A saturation point and its solve report."""
+
+    value: SaturationResult
+    report: SolveReport
 
 
 def wilson_k(t: ArrayLike, p: ArrayLike, tc: Array, pc: Array, omega: Array) -> Array:
@@ -77,6 +95,12 @@ def wilson_k(t: ArrayLike, p: ArrayLike, tc: Array, pc: Array, omega: Array) -> 
     t = jnp.asarray(t)
     p = jnp.asarray(p)
     return (pc / p) * jnp.exp(5.373 * (1.0 + omega) * (1.0 - tc / t))
+
+
+def wilson_psat(t: ArrayLike, tc: ArrayLike, pc: ArrayLike, omega: ArrayLike) -> Array:
+    """Wilson's vapour-pressure estimate (Pa), an initialization only."""
+    t = jnp.asarray(t, dtype=float)
+    return jnp.asarray(pc) * jnp.exp(5.373 * (1.0 + jnp.asarray(omega)) * (1.0 - tc / t))
 
 
 def _rr_residual(beta: Array, z: Array, k: Array) -> Array:
@@ -160,6 +184,36 @@ def classify_trivial(z: Array, k: Array, beta: Array, k_wilson: Array, z_factor:
     return jnp.where(trivial, single, beta)
 
 
+def phase_compositions(z: Array, k: Array, beta: Array) -> tuple[Array, Array]:
+    """Liquid and vapour compositions from the material balance at ``(K, beta)``.
+
+    A present phase's composition follows from Rachford-Rice. An absent phase
+    is the incipient trial phase, normalized so both are mole fractions.
+    """
+    denom = 1.0 + beta * (k - 1.0)
+    x = z / denom
+    y = k * x
+    x = jnp.where(beta >= 1.0, x / jnp.sum(x), x)
+    y = jnp.where(beta <= 0.0, y / jnp.sum(y), y)
+    return x, y
+
+
+def input_report(t: ArrayLike, p: ArrayLike, z: Array) -> Array:
+    """Whether ``(T, P, z)`` is a physical state specification."""
+    t = jnp.asarray(t)
+    p = jnp.asarray(p)
+    z = jnp.asarray(z)
+    return (
+        jnp.isfinite(t)
+        & jnp.isfinite(p)
+        & (t > 0)
+        & (p > 0)
+        & jnp.all(jnp.isfinite(z))
+        & jnp.all(z >= 0)
+        & (jnp.sum(z) > 0)
+    )
+
+
 def flash_pt(
     eos: CubicEOS,
     t: ArrayLike,
@@ -173,10 +227,9 @@ def flash_pt(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashResult:
-    """Isothermal flash value; use flash_pt_with_info for numerical status."""
-    return flash_pt_with_info(
-        eos, t, p, z, tc, pc, omega, kij=kij, tol=tol, max_iter=max_iter
-    ).value
+    """Isothermal flash value; NaN when `flash_pt_with_info` reports failure."""
+    solved = flash_pt_with_info(eos, t, p, z, tc, pc, omega, kij=kij, tol=tol, max_iter=max_iter)
+    return nan_unless_converged(solved.value, solved.report)
 
 
 def flash_pt_with_info(
@@ -192,13 +245,15 @@ def flash_pt_with_info(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashSolveResult:
-    """Isothermal-isobaric two-phase flash by accelerated successive substitution.
+    """Isothermal-isobaric vapour-liquid flash by successive substitution.
 
     Solves the equal-fugacity conditions ``phi_i^L x_i = phi_i^V y_i`` together
-    with the Rachford-Rice material balance, starting from Wilson K-values. The
-    converged solution (and therefore ``beta``, ``x``, ``y``) is
-    differentiable with respect to ``(T, P, z, ...)`` via implicit
-    differentiation of the fixed point.
+    with the Rachford-Rice material balance, starting from Wilson K-values. A
+    single-phase feed collapses onto the trivial solution ``K = 1``, whose phase
+    is decided by `classify_trivial`. The converged state is differentiable with
+    respect to ``(T, P, z, ...)`` via implicit differentiation of the fixed point.
+    This flash considers one liquid and one vapour; test the result's stability
+    when a second liquid can form.
     """
     z = jnp.asarray(z)
     tc = jnp.asarray(tc)
@@ -213,98 +268,193 @@ def flash_pt_with_info(
         t_, p_, z_, tc_, pc_, omega_, kij_ = theta
         k = jnp.exp(ln_k)
         beta = rachford_rice(z_, k)
-        denom = 1.0 + beta * (k - 1.0)
-        x = z_ / denom
-        y = k * x
+        # Normalized trial phases: a no-op at an interior Rachford-Rice root, and
+        # the incipient phase of a single-phase feed (where the unnormalized
+        # ``z / K`` would make the equation of state see a non-composition).
+        x, y = phase_compositions(z_, k, beta)
+        x, y = x / jnp.sum(x), y / jnp.sum(y)
         ln_phi_l, _ = ln_phi_mixture(eos, t_, p_, x, tc_, pc_, omega_, phase="liquid", kij=kij_)
         ln_phi_v, _ = ln_phi_mixture(eos, t_, p_, y, tc_, pc_, omega_, phase="vapor", kij=kij_)
         return ln_phi_l - ln_phi_v
 
     solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
-    ln_k_star = solved.value
-    k = jnp.exp(ln_k_star)
+    k = jnp.exp(solved.value)
     beta = rachford_rice(z, k)
     _, z_single = ln_phi_mixture(eos, t, p, z, tc, pc, omega, phase="vapor", kij=kij_arr)
     beta = classify_trivial(z, k, beta, k0, z_single)
-    denom = 1.0 + beta * (k - 1.0)
-    x = z / denom
-    y = k * x
-    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), solved.report)
+    x, y = phase_compositions(z, k, beta)
+    report = with_status(solved.report, ~input_report(t, p, z), SolveStatus.INVALID_INPUT)
+    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), report)
 
 
-def _psat_residual(
+# --------------------------------------------------------------------------- #
+# Pure-component saturation
+# --------------------------------------------------------------------------- #
+
+#: Compressibility separating vapour-like from liquid-like single cubic roots.
+_Z_SPLIT = 0.3
+
+
+def _psat_terms(eos: CubicEOS, ln_p: Array, theta: Any) -> tuple[Array, tuple[Array, Array]]:
+    """Equifugacity residual in ``ln P``, whether the roots coincide, and ``Z^V``."""
+    t, tc, pc, omega = theta
+    p = jnp.exp(ln_p)
+    ln_phi_l, z_l = ln_phi_pure(eos, t, p, tc, pc, omega, phase="liquid")
+    ln_phi_v, z_v = ln_phi_pure(eos, t, p, tc, pc, omega, phase="vapor")
+    single = jnp.abs(z_v - z_l) <= 1e-9 * jnp.maximum(jnp.abs(z_v), 1e-12)
+    return ln_phi_l - ln_phi_v, (single, z_v)
+
+
+def psat_eos_with_info(
     eos: CubicEOS,
     t: ArrayLike,
-    p: ArrayLike,
     tc: ArrayLike,
     pc: ArrayLike,
     omega: ArrayLike,
-) -> Array:
-    ln_phi_l, _ = ln_phi_pure(eos, t, p, tc, pc, omega, phase="liquid")
-    ln_phi_v, _ = ln_phi_pure(eos, t, p, tc, pc, omega, phase="vapor")
-    return ln_phi_l - ln_phi_v
+    *,
+    tol: float = 1e-10,
+    max_iter: int = 100,
+) -> SolveResult:
+    """Pure-component saturation pressure (Pa) from the EOS by equifugacity.
+
+    Solves ``ln phi^L(T, P) = ln phi^V(T, P)`` for ``ln P`` by Newton's method
+    from the Wilson estimate. A trial pressure outside the three-root region has
+    coincident liquid and vapour roots, where the residual vanishes trivially;
+    such a step is redirected toward the coexistence region instead of being
+    accepted. The loop stops on its own recorded convergence flag, so scalar and
+    vectorized evaluations follow identical arithmetic.
+
+    At or above the critical temperature no saturation pressure exists: the
+    report is ``OUT_OF_DOMAIN`` and the value is the (differentiable) Wilson
+    extrapolation, a usable initialization but not a property. Keeping that
+    value finite lets a mixture model carry an absent supercritical component
+    without poisoning derivatives. A converged value is differentiable in ``T``
+    and the critical constants (Clapeyron's implicit derivative); failures
+    inside the domain have nonfinite derivatives.
+
+    Args:
+        eos: Cubic equation of state.
+        t: Temperature (K).
+        tc: Critical temperature (K).
+        pc: Critical pressure (Pa).
+        omega: Acentric factor.
+        tol: Residual tolerance on ``ln phi^L - ln phi^V``.
+        max_iter: Newton iteration cap.
+
+    Returns:
+        The saturation pressure and its report.
+    """
+    t = jnp.asarray(t, dtype=float)
+    tc = jnp.asarray(tc, dtype=float)
+    pc = jnp.asarray(pc, dtype=float)
+    omega = jnp.asarray(omega, dtype=float)
+    in_domain = (t > 0.0) & (t < tc) & jnp.isfinite(t)
+    # Every lane (including vectorized supercritical ones) solves inside the
+    # domain, so a discarded solve never contributes a nonfinite derivative.
+    params = (jnp.where(in_domain, t, 0.9 * tc), tc, pc, omega)
+    theta = jax.lax.stop_gradient(params)
+    ln_p0 = jnp.log(jax.lax.stop_gradient(wilson_psat(*params)))
+
+    def terms(ln_p: Array) -> tuple[Array, Array, Array]:
+        r, (single, z_v) = _psat_terms(eos, ln_p, theta)
+        return r, single, z_v
+
+    def cond(carry: tuple) -> Array:
+        _, _, _, i, done = carry
+        return ~done & (i < max_iter)
+
+    def body(carry: tuple) -> tuple:
+        ln_p, _, _, i, _ = carry
+        (r, (single, z_v)), slope = jax.value_and_grad(
+            lambda x: _psat_terms(eos, x, theta), has_aux=True
+        )(ln_p)
+        newton = jnp.clip(-r / jnp.where(jnp.abs(slope) > 1e-300, slope, -1.0), -3.0, 3.0)
+        # One real root: a vapour-like root means P is below the coexistence
+        # window, a liquid-like root that it's above it.
+        escape = jnp.where(z_v > _Z_SPLIT, 0.7, -0.7)
+        ln_new = ln_p + jnp.where(single | ~jnp.isfinite(newton), escape, newton)
+        r_new, single_new, _ = terms(ln_new)
+        done = ((jnp.abs(r_new) <= tol) & ~single_new) | ~jnp.isfinite(r_new)
+        return ln_new, r_new, single_new, i + 1, done
+
+    r0, single0, _ = terms(ln_p0)
+    done0 = ((jnp.abs(r0) <= tol) & ~single0) | ~jnp.isfinite(r0)
+    ln_p, r, single, iterations, _ = jax.lax.while_loop(
+        cond, body, (ln_p0, r0, single0, jnp.asarray(0), done0)
+    )
+    solve = residual_report(jnp.atleast_1d(r), tol, iterations=iterations)
+    solve = with_status(solve, single, SolveStatus.TRIVIAL)
+    ln_psat = implicit_solution(
+        lambda x, th: jnp.atleast_1d(_psat_terms(eos, x[0], th)[0]),
+        jnp.atleast_1d(ln_p),
+        params,
+        solve.converged,
+    )[0]
+    value = jnp.where(in_domain, jnp.exp(ln_psat), wilson_psat(t, tc, pc, omega))
+    report = with_status(solve, ~in_domain, SolveStatus.OUT_OF_DOMAIN)
+    return SolveResult(value, report)
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 5, 6))
 def psat_eos(
     eos: CubicEOS,
     t: ArrayLike,
     tc: ArrayLike,
     pc: ArrayLike,
     omega: ArrayLike,
+    *,
     tol: float = 1e-10,
     max_iter: int = 100,
 ) -> Array:
-    """Pure-component saturation pressure (Pa) from the EOS by equifugacity.
+    """Saturation pressure (Pa); NaN when `psat_eos_with_info` reports failure."""
+    solved = psat_eos_with_info(eos, t, tc, pc, omega, tol=tol, max_iter=max_iter)
+    return nan_unless_converged(solved.value, solved.report)
 
-    Solves ``ln phi^L(T, P) = ln phi^V(T, P)`` for ``P`` with a Newton iteration
-    in ``ln P`` (which keeps the pressure positive), initialised from the Wilson
-    vapour-pressure estimate. Differentiable in ``T`` (and the critical
-    constants) via the Clapeyron-like implicit derivative ``dP/dT``.
+
+def psat_seeds(eos: CubicEOS, t: ArrayLike, tc: Array, pc: Array, omega: Array) -> Array:
+    """Finite, detached pure-component pressures for initializing mixture solves.
+
+    Converged EOS saturation pressures where they exist, and the Wilson
+    extrapolation elsewhere (for example, supercritical components).
     """
-    t = jnp.asarray(t)
-    p0 = pc * jnp.exp(5.373 * (1.0 + omega) * (1.0 - tc / t))
 
-    def body(_: int, carry: tuple[Array, Array]) -> tuple[Array, Array]:
-        p, active = carry
-        r, dr_dp = jax.value_and_grad(lambda pp: _psat_residual(eos, t, pp, tc, pc, omega))(p)
-        active = active & (jnp.abs(r) > tol)
-        ln_p_new = jnp.log(p) - r / (p * dr_dp)
-        return jnp.where(active, jnp.exp(ln_p_new), p), active
+    def one(a: Array, b: Array, c: Array) -> Array:
+        solved = psat_eos_with_info(eos, t, a, b, c)
+        return jnp.where(solved.report.converged, solved.value, wilson_psat(t, a, b, c))
 
-    # A vmapped while predicate is evaluated both for loop control and for
-    # masking each lane's updates. Near the tolerance, different rounding in
-    # those evaluations can leave the loop active with a frozen lane counter.
-    # A fixed trip count guarantees termination; converged pressures stay frozen.
-    p_star, _ = jax.lax.fori_loop(0, max_iter, body, (p0, jnp.asarray(True)))
-    return p_star
+    return jax.lax.stop_gradient(
+        jax.vmap(one)(jnp.asarray(tc), jnp.asarray(pc), jnp.asarray(omega))
+    )
 
 
-@psat_eos.defjvp
-def _psat_eos_jvp(
+# --------------------------------------------------------------------------- #
+# Mixture saturation pressures
+# --------------------------------------------------------------------------- #
+
+
+def _trivial_saturation(
     eos: CubicEOS,
-    tol: float,
-    max_iter: int,
-    primals: tuple[Array, Array, Array, Array],
-    tangents: tuple[Array, Array, Array, Array],
-) -> tuple[Array, Array]:
-    t, tc, pc, omega = primals
-    t_dot, tc_dot, pc_dot, omega_dot = tangents
-    p = psat_eos(eos, t, tc, pc, omega, tol, max_iter)
-    r_p = jax.grad(lambda pp: _psat_residual(eos, t, pp, tc, pc, omega))(p)
-    r_t = jax.grad(lambda tt: _psat_residual(eos, tt, p, tc, pc, omega))(t)
-    r_tc = jax.grad(lambda v: _psat_residual(eos, t, p, v, pc, omega))(tc)
-    r_pc = jax.grad(lambda v: _psat_residual(eos, t, p, tc, v, omega))(pc)
-    r_om = jax.grad(lambda v: _psat_residual(eos, t, p, tc, pc, v))(omega)
-    p_dot = -(r_t * t_dot + r_tc * tc_dot + r_pc * pc_dot + r_om * omega_dot) / r_p
-    return p, p_dot
+    t: ArrayLike,
+    p: Array,
+    liquid: Array,
+    vapor: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    kij: Array,
+) -> Array:
+    """Whether a converged saturation point is the trivial one-root solution.
+
+    At a genuine bubble or dew point the phases differ in density even when
+    their compositions coincide (an azeotrope). A trivial solution has equal
+    compositions on a single EOS root.
+    """
+    _, z_l = ln_phi_mixture(eos, t, p, liquid, tc, pc, omega, phase="liquid", kij=kij)
+    _, z_v = ln_phi_mixture(eos, t, p, vapor, tc, pc, omega, phase="vapor", kij=kij)
+    same_density = jnp.abs(z_v - z_l) <= 1e-6 * jnp.maximum(jnp.abs(z_v), 1e-12)
+    return jax.lax.stop_gradient(same_density & (jnp.max(jnp.abs(vapor - liquid)) <= 1e-6))
 
 
-def _all_psat(eos: CubicEOS, t: ArrayLike, tc: Array, pc: Array, omega: Array) -> Array:
-    return jax.vmap(lambda a, b, c: psat_eos(eos, t, a, b, c))(tc, pc, omega)
-
-
-def bubble_pressure_eos(
+def bubble_pressure_eos_with_info(
     eos: CubicEOS,
     t: ArrayLike,
     x: Array,
@@ -315,11 +465,12 @@ def bubble_pressure_eos(
     kij: Array | None = None,
     tol: float = 1e-12,
     max_iter: int = 300,
-) -> tuple[Array, Array]:
+) -> SaturationSolveResult:
     """Bubble-point pressure and incipient vapour composition at fixed ``T``, ``x``.
 
-    Returns ``(P, y)``. Solved as a coupled fixed point in ``(ln P, y)`` so the
-    result is differentiable in temperature and composition.
+    Solved as a coupled fixed point in ``(ln P, y)`` from Raoult's-law seeds. A
+    trivial solution (above the cricondenbar, where the iteration collapses onto
+    ``y = x`` on one root) is reported as ``TRIVIAL``.
     """
     x = jnp.asarray(x)
     tc = jnp.asarray(tc)
@@ -327,7 +478,7 @@ def bubble_pressure_eos(
     omega = jnp.asarray(omega)
     n = x.shape[0]
     kij_arr = jnp.zeros((n, n)) if kij is None else jnp.asarray(kij)
-    psats = _all_psat(eos, t, tc, pc, omega)
+    psats = psat_seeds(eos, t, tc, pc, omega)
     p0 = jnp.sum(x * psats)
     y0 = x * psats / p0
     state0 = jnp.concatenate([jnp.log(p0)[None], y0])
@@ -344,11 +495,35 @@ def bubble_pressure_eos(
         s = jnp.sum(y_unnorm)
         return jnp.concatenate([(state[0] + jnp.log(s))[None], y_unnorm / s])
 
-    state = fixed_point(g, state0, theta, tol, max_iter)
-    return jnp.exp(state[0]), state[1:]
+    solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+    p, y = jnp.exp(solved.value[0]), solved.value[1:]
+    trivial = _trivial_saturation(eos, t, p, x, y, tc, pc, omega, kij_arr)
+    report = with_status(solved.report, trivial, SolveStatus.TRIVIAL)
+    report = with_status(report, ~input_report(t, 1.0, x), SolveStatus.INVALID_INPUT)
+    value = gate_tree(SaturationResult(p, y), report.converged)
+    return SaturationSolveResult(value, report)
 
 
-def dew_pressure_eos(
+def bubble_pressure_eos(
+    eos: CubicEOS,
+    t: ArrayLike,
+    x: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    *,
+    kij: Array | None = None,
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> SaturationResult:
+    """Bubble pressure and incipient vapour ``(P, y)``; NaN on failure."""
+    solved = bubble_pressure_eos_with_info(
+        eos, t, x, tc, pc, omega, kij=kij, tol=tol, max_iter=max_iter
+    )
+    return nan_unless_converged(solved.value, solved.report)
+
+
+def dew_pressure_eos_with_info(
     eos: CubicEOS,
     t: ArrayLike,
     y: Array,
@@ -359,10 +534,11 @@ def dew_pressure_eos(
     kij: Array | None = None,
     tol: float = 1e-12,
     max_iter: int = 300,
-) -> tuple[Array, Array]:
+) -> SaturationSolveResult:
     """Dew-point pressure and incipient liquid composition at fixed ``T``, ``y``.
 
-    Returns ``(P, x)``, differentiable in temperature and composition.
+    Coupled fixed point in ``(ln P, x)``. A trivial one-root solution is
+    reported as ``TRIVIAL``.
     """
     y = jnp.asarray(y)
     tc = jnp.asarray(tc)
@@ -370,7 +546,7 @@ def dew_pressure_eos(
     omega = jnp.asarray(omega)
     n = y.shape[0]
     kij_arr = jnp.zeros((n, n)) if kij is None else jnp.asarray(kij)
-    psats = _all_psat(eos, t, tc, pc, omega)
+    psats = psat_seeds(eos, t, tc, pc, omega)
     p0 = 1.0 / jnp.sum(y / psats)
     x0 = y * p0 / psats
     state0 = jnp.concatenate([jnp.log(p0)[None], x0])
@@ -387,57 +563,29 @@ def dew_pressure_eos(
         s = jnp.sum(x_unnorm)
         return jnp.concatenate([(state[0] - jnp.log(s))[None], x_unnorm / s])
 
-    state = fixed_point(g, state0, theta, tol, max_iter)
-    return jnp.exp(state[0]), state[1:]
+    solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+    p, x = jnp.exp(solved.value[0]), solved.value[1:]
+    trivial = _trivial_saturation(eos, t, p, x, y, tc, pc, omega, kij_arr)
+    report = with_status(solved.report, trivial, SolveStatus.TRIVIAL)
+    report = with_status(report, ~input_report(t, 1.0, y), SolveStatus.INVALID_INPUT)
+    value = gate_tree(SaturationResult(p, x), report.converged)
+    return SaturationSolveResult(value, report)
 
 
-def stability_analysis(
+def dew_pressure_eos(
     eos: CubicEOS,
     t: ArrayLike,
-    p: ArrayLike,
-    z: Array,
+    y: Array,
     tc: Array,
     pc: Array,
     omega: Array,
     *,
     kij: Array | None = None,
-    iters: int = 40,
-) -> StabilityResult:
-    """Michelsen tangent-plane stability test for a feed ``z`` at ``(T, P)``.
-
-    Performs two trial-phase searches (vapour-like and liquid-like). If the
-    modified tangent-plane distance ``tm`` dips below zero for either trial, a
-    second phase can lower the Gibbs energy and the feed is *unstable* (it will
-    split). Returns the worst (smallest) ``tm`` found and a stability flag.
-    """
-    z = jnp.asarray(z)
-    tc = jnp.asarray(tc)
-    pc = jnp.asarray(pc)
-    omega = jnp.asarray(omega)
-    n = z.shape[0]
-    kij_arr = jnp.zeros((n, n)) if kij is None else jnp.asarray(kij)
-
-    ln_phi_zl, _ = ln_phi_mixture(eos, t, p, z, tc, pc, omega, phase="liquid", kij=kij_arr)
-    ln_phi_zv, _ = ln_phi_mixture(eos, t, p, z, tc, pc, omega, phase="vapor", kij=kij_arr)
-    g_l = jnp.sum(z * (jnp.log(z) + ln_phi_zl))
-    g_v = jnp.sum(z * (jnp.log(z) + ln_phi_zv))
-    ln_phi_z = jnp.where(g_l < g_v, ln_phi_zl, ln_phi_zv)
-    d = jnp.log(z) + ln_phi_z
-
-    k_wilson = wilson_k(t, p, tc, pc, omega)
-
-    def run_trial(w0: Array, phase: str) -> Array:
-        def body(_: Array, w: Array) -> Array:
-            wn = w / jnp.sum(w)
-            ln_phi_w, _ = ln_phi_mixture(eos, t, p, wn, tc, pc, omega, phase=phase, kij=kij_arr)
-            return jnp.exp(d - ln_phi_w)
-
-        w = jax.lax.fori_loop(0, iters, body, w0)
-        wn = w / jnp.sum(w)
-        ln_phi_w, _ = ln_phi_mixture(eos, t, p, wn, tc, pc, omega, phase=phase, kij=kij_arr)
-        return 1.0 + jnp.sum(w * (jnp.log(w) + ln_phi_w - d - 1.0))
-
-    tm_vapor = run_trial(z * k_wilson, "vapor")
-    tm_liquid = run_trial(z / k_wilson, "liquid")
-    tpd = jnp.minimum(tm_vapor, tm_liquid)
-    return StabilityResult(stable=tpd >= -1e-8, tpd=tpd)
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> SaturationResult:
+    """Dew pressure and incipient liquid ``(P, x)``; NaN on failure."""
+    solved = dew_pressure_eos_with_info(
+        eos, t, y, tc, pc, omega, kij=kij, tol=tol, max_iter=max_iter
+    )
+    return nan_unless_converged(solved.value, solved.report)

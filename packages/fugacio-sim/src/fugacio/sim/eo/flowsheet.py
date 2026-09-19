@@ -40,9 +40,7 @@ from jax.flatten_util import ravel_pytree
 from fugacio.sim.eo.blocks import Block, Context, Scales
 from fugacio.sim.properties import Model, _resolve, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
-from fugacio.thermo import CubicEOS
-from fugacio.thermo.diagnostics import SolveReport, require_converged
-from fugacio.thermo.eos import PR
+from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, with_status
 from fugacio.thermo.implicit import newton_system_with_info
 from fugacio.thermo.sparsity import SparsityPattern
 
@@ -198,7 +196,7 @@ class EOFlowsheet:
 
     Example::
 
-        fs = EOFlowsheet(eos=PR)
+        fs = EOFlowsheet()
         fs.feed("fresh", fresh_stream)
         fs.add(Mixer(inlets=("fresh", "recycle"), outlets=("mixed",)))
         fs.add(Flash(inlets=("mixed",), outlets=("vapor", "liquid"), t="T", p="P"))
@@ -208,18 +206,14 @@ class EOFlowsheet:
         product = sol["vapor"]
 
     Attributes:
-        eos: Cubic equation of state for the default property package.
-        kij: Optional binary-interaction matrix for the default package.
         scales: Residual/variable scales (auto-derived from the feeds by
             `solve` when left at the default).
         model: Property package (see `fugacio.sim.models.package_for`) used by
-            every block; ``None`` selects the cubic default built from ``eos`` /
-            ``kij``. Any method class (cubic, gamma-phi, PC-SAFT, reference
+            every block; ``None`` selects Peng-Robinson over the feeds'
+            components. Any method class (cubic, gamma-phi, PC-SAFT, reference
             fluid) can drive the whole simultaneous solve.
     """
 
-    eos: CubicEOS = PR
-    kij: Array | None = None
     scales: Scales | None = None
     model: Model = None
     feeds: dict[str, Stream] = field(default_factory=dict)
@@ -401,9 +395,7 @@ class EOFlowsheet:
         """Build the static solve context (components, EOS, scales)."""
         comps = self._components()
         scales = self.scales if self.scales is not None else _auto_scales(self.feeds)
-        return Context(
-            components=comps, eos=self.eos, kij=self.kij, scales=scales, model=self.model
-        )
+        return Context(components=comps, scales=scales, model=self.model)
 
     def degrees_of_freedom(self) -> DOFReport:
         """Report the unknown/equation balance for the flowsheet (see `DOFReport`)."""
@@ -624,21 +616,12 @@ class EOFlowsheet:
         specs_sig = tuple(
             (sp.manipulated, id(sp.measure), repr(sp.target), repr(sp.init)) for sp in self.specs
         )
-        kij_sig = None if self.kij is None else tuple(jnp.asarray(self.kij).shape)
         scales_sig = None if self.scales is None else repr(self.scales)
-        model_sig = (
-            None
-            if self.model is None
-            else resolve_package(
-                self._components(), self.model, eos=self.eos, kij=self.kij
-            ).signature()
-        )
+        model_sig = resolve_package(self._components(), self.model).signature()
         return (
             tuple(repr(b) for b in self.blocks),
             feeds_sig,
             specs_sig,
-            repr(self.eos),
-            kij_sig,
             scales_sig,
             model_sig,
             self.jacobian_mode,
@@ -757,7 +740,7 @@ class EOFlowsheet:
 
         params = dict(params or {})
         plan = self._get_plan(params, 0, 1e-10, 60)
-        pkg = resolve_package(self._components(), self.model, eos=self.eos, kij=self.kij)
+        pkg = resolve_package(self._components(), self.model)
         ctx = replace(plan.ctx, model=pkg)
         u = self._initial_unknowns(
             ctx, plan.internal, plan.aux_scales, params, self.feeds, guess, 0
@@ -867,7 +850,7 @@ class EOFlowsheet:
         """
         params = dict(params or {})
         plan = self._get_plan(params, sweeps, tol, max_iter)
-        pkg = resolve_package(self._components(), self.model, eos=self.eos, kij=self.kij)
+        pkg = resolve_package(self._components(), self.model)
 
         if check_dof:
             dof = plan.n_unknowns - plan.n_equations
@@ -913,14 +896,25 @@ class EOFlowsheet:
 
         if not _is_traced(x_star) and bool(solve_report.converged):
             plan.seed[:] = [jax.lax.stop_gradient(x_star)]
+        ctx = replace(plan.ctx, model=pkg)
+        u = plan.unravel(x_star)
+        streams = self._assemble_streams(self.feeds, ctx, plan.internal, u)
+        aux = {k: u["a"][k] * plan.aux_scales[k] for k in plan.aux_scales}
+        # A converged solution a block can't physically realize (an exchanger
+        # temperature cross) is reported, not returned as an answer.
+        realizable = [jnp.asarray(b.feasible(streams, aux, params, ctx)) for b in self.blocks]
+        feasible = jnp.all(jnp.stack(realizable)) if realizable else jnp.asarray(True)
+        solve_report = with_status(
+            solve_report, solve_report.converged & ~feasible, SolveStatus.INFEASIBLE
+        )
         if check:
             require_converged(
                 solve_report, "equation-oriented flowsheet", self.equation_labels(plan.ctx)
             )
             x_star = jnp.where(solve_report.converged, x_star, jnp.nan)
-        u = plan.unravel(x_star)
-        streams = self._assemble_streams(self.feeds, replace(plan.ctx, model=pkg), plan.internal, u)
-        aux = {k: u["a"][k] * plan.aux_scales[k] for k in plan.aux_scales}
+            u = plan.unravel(x_star)
+            streams = self._assemble_streams(self.feeds, ctx, plan.internal, u)
+            aux = {k: u["a"][k] * plan.aux_scales[k] for k in plan.aux_scales}
         specs = {sp.manipulated: u["d"][sp.manipulated] * sp.scale() for sp in self.specs}
         return EOSolution(
             streams=streams,

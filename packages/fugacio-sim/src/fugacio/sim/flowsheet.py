@@ -7,12 +7,12 @@ with the recycle guess, run the units, return the recomputed recycle), the
 converged flowsheet is the fixed point ``tear* = g(tear*, theta)``.
 
 `tear_solve` finds that fixed point with one of three tear methods: a
-**Wegstein-accelerated** direct substitution (the workhorse of sequential-modular
-simulators, far more robust than plain substitution on tight recycles), a
-**Broyden** quasi-Newton iteration (rank-one inverse-Jacobian updates, the
-preferred method for several interacting tears), or a full **Newton** iteration
-on ``g(x) - x`` with the autodiff Jacobian (quadratic convergence for stiff
-recycles, at one Jacobian per step). All three differentiate the *converged*
+**Broyden** quasi-Newton iteration (rank-one inverse-Jacobian updates with a
+residual-decreasing line search, the default: it handles tight and interacting
+recycles that stall acceleration schemes), a **Wegstein-accelerated** direct
+substitution (the classic sequential-modular workhorse), or a full **Newton**
+iteration on ``g(x) - x`` with the autodiff Jacobian (quadratic convergence for
+stiff recycles, at one Jacobian per step). All three differentiate the *converged*
 solution by the implicit function theorem (a ``custom_jvp`` whose transpose
 solves the small dense adjoint system ``(I - dg/dx)^T w = x_bar``). The forward
 iteration count never appears in the backward pass, so a gradient of any product
@@ -34,6 +34,14 @@ that prefers the streams whose removal leaves the least coupling). Tears may
 also be designated by hand with `Flowsheet.tear`, which additionally supplies
 the starting guess; automatically chosen tears are seeded from a first pass
 of the loop.
+
+A unit may return plain streams or a unit result exposing ``outlets`` (every
+unit in `fugacio.sim.units` that has a duty, work, or report does). The
+flowsheet retains each result's heat, work, and report, and a failed unit report
+fails the flowsheet. With a ``model``, every solved stream is also audited for
+physical acceptance (equilibrium, stability, applicability) after convergence,
+outside the recycle iterations. Each recycle's map is built once per partition,
+so repeated solves at new operating points reuse the compiled recycle kernel.
 """
 
 from __future__ import annotations
@@ -178,7 +186,7 @@ def tear_solve_with_info(
     tear0: Any,
     theta: Any = None,
     *,
-    method: str = "wegstein",
+    method: str = "broyden",
     q_min: float = -5.0,
     q_max: float = 0.0,
     tol: float = 1e-10,
@@ -196,7 +204,7 @@ def tear_solve_with_info(
         g: One flowsheet pass.
         tear0: Starting recycle state, as any floating-point pytree.
         theta: Differentiable operating parameters and upstream streams.
-        method: Wegstein, Broyden, or Newton.
+        method: Broyden (default), Wegstein, or Newton.
         q_min: Minimum Wegstein acceleration factor.
         q_max: Maximum Wegstein acceleration factor.
         tol: Scaled fixed-point residual tolerance.
@@ -254,7 +262,7 @@ def tear_solve(
     tear0: Any,
     theta: Any = None,
     *,
-    method: str = "wegstein",
+    method: str = "broyden",
     q_min: float = -5.0,
     q_max: float = 0.0,
     tol: float = 1e-10,
@@ -292,6 +300,19 @@ def tear_solve(
 
 
 UnitFn = Callable[..., Any]
+
+
+def _unit_outputs(result: Any) -> tuple[tuple[Stream, ...], UnitRecord]:
+    """Streams a unit produced, and the energy/report evidence it returned."""
+    zero = jnp.asarray(0.0)
+    if hasattr(result, "outlets"):
+        return tuple(result.outlets), UnitRecord(
+            heat=jnp.asarray(getattr(result, "heat", zero)),
+            work=jnp.asarray(getattr(result, "work", zero)),
+            report=getattr(result, "report", residual_report(jnp.zeros(1))),
+        )
+    produced = tuple(result) if isinstance(result, list | tuple) else (result,)
+    return produced, UnitRecord(heat=zero, work=zero, report=residual_report(jnp.zeros(1)))
 
 
 @dataclass
@@ -453,21 +474,54 @@ def _select_tears(
 
 
 @dataclass(frozen=True)
+class UnitRecord:
+    """Energy and solve evidence a unit returned alongside its outlets.
+
+    Attributes:
+        heat: Heat into the fluid (W); zero if the unit reports none.
+        work: Shaft work into the fluid (W); zero if the unit reports none.
+        report: The unit's own solve report (a converged placeholder for units
+            that return plain streams).
+    """
+
+    heat: Array
+    work: Array
+    report: SolveReport
+
+
+@dataclass(frozen=True)
 class FlowsheetResult:
-    """Named streams with per-block convergence and physical-state checks.
+    """Named streams with per-block convergence, unit evidence, and physical audits.
 
     Attributes:
         streams: All feeds and computed streams.
-        reports: Solve reports keyed by unit or recycle-block name.
+        reports: Solve reports keyed by ``recycle:``, ``unit:``, or ``stream:`` name.
+        units: Heat, work, and report retained from each unit's result.
+        audits: Physical acceptance of each stream (empty without a model).
     """
 
     streams: dict[str, Stream]
     reports: dict[str, SolveReport]
+    units: dict[str, UnitRecord] = field(default_factory=dict)
+    audits: dict[str, Any] = field(default_factory=dict)
 
     @property
     def converged(self) -> Array:
-        """Whether every block and physical-state check succeeded."""
+        """Whether every recycle, unit, and stream-structure check succeeded."""
         return jnp.all(jnp.asarray([r.converged for r in self.reports.values()]))
+
+    @property
+    def accepted(self) -> Array:
+        """Converged, and every non-empty audited stream passed physical acceptance.
+
+        Without audits (no flowsheet ``model``), this equals `converged`: no
+        physical acceptance is claimed that wasn't checked.
+        """
+        ok = [
+            (self.streams[name].total <= 0) | report.accepted
+            for name, report in self.audits.items()
+        ]
+        return self.converged & jnp.all(jnp.asarray(ok if ok else [True]))
 
     @property
     def report(self) -> SolveReport:
@@ -483,9 +537,21 @@ class FlowsheetResult:
         return self.streams[name]
 
     def check(self) -> None:
-        """Raise with the responsible block's name if any calculation failed."""
+        """Raise with the responsible block's name if any calculation failed.
+
+        Raises:
+            ConvergenceError: For a failed recycle, unit, or stream structure.
+            PhysicalAcceptanceError: For an audited stream that failed physical
+                acceptance (for example, a vapor-liquid state that is actually
+                liquid-liquid unstable).
+        """
+        from fugacio.thermo.acceptance import require_accepted
+
         for name, report in self.reports.items():
             require_converged(report, name)
+        for name, audit in self.audits.items():
+            if float(self.streams[name].total) > 0:
+                require_accepted(audit, f"stream {name}")
 
 
 @dataclass
@@ -518,6 +584,8 @@ class Flowsheet:
     feeds: dict[str, Stream] = field(default_factory=dict)
     units: list[_Unit] = field(default_factory=list)
     tears: dict[str, Stream] = field(default_factory=dict)
+    model: Any = None
+    _maps: dict[Partition, Any] = field(default_factory=dict, repr=False, compare=False)
 
     def feed(self, name: str, stream: Stream) -> Flowsheet:
         """Register a fresh feed stream by name. Returns ``self`` for chaining."""
@@ -543,6 +611,7 @@ class Flowsheet:
         if any(u.name == name for u in self.units):
             raise ValueError(f"duplicate unit name {name!r}")
         self.units.append(_Unit(name, fn, tuple(inputs), tuple(outputs)))
+        self._maps.clear()
         return self
 
     def tear(self, name: str, guess: Stream) -> Flowsheet:
@@ -554,6 +623,7 @@ class Flowsheet:
         the feeds', which the automatic seed cannot infer.
         """
         self.tears[name] = guess
+        self._maps.clear()
         return self
 
     # -- structure ---------------------------------------------------------- #
@@ -612,7 +682,11 @@ class Flowsheet:
 
     # -- evaluation --------------------------------------------------------- #
     def _run_units(
-        self, names: Sequence[str], streams: dict[str, Stream], theta: Any
+        self,
+        names: Sequence[str],
+        streams: dict[str, Stream],
+        theta: Any,
+        records: dict[str, UnitRecord] | None = None,
     ) -> dict[str, Stream]:
         by_name = {u.name: u for u in self.units}
         for name in names:
@@ -622,13 +696,15 @@ class Flowsheet:
                 result = u.fn(*args, theta)
             except ConvergenceError as exc:
                 raise ConvergenceError(exc.report, f"unit {u.name}: {exc.context}") from exc
-            produced = result if isinstance(result, list | tuple) else (result,)
+            produced, record = _unit_outputs(result)
             if len(produced) != len(u.outputs):
                 raise ValueError(
                     f"unit {u.name!r} produced {len(produced)} outputs, expected {len(u.outputs)}"
                 )
             for out_name, out_stream in zip(u.outputs, produced, strict=True):
                 streams[out_name] = out_stream
+            if records is not None:
+                records[u.name] = record
         return streams
 
     def _seed_tears(
@@ -638,6 +714,11 @@ class Flowsheet:
         guesses: dict[str, Stream] = {}
         missing = [t for t in block.tears if t not in self.tears]
         if missing:
+            if not streams:
+                raise ValueError(
+                    f"recycle block {', '.join(block.units)} has no upstream stream to seed "
+                    f"its tear(s) {', '.join(missing)}; supply a guess with Flowsheet.tear"
+                )
             template = next(iter(streams.values()))
             trial = dict(streams)
             for t in missing:
@@ -658,28 +739,27 @@ class Flowsheet:
                 guesses[t] = self.tears[t]
         return tuple(jax.lax.stop_gradient(guesses[t]) for t in block.tears)
 
-    def _evaluate(self, tears: dict[str, Stream], theta: Any) -> dict[str, Stream]:
-        """Run every unit once in registration order (legacy single-pass evaluation)."""
-        streams: dict[str, Stream] = {**self.feeds, **tears}
-        return self._run_units([u.name for u in self.units], streams, theta)
-
     def solve_with_info(
         self,
         theta: Any = None,
         *,
         guess: Mapping[str, Stream] | None = None,
+        audit: bool = True,
         **tear_solve_kwargs: Any,
     ) -> FlowsheetResult:
-        """Solve every block and retain convergence reports alongside streams.
+        """Solve every block and retain reports, unit evidence, and stream audits.
 
         Failed blocks retain their best iterates for diagnosis. Use ``result.check()``
-        at an application boundary, or inspect ``result.converged`` inside JIT.
+        at an application boundary, or inspect ``result.converged`` and
+        ``result.accepted`` inside JIT. With a flowsheet ``model`` and ``audit``,
+        every stream is audited for physical acceptance after convergence.
         """
         streams: dict[str, Stream] = dict(self.feeds)
         reports: dict[str, SolveReport] = {}
+        records: dict[str, UnitRecord] = {}
         for block in self.partition():
             if not block.cyclic:
-                self._run_units(block.units, streams, theta)
+                self._run_units(block.units, streams, theta, records)
             else:
                 if guess is not None and all(name in guess for name in block.tears):
                     guesses = tuple(jax.lax.stop_gradient(guess[name]) for name in block.tears)
@@ -695,29 +775,38 @@ class Flowsheet:
                 )
                 reports["recycle:" + ",".join(block.units)] = converged.report
                 streams.update(zip(block.tears, converged.value, strict=True))
-                self._run_units(block.units, streams, theta)
+                self._run_units(block.units, streams, theta, records)
+        for name, record in records.items():
+            reports["unit:" + name] = record.report
         for name, stream in streams.items():
             reports["stream:" + name] = stream.report
-        return FlowsheetResult(streams, reports)
+        audits: dict[str, Any] = {}
+        if audit and self.model is not None:
+            from fugacio.sim.acceptance import audit_stream
+
+            audits = {name: audit_stream(s, self.model) for name, s in streams.items()}
+        return FlowsheetResult(streams, reports, records, audits)
 
     def solve(
         self, theta: Any = None, *, check: bool = True, **tear_solve_kwargs: Any
     ) -> dict[str, Stream]:
-        """Return named streams after checked recycle convergence.
+        """Return named streams after checked recycle convergence and acceptance.
 
-        Eager failures identify the responsible block. Compiled failures produce
-        nonfinite streams; :meth:`solve_with_info` retains the reports and best
-        iterates for inspection. Set ``check=False`` to return best iterates.
+        Eager failures identify the responsible block, unit, or stream. Compiled
+        failures produce nonfinite streams; :meth:`solve_with_info` retains the
+        reports and best iterates for inspection. Set ``check=False`` to return
+        best iterates.
 
         Raises:
-            ConvergenceError: If an eager block or stream check fails.
+            ConvergenceError: If an eager block, unit, or stream check fails.
+            PhysicalAcceptanceError: If an audited stream fails acceptance.
         """
         result = self.solve_with_info(theta, **tear_solve_kwargs)
         if not check:
             return result.streams
         result.check()
         return jax.tree_util.tree_map(
-            lambda x: jnp.where(result.converged, x, jnp.nan), result.streams
+            lambda x: jnp.where(result.accepted, x, jnp.nan), result.streams
         )
 
     def solve_path(
@@ -747,7 +836,14 @@ class Flowsheet:
     def _block_map(
         self, block: Partition
     ) -> Callable[[tuple[Stream, ...], tuple[Any, dict[str, Stream]]], tuple[Stream, ...]]:
-        """The recycle map ``g(tears, (theta, upstream)) -> tears`` of one cyclic block."""
+        """The recycle map ``g(tears, (theta, upstream)) -> tears`` of one cyclic block.
+
+        Maps are cached per partition: the recycle kernel is compiled with the map
+        as a static argument, so a fresh closure per solve would recompile it.
+        Registering a unit or tear clears the cache.
+        """
+        if block in self._maps:
+            return self._maps[block]
 
         def g(
             tear_tuple: tuple[Stream, ...], params: tuple[Any, dict[str, Stream]]
@@ -758,11 +854,13 @@ class Flowsheet:
             self._run_units(block.units, local, th)
             return tuple(local[name] for name in block.tears)
 
+        self._maps[block] = g
         return g
 
 
+jax.tree_util.register_dataclass(UnitRecord, data_fields=["heat", "work", "report"], meta_fields=[])
 jax.tree_util.register_dataclass(
-    FlowsheetResult, data_fields=["streams", "reports"], meta_fields=[]
+    FlowsheetResult, data_fields=["streams", "reports", "units", "audits"], meta_fields=[]
 )
 
 __all__ = [
@@ -771,6 +869,7 @@ __all__ = [
     "FlowsheetResult",
     "Partition",
     "TearResult",
+    "UnitRecord",
     "tear_solve",
     "tear_solve_with_info",
 ]

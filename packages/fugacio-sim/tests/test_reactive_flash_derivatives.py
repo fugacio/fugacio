@@ -8,14 +8,17 @@ import pytest
 
 from fugacio.sim import ReactionSet, Stream, reactive_flash
 from fugacio.sim.properties import resolve_package
-from fugacio.thermo import Reaction, component_arrays, gamma_phi_model
+from fugacio.thermo import Reaction, component_arrays, get
 from fugacio.thermo.activity.models import nrtl
+from fugacio.thermo.ideal import ideal_gas_coeffs
+from fugacio.thermo.package import gamma_phi_package
 
 NAMES = ("acetic acid", "ethanol", "ethyl acetate", "water")
 
 
 def test_jitted_reactive_flash_differentiates_activity_feed_and_thermochemistry():
     constants = component_arrays(list(NAMES))
+    cp = ideal_gas_coeffs([get(n) for n in NAMES])
     system = ReactionSet.from_reactions(Reaction(NAMES, jnp.array([-1.0, -1.0, 1.0, 1.0])))
     alpha = 0.3 * (jnp.ones((4, 4)) - jnp.eye(4))
     direction = jnp.array(
@@ -24,7 +27,9 @@ def test_jitted_reactive_flash_differentiates_activity_feed_and_thermochemistry(
 
     def objective(q):
         activity = nrtl(a=q * direction, b=jnp.zeros((4, 4)), alpha=alpha)
-        model = gamma_phi_model(activity, constants["tc"], constants["pc"], constants["omega"])
+        model = gamma_phi_package(
+            activity, constants["tc"], constants["pc"], constants["omega"], cp
+        )
         rx = replace(
             system, formation_gibbs=system.formation_gibbs + q * jnp.array([0.0, 0.0, 10.0, 0.0])
         )

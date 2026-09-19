@@ -28,21 +28,23 @@ The public surface is grouped as:
   Peneloux translation), and transport properties
   (`gas_viscosities`, `liquid_thermal_conductivities`,
   `surface_tensions`, `gas_diffusivity`, ...), pure and mixture;
-* **phase equilibrium**: equation-of-state (`flash_pt`,
-  `bubble_pressure_eos`, ...) *and* gamma-phi (`flash_pt_gamma`,
-  `bubble_pressure_gamma`, ...) routes, plus liquid-liquid
-  (`flash_lle`) and vapour-liquid-liquid (`flash_vlle`,
-  `heterogeneous_azeotrope`) equilibria and tangent-plane stability;
+* **phase equilibrium**: equation-of-state (`flash_pt_with_info`,
+  `bubble_pressure_eos_with_info`, ...) *and* gamma-phi
+  (`flash_pt_gamma_with_info`, `bubble_temperature_gamma_with_info`, ...)
+  routes, plus liquid-liquid (`flash_lle_with_info`) and
+  vapour-liquid-liquid (`flash_vlle_with_info`, `heterogeneous_azeotrope`)
+  equilibria and the shared tangent-plane stability search (`tpd_search`).
+  Every checked ``_with_info`` calculation returns a `SolveReport`; its
+  value-only twin returns NaN when that report fails;
 * **PC-SAFT**: `fugacio.thermo.saft`, a molecular-based (perturbed-chain
-  SAFT) equation of state with Wertheim association (`SAFTModel`,
-  `saft_parameters_for`, `flash_pt_saft`, ...), the third class of
+  SAFT) equation of state with Wertheim association
+  (`saft_parameters_for`, `flash_pt_saft_with_info`, ...), the third class of
   thermodynamic method alongside the cubic EOS and gamma-phi routes;
-* **models**: the unified `EOSModel` / `GammaPhiModel` / `SAFTModel` interface;
 * **property packages**: `fugacio.thermo.package`, the one object that owns
   phase equilibrium *and* energy (``ln_phi``, enthalpy, entropy, volume,
-  PT/PH/PS/TV flashes) for every method class (`CubicPackage`,
-  `GammaPhiPackage` with autodiff excess enthalpy, `SAFTPackage`,
-  `HelmholtzPackage`), so a whole flowsheet runs on any of them;
+  stability, PT/PH/PS/TV flashes, saturation points) for every method class
+  (`CubicPackage`, `GammaPhiPackage` with autodiff excess enthalpy,
+  `SAFTPackage`, `HelmholtzPackage`), so a whole flowsheet runs on any of them;
 * **regression**: differentiable parameter estimation
   (`levenberg_marquardt`, `fit_nrtl_binary`, ...),
   UNIFAC-to-binary prediction (`predict_nrtl_from_unifac`), and the
@@ -151,15 +153,10 @@ from fugacio.thermo.diagnostics import (
     SolveReport,
     SolveResult,
     SolveStatus,
+    nan_unless_converged,
     require_converged,
 )
-from fugacio.thermo.energy import (
-    EnergyFlashResult,
-    flash_ph,
-    flash_ps,
-    mixture_enthalpy,
-    mixture_entropy,
-)
+from fugacio.thermo.energy import EnergyFlashResult
 from fugacio.thermo.eos import (
     PR,
     RK,
@@ -174,21 +171,31 @@ from fugacio.thermo.eos import (
 )
 from fugacio.thermo.equilibrium import (
     FlashResult,
-    StabilityResult,
+    FlashSolveResult,
+    SaturationResult,
+    SaturationSolveResult,
     bubble_pressure_eos,
+    bubble_pressure_eos_with_info,
     dew_pressure_eos,
+    dew_pressure_eos_with_info,
     flash_pt,
+    flash_pt_with_info,
     psat_eos,
+    psat_eos_with_info,
     rachford_rice,
-    stability_analysis,
     wilson_k,
 )
 from fugacio.thermo.gammaphi import (
     bubble_pressure_gamma,
+    bubble_pressure_gamma_with_info,
     bubble_temperature_gamma,
+    bubble_temperature_gamma_with_info,
     dew_pressure_gamma,
+    dew_pressure_gamma_with_info,
     dew_temperature_gamma,
+    dew_temperature_gamma_with_info,
     flash_pt_gamma,
+    flash_pt_gamma_with_info,
     gamma_phi_k_values,
 )
 from fugacio.thermo.groupcontrib import (
@@ -226,10 +233,13 @@ from fugacio.thermo.ideal import (
     ideal_gas_coeffs,
 )
 from fugacio.thermo.implicit import (
+    bracketed_root,
     bracketed_root_with_info,
     fixed_point_with_info,
+    gate_derivative,
     newton_root_with_info,
     newton_system_with_info,
+    scanned_root_with_info,
 )
 from fugacio.thermo.kinetics import (
     LHHW,
@@ -241,9 +251,11 @@ from fugacio.thermo.kinetics import (
 )
 from fugacio.thermo.lle import (
     LLEResult,
+    LLESolveResult,
     binary_binodal,
     binodal_curve,
     flash_lle,
+    flash_lle_with_info,
     tie_line,
 )
 from fugacio.thermo.package import (
@@ -257,8 +269,6 @@ from fugacio.thermo.package import (
     energy_flash_report,
     excess_enthalpy,
     excess_entropy,
-    flash_ph_with_info,
-    flash_ps_with_info,
     gamma_phi_package,
     helmholtz_package,
     saft_package,
@@ -268,21 +278,6 @@ from fugacio.thermo.parameter_bank import (
     ParameterBank,
     fit_bundled_samples,
     fit_vle_dataset,
-)
-from fugacio.thermo.phase import (
-    EOSModel,
-    EquilibriumModel,
-    GammaPhiModel,
-    eos_model,
-    gamma_phi_model,
-)
-from fugacio.thermo.properties import (
-    molar_cp,
-    molar_enthalpy,
-    molar_entropy,
-    molar_gibbs,
-    speed_of_sound_ideal,
-    stable_phase,
 )
 from fugacio.thermo.reaction_system import ReactionSet, ReferenceRate
 from fugacio.thermo.reactions import (
@@ -306,6 +301,7 @@ from fugacio.thermo.reference import (
     pure_liquid_volumes,
     saturation_fugacity_coefficient,
     saturation_pressures,
+    saturation_pressures_with_info,
 )
 from fugacio.thermo.regression import (
     activity_residuals,
@@ -320,28 +316,29 @@ from fugacio.thermo.regression import (
     unifac_ln_gamma_grid,
 )
 from fugacio.thermo.saft import (
-    SAFTModel,
     SaftParameters,
     bubble_pressure_saft,
+    bubble_pressure_saft_with_info,
     dew_pressure_saft,
+    dew_pressure_saft_with_info,
     fit_saft_kij,
     fit_saft_pure,
     flash_pt_saft,
+    flash_pt_saft_with_info,
     psat_saft,
-    saft_model,
+    psat_saft_with_info,
     saft_parameters,
     saft_parameters_for,
     site_fractions,
-    stability_saft,
 )
 from fugacio.thermo.saft import (
     residual_properties as saft_residual_properties,
 )
 from fugacio.thermo.stability import (
-    TangentPlaneResult,
+    StabilityResult,
     liquid_stability,
-    stability_analysis_general,
     tangent_plane_distance,
+    tpd_search,
 )
 from fugacio.thermo.thermoml import (
     Column,
@@ -383,7 +380,9 @@ from fugacio.thermo.transport import (
 from fugacio.thermo.vlle import (
     HeterogeneousAzeotrope,
     VLLEResult,
+    VLLESolveResult,
     flash_vlle,
+    flash_vlle_with_info,
     heterogeneous_azeotrope,
 )
 from fugacio.thermo.volumetric import (
@@ -423,21 +422,20 @@ __all__ = [
     "CubicEOS",
     "CubicPackage",
     "Dataset",
-    "EOSModel",
     "EnergyFlashResult",
     "EnergySolveResult",
-    "EquilibriumModel",
     "FittedBinary",
     "FlashResult",
+    "FlashSolveResult",
     "FloryHuggins",
     "FluidState",
-    "GammaPhiModel",
     "GammaPhiPackage",
     "HelmholtzFluid",
     "HelmholtzPackage",
     "HeterogeneousAzeotrope",
     "Hildebrand",
     "LLEResult",
+    "LLESolveResult",
     "Margules",
     "MassActionReversible",
     "ParameterBank",
@@ -450,17 +448,18 @@ __all__ = [
     "ReferenceRate",
     "RegularSolution",
     "ResidualProperties",
-    "SAFTModel",
     "SAFTPackage",
     "SaftParameters",
+    "SaturationResult",
+    "SaturationSolveResult",
     "SaturationState",
     "SolveReport",
     "SolveResult",
     "SolveStatus",
     "StabilityResult",
-    "TangentPlaneResult",
     "ThermoMLData",
     "VLLEResult",
+    "VLLESolveResult",
     "VanLaar",
     "Wilson",
     "activity_residuals",
@@ -469,13 +468,18 @@ __all__ = [
     "arrhenius_ref",
     "binary_binodal",
     "binodal_curve",
+    "bracketed_root",
     "bracketed_root_with_info",
     "brock_bird_surface_tension",
     "bubble_pressure_eos",
+    "bubble_pressure_eos_with_info",
     "bubble_pressure_gamma",
+    "bubble_pressure_gamma_with_info",
     "bubble_pressure_residuals",
     "bubble_pressure_saft",
+    "bubble_pressure_saft_with_info",
     "bubble_temperature_gamma",
+    "bubble_temperature_gamma_with_info",
     "chung_thermal_conductivity_gas",
     "chung_viscosity_gas",
     "component_arrays",
@@ -488,9 +492,13 @@ __all__ = [
     "delta_h_rxn",
     "delta_s_rxn",
     "dew_pressure_eos",
+    "dew_pressure_eos_with_info",
     "dew_pressure_gamma",
+    "dew_pressure_gamma_with_info",
     "dew_pressure_saft",
+    "dew_pressure_saft_with_info",
     "dew_temperature_gamma",
+    "dew_temperature_gamma_with_info",
     "diffusion_volume",
     "dippr9h_mixture",
     "dippr100",
@@ -503,7 +511,6 @@ __all__ = [
     "enthalpy_ig_mixture",
     "entropy_ig",
     "entropy_ig_mixture",
-    "eos_model",
     "equilibrium_constant",
     "equilibrium_constant_of",
     "excess_enthalpy",
@@ -517,26 +524,27 @@ __all__ = [
     "fit_vle_dataset",
     "fixed_point_with_info",
     "flash_lle",
-    "flash_ph",
-    "flash_ph_with_info",
-    "flash_ps",
-    "flash_ps_with_info",
+    "flash_lle_with_info",
     "flash_pt",
     "flash_pt_gamma",
+    "flash_pt_gamma_with_info",
     "flash_pt_saft",
+    "flash_pt_saft_with_info",
+    "flash_pt_with_info",
     "flash_vlle",
+    "flash_vlle_with_info",
     "flory_huggins_gamma",
     "flory_huggins_ln_gamma",
     "fuller_diffusivity",
     "gamma",
     "gamma_phi_k_values",
-    "gamma_phi_model",
     "gamma_phi_package",
     "gas_diffusivity",
     "gas_mixture_thermal_conductivity",
     "gas_mixture_viscosity",
     "gas_thermal_conductivities",
     "gas_viscosities",
+    "gate_derivative",
     "get",
     "gibbs_ig",
     "gibbs_ig_mixture",
@@ -574,18 +582,13 @@ __all__ = [
     "margules_excess_gibbs",
     "margules_gamma",
     "margules_ln_gamma",
-    "mixture_enthalpy",
-    "mixture_entropy",
     "mixture_liquid_volume",
     "mixture_surface_tension",
     "modified_unifac_activity",
-    "molar_cp",
-    "molar_enthalpy",
-    "molar_entropy",
-    "molar_gibbs",
     "molar_volume",
     "mulero_cachadina",
     "names",
+    "nan_unless_converged",
     "newton_root_with_info",
     "newton_system_with_info",
     "nrtl",
@@ -604,7 +607,9 @@ __all__ = [
     "predict_uniquac_from_unifac",
     "pressure",
     "psat_eos",
+    "psat_eos_with_info",
     "psat_saft",
+    "psat_saft_with_info",
     "pure_liquid_volumes",
     "rachford_rice",
     "rackett_volume",
@@ -623,7 +628,6 @@ __all__ = [
     "residual_gibbs",
     "residual_properties",
     "rowlinson_bondi_cp",
-    "saft_model",
     "saft_package",
     "saft_parameters",
     "saft_parameters_for",
@@ -632,13 +636,10 @@ __all__ = [
     "sato_riedel_thermal_conductivity",
     "saturation_fugacity_coefficient",
     "saturation_pressures",
+    "saturation_pressures_with_info",
     "saturation_state",
+    "scanned_root_with_info",
     "site_fractions",
-    "speed_of_sound_ideal",
-    "stability_analysis",
-    "stability_analysis_general",
-    "stability_saft",
-    "stable_phase",
     "state_ph",
     "state_pq",
     "state_ps",
@@ -648,6 +649,7 @@ __all__ = [
     "surface_tensions",
     "tangent_plane_distance",
     "tie_line",
+    "tpd_search",
     "translated_liquid_volume_for",
     "translated_molar_volume",
     "tyn_calus_vb",

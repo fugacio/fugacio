@@ -512,7 +512,9 @@ def _solve_flat(
     """Run the requested flat solver. Returns ``(x*, n_iter, grad_norm, violation, converged)``."""
     constrained = eq is not None or ineq is not None
     has_bounds = lower is not None and upper is not None
-    opt_tol = jnp.sqrt(jnp.asarray(tol))
+    # Report convergence by the same test that stops the iteration, so a run
+    # that exhausts max_iter short of tol isn't called converged.
+    opt_tol = jnp.asarray(tol)
     if constrained:
         return _auglag(
             f, x0, eq, ineq, lower, upper, tol=tol, max_iter=max_iter, inner_iter=inner_iter
@@ -556,14 +558,27 @@ def _broadcast_bound(
 ) -> Array:
     """Turn a scalar or pytree bound into a flat vector aligned with the decision vector.
 
-    A single scalar broadcasts to every variable; a pytree bound (matching the
-    decision structure) is flattened in the same order as the decision vector.
+    A single scalar broadcasts to every variable. A pytree bound matches the
+    decision structure, and a ``None`` leaf leaves that variable unbounded on
+    this side (``fill``), so the remaining bounds stay aligned with their
+    variables.
+
+    Raises:
+        ValueError: If a pytree bound's structure doesn't match the decision's.
     """
     if bound is None:
         return jnp.full((n,), fill)
-    flat, _ = ravel_pytree(bound)
-    if flat.shape[0] == 1 and n != 1:
-        return jnp.full((n,), flat[0])
+    leaves = jax.tree_util.tree_leaves(bound, is_leaf=lambda v: v is None)
+    if len(leaves) == 1 and leaves[0] is not None and jnp.size(leaves[0]) == 1:
+        return jnp.full((n,), jnp.reshape(jnp.asarray(leaves[0], dtype=float), ()))
+    template = unravel(jnp.zeros(n))
+    filled = jax.tree_util.tree_map(
+        lambda b, x: jnp.broadcast_to(jnp.asarray(fill if b is None else b, dtype=float), x.shape),
+        bound,
+        template,
+        is_leaf=lambda v: v is None,
+    )
+    flat, _ = ravel_pytree(filled)
     return flat
 
 
@@ -651,6 +666,51 @@ def argmin(
 ) -> Any:
     """The minimizer ``x*(theta) = argmin_x fun(x, theta)``, differentiable in ``theta``.
 
+    `argmin_with_info` without the diagnostics. An eager call raises when the
+    optimization fails; a traced call returns the best iterate with nonfinite
+    derivatives.
+
+    Raises:
+        ConvergenceError: If an eager optimization doesn't converge.
+    """
+    solution, primal = argmin_with_info(
+        fun,
+        x0,
+        theta,
+        method=method,
+        bounds=bounds,
+        eq_constraints=eq_constraints,
+        ineq_constraints=ineq_constraints,
+        tol=tol,
+        max_iter=max_iter,
+        inner_iter=inner_iter,
+    )
+    if not any(
+        isinstance(leaf, jax.core.Tracer) for leaf in jax.tree_util.tree_leaves((theta, x0))
+    ):
+        primal.check()
+    return solution
+
+
+def argmin_with_info(
+    fun: Objective,
+    x0: Any,
+    theta: Any,
+    *,
+    method: str = "bfgs",
+    bounds: tuple[Any, Any] | None = None,
+    eq_constraints: Constraint | None = None,
+    ineq_constraints: Constraint | None = None,
+    tol: float = 1e-7,
+    max_iter: int = 200,
+    inner_iter: int = 100,
+) -> tuple[Any, OptimizeResult]:
+    """The minimizer ``x*(theta)`` and the optimization's own diagnostics.
+
+    Returns ``(solution, result)``: ``solution`` is differentiable in ``theta``
+    (with nonfinite derivatives when the optimization failed), and ``result``
+    is the `OptimizeResult` of the primal solve, on detached parameters.
+
     Identical problem setup to `minimize`, but returns only the optimal
     decision pytree and (the point of this function) carries exact gradients
     with respect to ``theta`` by implicit differentiation of the optimality
@@ -690,10 +750,6 @@ def argmin(
     primal = OptimizeResult(
         unravel(x_star), f_flat(x_star, detached), norm, n_iter, converged, violation
     )
-    if not any(
-        isinstance(leaf, jax.core.Tracer) for leaf in jax.tree_util.tree_leaves((theta, x0))
-    ):
-        primal.check()
     x_star = jax.lax.stop_gradient(x_star)
     active_parts = []
     if eq_flat is not None:
@@ -743,7 +799,7 @@ def argmin(
     solution = implicit_solution(
         kkt_residual, initial, theta, jax.lax.stop_gradient(primal.report.converged)
     )
-    return unravel(solution[:n])
+    return unravel(solution[:n]), primal
 
 
 def least_squares(
@@ -773,6 +829,6 @@ def least_squares(
         fun=0.5 * jnp.vdot(rr, rr),
         grad_norm=grad_norm,
         n_iter=n_iter,
-        converged=grad_norm <= jnp.sqrt(jnp.asarray(tol)),
+        converged=grad_norm <= tol,
         constraint_violation=jnp.asarray(0.0),
     )

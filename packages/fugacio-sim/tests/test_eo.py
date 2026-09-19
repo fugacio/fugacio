@@ -43,7 +43,6 @@ from fugacio.sim.eo import (
     Valve,
     optimize_flowsheet_eo,
 )
-from fugacio.thermo.eos import PR
 
 C = ("methane", "propane", "n-pentane")
 
@@ -70,13 +69,13 @@ def _same_stream(a: Stream, b: Stream, *, n_atol: float = 1e-4, t_atol: float = 
 def test_eo_flash_matches_sequential_modular() -> None:
     # The feed is genuinely two-phase at the drum conditions (both products
     # present), the regime where the equifugacity residuals are well posed.
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _fresh())
     fs.add(Flash(inlets=("feed",), outlets=("vap", "liq"), t="T", p="P"))
     sol = fs.solve({"T": 315.0, "P": 18e5})
 
     assert float(sol.residual_norm) < 1e-8
-    vap_sm, liq_sm = flash_drum(_fresh(), 315.0, 18e5, eos=PR)
+    vap_sm, liq_sm = flash_drum(_fresh(), 315.0, 18e5)
     assert float(jnp.sum(vap_sm.n)) > 1.0 and float(jnp.sum(liq_sm.n)) > 1.0  # two-phase
     _same_stream(sol["vap"], vap_sm)
     _same_stream(sol["liq"], liq_sm)
@@ -89,7 +88,7 @@ def test_eo_energy_units_match_sequential_modular() -> None:
     # same chain evaluated unit by unit. Exercises the auxiliary (isentropic
     # temperature) unknown, the fixed-outlet-temperature heater, and the
     # isenthalpic valve together.
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _gas())
     fs.add(Compressor(inlets=("feed",), outlets=("c",), p_out=80e5, efficiency=0.8))
     fs.add(Heater(inlets=("c",), outlets=("h",), t_out=360.0, dp=0.0))
@@ -97,9 +96,9 @@ def test_eo_energy_units_match_sequential_modular() -> None:
     sol = fs.solve()
 
     assert float(sol.residual_norm) < 1e-8
-    c_sm = compressor(_gas(), 80e5, efficiency=0.8, eos=PR).outlet
-    h_sm = heater(c_sm, t_out=360.0, dp=0.0, eos=PR).outlet
-    v_sm = valve(h_sm, 15e5, eos=PR)
+    c_sm = compressor(_gas(), 80e5, efficiency=0.8).outlet
+    h_sm = heater(c_sm, t_out=360.0, dp=0.0).outlet
+    v_sm = valve(h_sm, 15e5)
     _same_stream(sol["c"], c_sm)
     _same_stream(sol["h"], h_sm)
     _same_stream(sol["v"], v_sm)
@@ -107,7 +106,7 @@ def test_eo_energy_units_match_sequential_modular() -> None:
 
 def test_eo_flow_units_match_sequential_modular() -> None:
     # mix -> pump -> split -> component-separator, simultaneously vs unit by unit.
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("a", _liquid())
     fs.feed("b", _liquid())
     fs.add(Mixer(inlets=("a", "b"), outlets=("m",)))
@@ -119,8 +118,8 @@ def test_eo_flow_units_match_sequential_modular() -> None:
     sol = fs.solve()
 
     assert float(sol.residual_norm) < 1e-8
-    m_sm = mix([_liquid(), _liquid()], eos=PR)
-    p_sm = pump(m_sm, 25e5, efficiency=0.75, eos=PR).outlet
+    m_sm = mix([_liquid(), _liquid()])
+    p_sm = pump(m_sm, 25e5, efficiency=0.75).outlet
     s1_sm, s2_sm = splitter(p_sm, jnp.array([0.6, 0.4]))
     top_sm, bot_sm = component_separator(s1_sm, jnp.array([0.95, 0.5, 0.05]))
     _same_stream(sol["m"], m_sm)
@@ -139,7 +138,7 @@ def _fresh() -> Stream:
 
 
 def test_eo_recycle_closes_without_tearing() -> None:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("fresh", _fresh())
     fs.add(Mixer(inlets=("fresh", "recycle"), outlets=("mixed",), t=320.0))
     fs.add(Flash(inlets=("mixed",), outlets=("vapor", "liquid"), t="T", p="P"))
@@ -155,7 +154,7 @@ def test_eo_recycle_closes_without_tearing() -> None:
     # Same answer as the sequential-modular tear solver.
     def _pass(recycle: Stream, th) -> Stream:
         mixed = mix([_fresh(), recycle], t=320.0)
-        _v, liq = flash_drum(mixed, th["T"], th["P"], eos=PR)
+        _v, liq = flash_drum(mixed, th["T"], th["P"])
         recycled, _purge = splitter(liq, jnp.array([th["r"], 1.0 - th["r"]]))
         return recycled
 
@@ -165,7 +164,7 @@ def test_eo_recycle_closes_without_tearing() -> None:
 
 
 def test_eo_recycle_gradient_matches_finite_difference() -> None:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("fresh", _fresh())
     fs.add(Mixer(inlets=("fresh", "recycle"), outlets=("mixed",), t=320.0))
     fs.add(Flash(inlets=("mixed",), outlets=("vapor", "liquid"), t="T", p=20e5))
@@ -186,7 +185,7 @@ def test_eo_recycle_gradient_matches_finite_difference() -> None:
 # 3. Degrees of freedom
 # --------------------------------------------------------------------------- #
 def test_eo_degrees_of_freedom_report() -> None:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _gas())
     fs.add(Flash(inlets=("feed",), outlets=("vap", "liq"), t="T", p="P"))
     report = fs.degrees_of_freedom()
@@ -199,7 +198,7 @@ def test_eo_degrees_of_freedom_report() -> None:
 
 
 def test_eo_unknown_stream_is_rejected() -> None:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _gas())
     fs.add(Valve(inlets=("missing",), outlets=("out",), p_out=10e5))
     with pytest.raises(ValueError, match="undefined stream"):
@@ -207,7 +206,7 @@ def test_eo_unknown_stream_is_rejected() -> None:
 
 
 def test_eo_duplicate_source_is_rejected() -> None:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _gas())
     fs.add(Valve(inlets=("feed",), outlets=("out",), p_out=10e5))
     fs.add(Heater(inlets=("feed",), outlets=("out",), t_out=320.0))
@@ -219,7 +218,7 @@ def test_eo_duplicate_source_is_rejected() -> None:
 # 4. Design specs (an extra equation + freed variable, solved simultaneously)
 # --------------------------------------------------------------------------- #
 def test_eo_design_spec_drives_measurement_to_target() -> None:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _gas())
     fs.add(Heater(inlets=("feed",), outlets=("out",), duty="Q", dp=0.0))
     # Free the duty Q so the outlet temperature hits 360 K.
@@ -229,7 +228,7 @@ def test_eo_design_spec_drives_measurement_to_target() -> None:
     assert float(sol.residual_norm) < 1e-8
     assert float(sol["out"].t) == pytest.approx(360.0, abs=1e-3)
     # The freed duty matches the sequential-modular heater that achieves the same T.
-    duty_sm = float(heater(_gas(), t_out=360.0, dp=0.0, eos=PR).duty)
+    duty_sm = float(heater(_gas(), t_out=360.0, dp=0.0).duty)
     assert float(sol.specs["Q"]) == pytest.approx(duty_sm, rel=1e-4)
 
 
@@ -237,7 +236,7 @@ def test_eo_design_spec_drives_measurement_to_target() -> None:
 # 5. Optimization (nested and simultaneous agree)
 # --------------------------------------------------------------------------- #
 def _flash_opt_flowsheet() -> EOFlowsheet:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _fresh())
     fs.add(Flash(inlets=("feed",), outlets=("vap", "liq"), t="T", p="P"))
     return fs
@@ -246,7 +245,7 @@ def _flash_opt_flowsheet() -> EOFlowsheet:
 def test_optimize_flowsheet_eo_nested_hits_interior_target() -> None:
     # Choose the flash temperature so the vapour molar flow matches a target that
     # is reachable in the interior of the bracket: a smooth, interior optimum.
-    vap_target = float(jnp.sum(flash_drum(_fresh(), 320.0, 20e5, eos=PR)[0].n))
+    vap_target = float(jnp.sum(flash_drum(_fresh(), 320.0, 20e5)[0].n))
     fs = _flash_opt_flowsheet()
     res = optimize_flowsheet_eo(
         fs,
@@ -261,7 +260,7 @@ def test_optimize_flowsheet_eo_nested_hits_interior_target() -> None:
 
 
 def _heater_duty_flowsheet() -> EOFlowsheet:
-    fs = EOFlowsheet(eos=PR)
+    fs = EOFlowsheet()
     fs.feed("feed", _gas())
     fs.add(Heater(inlets=("feed",), outlets=("out",), duty="Q", dp=0.0))
     return fs
@@ -347,7 +346,7 @@ def test_eo_stoichiometric_reactor_matches_sequential_modular() -> None:
     assert float(sol.residual_norm) < 1e-8
 
     ref = stoichiometric_reactor(
-        feed, Reaction(components=comps, nu=jnp.array(nu[0])), conversion=0.6, adiabatic=True
+        feed, Reaction(components=comps, nu=jnp.array(nu[0])), conversion=0.6, duty=0.0
     )
     _same_stream(sol.streams["prod"], ref.outlet)
     assert float(sol.streams["prod"].t) > 500.0  # hydrogenation is exothermic

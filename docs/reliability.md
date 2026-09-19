@@ -5,6 +5,84 @@ Fugacio provides numerical reports for roots, recycles, rigorous columns,
 equation-oriented flowsheets, energy-balanced units, and optimization. Use these
 reports when accepting a design or presenting a result.
 
+## The failure contract
+
+No public call returns a plausible number from a failed solve. Every
+equilibrium calculation comes in two forms:
+
+- A checked `*_with_info` form returns the best iterate and a `SolveReport`.
+  Its derivatives are nonfinite unless the report converged, so an optimizer
+  can't consume a failed sensitivity.
+- A value-only form returns NaN whenever that report fails.
+
+This covers the cubic, gamma-phi, liquid-liquid, three-phase, and PC-SAFT
+flashes and saturation calls, reaction equilibrium, and every
+[property-package](property-packages.md) method (`flash_pt`, `bubble_pressure`,
+`dew_temperature`, `flash_ph`, and so on).
+
+```python
+import jax
+import jax.numpy as jnp
+from fugacio.sim import package_for
+
+pkg = package_for(("methane", "n-butane"))
+x = jnp.array([0.6, 0.4])
+
+solved = pkg.bubble_pressure_with_info(330.0, x)
+solved.report.to_dict()["status"]     # "trivial": the iteration found y = x
+pkg.bubble_pressure(330.0, x).value   # nan
+
+# Above the cricondenbar there's no bubble point, and no usable derivative.
+jax.grad(lambda p: pkg.bubble_temperature(p, x).value)(200e5)   # nan
+```
+
+`SolveStatus` names the outcome:
+
+| Status | Meaning |
+| --- | --- |
+| `CONVERGED` (0) | The independently checked residual passed its tolerance. |
+| `MAX_ITERATIONS` (1) | The iteration cap was reached first. |
+| `NONFINITE` (2) | A NaN or infinite value appeared. |
+| `SINGULAR` (3) | A linear system was singular. |
+| `STALLED` (4) | The residual stopped decreasing. |
+| `INVALID_INPUT` (5) | The specification is invalid or violates an operating limit. |
+| `INFEASIBLE` (6) | No physical solution satisfies the specification, such as one that needs negative amounts. |
+| `OUT_OF_DOMAIN` (7) | A well-posed request lies outside the model's domain, such as a vapor pressure above the critical temperature. |
+| `TRIVIAL` (8) | An equilibrium iteration collapsed onto identical phases where a distinct phase was required. |
+
+Unit operations share one contract (see `fugacio.sim.units`). Every unit is a
+compiled kernel that returns its outlets with a report, and a failed kernel's
+outlets are NaN:
+
+- An eager call raises `ConvergenceError` for a failed solve, or `ValueError`
+  for a violated operating limit from `fugacio.sim.unit_limits`: a valve,
+  mixer, drum, or turbine that would raise pressure, a pump or compressor that
+  would lower it, split fractions outside `[0, 1]` or not summing to one, or a
+  pump with a vapor inlet.
+- A traced call (inside `jax.jit`, a flowsheet recycle, or an optimizer)
+  can't raise. It returns NaN outlets with nonfinite derivatives; the unit's
+  `report`, and each NaN outlet's `Stream.report`, record the failure.
+
+```python
+from fugacio.sim import Stream, valve
+
+feed = Stream.from_fractions(("methane", "propane"), jnp.array([0.9, 0.1]), 10.0, 300.0, 20e5)
+valve(feed, 30e5)                            # ValueError: a valve can't raise pressure
+
+jax.jit(lambda p: valve(feed, p).t)(30e5)    # nan: the traced limit fails the report
+```
+
+The saved-case audit (`fugacio.sim.cases`) checks solved streams against the
+same `unit_limits` predicates, so a limit can't be enforced in one place and
+forgotten in another.
+
+`rigorous_column`, `stoichiometric_reactor`, the flow reactors
+(`equilibrium_reactor`, `cstr`, and `pfr`), and `reactive_flash` follow the same
+contract; a failed reactor also keeps its report, balances, and profiles for
+diagnosis. Where a unit offers `check=False`, it returns its best iterate
+instead, with a failed `report` and nonfinite derivatives, so check
+`result.report` (or `result.converged`) before using it.
+
 ## Read a solve report
 
 ```python
@@ -24,25 +102,51 @@ result.report.to_dict()             # Strict JSON on the host
 
 Reports contain a status, an iteration count, the maximum absolute scaled
 residual, the last scaled step, and the index of the largest residual. A small
-step alone doesn't establish convergence. Status codes distinguish convergence,
-iteration limits, nonfinite values, stalled iterations, invalid inputs, and
-infeasible specifications. `ConvergenceError` retains the report and calculation
-context. Units that independently verify an energy balance report zero numerical
-iterations for that verification; this isn't a count of their internal flash
-iterations.
+step alone doesn't establish convergence. `ConvergenceError` retains the report
+and calculation context. Units that independently verify an energy balance
+report zero numerical iterations for that verification; this isn't a count of
+their internal flash iterations. `nan_unless_converged(value, report)` applies
+the value-only contract to your own calculations, and
+`fugacio.thermo.diagnostics.with_status` overrides a report's status where a
+condition fails.
 
 `newton_system_with_info` accepts characteristic variable and equation scales and
 optional bounds. Its Newton search reduces the actual residual and keeps trial
 variables within the bounds. Bounds aid the search; they don't replace any
 original equation. The scalar `bracketed_root_with_info` checks both a valid
-bracket and the resulting residual, so a discontinuity can't pass merely because
-the bracket became narrow. Existing low-level value-only root functions retain
-their compatibility behavior. Use the reporting variants to accept their results.
+bracket and the resulting residual: a bracket without a sign change is
+`INVALID_INPUT`, and a sign change across a pole, whose residual stays large as
+the bracket shrinks, fails. `scanned_root_with_info` first scans a wide bracket
+for the first finite sign change, so a residual that's undefined over part of
+the bracket still works. `bracketed_root` returns the same checked root without
+its report; its derivative is nonfinite when the check fails, so use the
+reporting variant to accept a value.
 
-Results that carry a new `report` field should be accessed by attribute rather
-than positional tuple unpacking. `Stream` also has an additional array leaf for
-phase inventory. Checked flowsheet and column entry points now raise on concrete
-convergence failures by default.
+Access results by attribute: most carry a `report` field alongside their
+values, and a unit result also exposes its outlets as `outlets`.
+
+## Test stability first
+
+A converged two-phase flash can still be wrong: it considers one liquid and one
+vapor, so a feed that splits into two liquids can return a converged
+vapor-liquid answer. Fugacio checks stability with one shared tangent-plane
+search, `fugacio.thermo.stability.tpd_search`, which starts from the feed, the
+Wilson-like estimates, and an enrichment toward every component, on both the
+liquid and the vapor branch:
+
+- `pkg.stability(t, p, z)` on every property package returns a
+  `StabilityResult(stable, tpd, trial, branch, converged)`.
+- `flash_lle` and `decanter` test stability before they split a liquid.
+- An eager `flash_drum` warns with `PhysicalAcceptanceWarning` when an outlet
+  is unstable, and `fugacio.sim.acceptance.flash_drum_checked` audits both
+  outlets; its `check()` raises `PhysicalAcceptanceError`.
+- `flash_pt_checked`, `audit_stream`, and flowsheet audits reject a state with a
+  negative tangent-plane distance, and `PhysicalReport.failures()` explains
+  each rejection in plain language.
+
+A finite-start search can't prove a global minimum. A negative distance
+establishes instability; a verdict of stability also requires every trial to
+reach a stationary point (`converged`).
 
 ## Keep a stream's phase state
 
@@ -81,20 +185,38 @@ published PH and PS state functions. Equation-oriented pure-fluid streams use
 molar enthalpy as their thermal coordinate so that quality remains an unknown
 when saturation temperature is fixed.
 
+For the same reason, `heater(feed, t_out=...)` on a pure fluid raises
+`ValueError` when `t_out` is exactly its saturation temperature at the outlet
+pressure: the quality is undetermined. Specify `vapor_fraction` (0 for
+saturated liquid, 1 for saturated vapor, or any quality in between) or `duty`
+instead. `adiabatic_flash(feed, p, duty=...)` separates a letdown or a heated
+pure fluid on its saturation line, where a temperature can't fix the phase
+amounts.
+
 ## Accept a flowsheet calculation
 
 ```python
-result = fs.solve_with_info(parameters, method="broyden")
+result = fs.solve_with_info(parameters)
 result.check()
 streams = result.streams
 for name, report in result.reports.items():
     print(name, report.to_dict())
 ```
 
-Sequential flowsheet reports identify recycle blocks and invalid named streams.
+Sequential flowsheet reports identify recycle blocks, units, and invalid named
+streams, and `result.units` keeps the heat, work, and report each unit returned.
 `fs.solve()` checks those reports by default. `solve_with_info` retains best
-iterates for diagnosis; a unit that can't close its own energy equation can still
-raise a `ConvergenceError` before a complete flowsheet result exists.
+iterates for diagnosis; a unit that fails outside a recycle iteration can still
+raise a `ConvergenceError`, naming the unit, before a complete flowsheet result
+exists. Recycles converge with Broyden's method unless you pass another
+`method`.
+
+With a property package, `Flowsheet(model=pkg)` audits every solved stream for
+equilibrium, stability, and parameter applicability after convergence.
+`result.accepted` combines convergence with those audits, `result.audits` holds
+each stream's `PhysicalReport`, and `fs.solve()` raises
+`PhysicalAcceptanceError` for a stream that fails. The audits run once, outside
+the recycle iterations, so they don't slow the solve itself.
 
 `EOFlowsheet.solve()` returns an `EOSolution` with a report and checks concrete
 failures by default. `check=False` exposes its best iterate. Errors identify the
@@ -172,7 +294,10 @@ supply a valid solution sensitivity.
 Host-side checked calculations raise on failure. Inside compiled calculations,
 checked flowsheet values and failed implicit sensitivities become nonfinite, and
 reporting APIs retain the failure status. Carry the report through JIT and inspect
-it before accepting results. Phase transitions, active-set changes, redundant
+it before accepting results. For an acceptance check of your own, made after a
+solve, `fugacio.thermo.implicit.gate_derivative(value, valid)` keeps the value
+but makes its derivative nonfinite unless `valid`; `gate_tree` applies it to
+every floating leaf of a pytree. Phase transitions, active-set changes, redundant
 constraints, and singular roots can make a derivative undefined even when the
 primal residual is small. A successful residual check doesn't prove smoothness
 or global optimality.

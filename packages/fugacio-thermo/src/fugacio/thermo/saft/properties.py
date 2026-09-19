@@ -69,16 +69,35 @@ def _log_rho_residual(ln_rho: Array, params_t_p_x: tuple) -> Array:
     return pressure(params, jnp.exp(ln_rho), t, x) / p - 1.0
 
 
+def _density_root(params: SaftParameters, t: Array, p: Array, x: Array, ln_seed: Array) -> Array:
+    return newton_root(_log_rho_residual, (params, t, p, x), ln_seed, 1e-13, 100)
+
+
+def _is_density_root(params: SaftParameters, t: Array, p: Array, x: Array, ln_rho: Array) -> Array:
+    """Whether ``ln_rho`` is a finite, mechanically stable point on the isotherm."""
+    finite = jnp.isfinite(ln_rho)
+    rho = jnp.exp(jnp.where(finite, ln_rho, 0.0))
+    slope = jax.grad(lambda r: pressure(params, r, t, x))(rho)
+    on_isotherm = jnp.abs(pressure(params, rho, t, x) / p - 1.0) < 1e-6
+    return finite & on_isotherm & (slope > 0.0)
+
+
 @partial(jax.jit, static_argnames=("phase",))
 def _molar_density(params: SaftParameters, t: Array, p: Array, x: Array, phase: str) -> Array:
-    if phase == "vapor":
-        rho0 = p / (R * t)
-        ln_rho = newton_root(_log_rho_residual, (params, t, p, x), jnp.log(rho0), 1e-13, 100)
-        return jnp.exp(ln_rho)
-    if phase == "liquid":
-        rho0 = _packing_density(params, t, x, 0.5)
-        ln_rho = newton_root(_log_rho_residual, (params, t, p, x), jnp.log(rho0), 1e-13, 100)
-        return jnp.exp(ln_rho)
+    if phase in ("vapor", "liquid"):
+        # Seed Newton from the ideal gas (vapor) or a dense packing (liquid).
+        # Where the requested branch doesn't exist on this isotherm (no vapor
+        # root in a compressed liquid, no liquid root in a light gas), use the
+        # other branch's root, as a cubic's single real root serves both phases.
+        # The trial solve is detached so a failed branch never feeds a
+        # nonfinite implicit derivative into the result.
+        ideal = jnp.log(p / (R * t))
+        dense = jnp.log(_packing_density(params, t, x, 0.5))
+        preferred, other = (ideal, dense) if phase == "vapor" else (dense, ideal)
+        frozen = jax.lax.stop_gradient((params, t, p, x))
+        trial = _density_root(*frozen, jax.lax.stop_gradient(preferred))
+        seed = jnp.where(_is_density_root(*frozen, trial), trial, other)
+        return jnp.exp(_density_root(params, t, p, x, jax.lax.stop_gradient(seed)))
     lo = jnp.log(_packing_density(params, t, x, 1e-10))
     hi = jnp.log(_packing_density(params, t, x, _ETA_MAX))
     ln_rho = bracketed_root(_log_rho_residual, (params, t, p, x), lo, hi, 1e-14, 300)
@@ -96,9 +115,10 @@ def molar_density(
         p: Pressure (Pa).
         x: Mole fractions, shape ``(n,)``.
         phase: ``"liquid"`` or ``"vapor"`` seed the Newton solve from a dense
-            packing fraction or the ideal gas; ``"stable"`` runs a bracketed
-            bisection over the whole density range and returns the root with the
-            lower molar Gibbs energy when more than one branch exists.
+            packing fraction or the ideal gas, and fall back to the other
+            branch's root where the requested one doesn't exist; ``"stable"``
+            solves both branches and returns the root with the lower molar Gibbs
+            energy when more than one exists.
 
     Returns:
         The converged molar density, differentiable in ``T``, ``P``, ``x``, and

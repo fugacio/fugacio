@@ -7,7 +7,6 @@ import pytest
 from fugacio.thermo.acceptance import (
     AcceptancePolicy,
     PhysicalAcceptanceError,
-    accepted_value,
     assess_flash,
     flash_pt_checked,
     require_accepted,
@@ -16,6 +15,7 @@ from fugacio.thermo.activity.models import NRTL
 from fugacio.thermo.components import component_arrays, get
 from fugacio.thermo.equilibrium import FlashResult
 from fugacio.thermo.ideal import ideal_gas_coeffs
+from fugacio.thermo.implicit import gate_derivative
 from fugacio.thermo.package import cubic_package, gamma_phi_package
 from fugacio.thermo.provenance import PackageEvidence, PairEvidence
 
@@ -74,9 +74,9 @@ def test_stalled_solver_and_missing_parameters_are_rejected():
 
 
 def test_gradient_guard_handles_forward_and_reverse_mode():
-    assert jax.grad(lambda x: accepted_value(x * x, jnp.array(True)))(2.0) == 4.0
-    assert jnp.isnan(jax.grad(lambda x: accepted_value(x * x, jnp.array(False)))(2.0))
-    assert jnp.isnan(jax.jvp(lambda x: accepted_value(x * x, jnp.array(False)), (2.0,), (1.0,))[1])
+    assert jax.grad(lambda x: gate_derivative(x * x, jnp.array(True)))(2.0) == 4.0
+    assert jnp.isnan(jax.grad(lambda x: gate_derivative(x * x, jnp.array(False)))(2.0))
+    assert jnp.isnan(jax.jvp(lambda x: gate_derivative(x * x, jnp.array(False)), (2.0,), (1.0,))[1])
 
 
 def test_two_liquid_instability_rejects_a_material_balanced_single_liquid():

@@ -20,9 +20,11 @@ from fugacio.sim import (
     bottoms_rate,
     distillate_rate,
     enthalpy_flow,
+    fenske_min_stages,
     package_for,
     purity,
     reflux_ratio,
+    relative_volatility,
     rigorous_column,
 )
 
@@ -128,6 +130,17 @@ def test_partial_condenser_with_purity_spec() -> None:
     assert float(res.bottoms.total) == pytest.approx(50.0, rel=1e-8)
     # A vapour distillate leaves at the top-stage dew point, i.e. in equilibrium with the reflux.
     assert jnp.allclose(res.distillate.z, res.y[0], atol=1e-10)
+
+
+def test_rigorous_column_needs_more_stages_than_the_fenske_minimum() -> None:
+    feed = _bt_feed()
+    res = rigorous_column(
+        [ColumnFeed(feed, 6)], 12, p=1.013e5, specs=[reflux_ratio(2.5), distillate_rate(50.0)]
+    )
+    alpha = relative_volatility(package_for(BT, "pr"), res.t[5], 1.013e5, feed.z, ref=1)
+    n_min = fenske_min_stages(res.distillate.n, res.bottoms.n, lk=0, hk=1, alpha=alpha)
+    # A finite reflux needs more stages than total reflux does.
+    assert 0.0 < float(n_min) < 12.0
 
 
 def test_distillate_purity_gradient_matches_finite_difference() -> None:

@@ -57,15 +57,19 @@ def uniquac_ln_gamma(x: Array, r: Array, q: Array, tau: Array) -> Array:
     q = jnp.asarray(q)
     tau = jnp.asarray(tau)
 
-    phi = r * x / jnp.sum(r * x)
-    theta = q * x / jnp.sum(q * x)
+    sum_rx = jnp.sum(r * x)
+    sum_qx = jnp.sum(q * x)
+    theta = q * x / sum_qx
     ell = (Z_COORD / 2.0) * (r - q) - (r - 1.0)
+    # Exact ratios (no division by x_i), finite at infinite dilution.
+    phi_over_x = r / sum_rx
+    theta_over_phi = (q / sum_qx) / phi_over_x
 
     ln_gamma_c = (
-        jnp.log(phi / x)
-        + (Z_COORD / 2.0) * q * jnp.log(theta / phi)
+        jnp.log(phi_over_x)
+        + (Z_COORD / 2.0) * q * jnp.log(theta_over_phi)
         + ell
-        - (phi / x) * jnp.sum(x * ell)
+        - phi_over_x * jnp.sum(x * ell)
     )
 
     s = theta @ tau  # S_j = sum_k theta_k tau_kj

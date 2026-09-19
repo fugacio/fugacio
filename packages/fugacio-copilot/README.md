@@ -59,5 +59,23 @@ behind the optional `llm` extra:
 pip install "fugacio-copilot[llm]"
 ```
 
+`run_llm_agent` drives a real model through the same registry with a
+provider from `fugacio.copilot.llm`: `AnthropicProvider` (Claude Opus 5,
+`claude-opus-5`, by default), `OpenAIProvider` (`gpt-5-mini` by default), or the
+deterministic `MockProvider` for tests. The providers send a sampling
+`temperature` only when you pass one and cap each reply at 16,000 tokens by
+default. A failed tool call returns to the model as an error it can correct;
+a refused reply, or one cut off at the token cap, ends the run with that
+`stop_reason` rather than an answer. Engine tools raise on a failed or
+out-of-domain solve, so the model never receives an unconverged number.
+
+```python
+from fugacio.copilot import run_llm_agent
+from fugacio.copilot.llm import AnthropicProvider
+
+result = run_llm_agent("Flash this feed at 320 K and 20 bar.", AnthropicProvider())
+result.answer, result.stop_reason
+```
+
 Part of the `fugacio` namespace; installs independently:
 `pip install fugacio-copilot`.

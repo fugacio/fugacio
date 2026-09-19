@@ -33,8 +33,14 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.thermo.constants import P_REF, R
+from fugacio.thermo.diagnostics import (
+    SolveReport,
+    SolveStatus,
+    nan_unless_converged,
+    with_status,
+)
 from fugacio.thermo.eos import PR, CubicEOS, ln_phi_mixture
-from fugacio.thermo.implicit import bracketed_root, newton_system
+from fugacio.thermo.implicit import bracketed_root_with_info, newton_system_with_info
 from fugacio.thermo.reactions import Reaction, delta_g_rxn, reaction_arrays
 
 ArrayLike = Array | float
@@ -48,12 +54,14 @@ class EquilibriumResult(NamedTuple):
         moles: Equilibrium moles of each component, shape ``(n,)``.
         y: Equilibrium mole fractions, shape ``(n,)``.
         k: Equilibrium constant of each reaction at ``T``, shape ``(R,)``.
+        report: The solve report; every other field is NaN when it fails.
     """
 
     extent: Array
     moles: Array
     y: Array
     k: Array
+    report: SolveReport
 
 
 def _as_list(reactions: Reaction | Sequence[Reaction]) -> list[Reaction]:
@@ -133,8 +141,10 @@ def equilibrium(
         max_iter: Maximum number of solver iterations.
 
     Returns:
-        An `EquilibriumResult` with extents, moles, mole fractions, and
-        ``K(T)``. Differentiable in ``t``, ``p``, and ``n_feed``.
+        An `EquilibriumResult` with extents, moles, mole fractions, ``K(T)``,
+        and the solve report. Differentiable in ``t``, ``p``, and ``n_feed``. An
+        unconverged solve, or one whose composition leaves a negative amount,
+        is reported (``INFEASIBLE`` for the latter) and its values are NaN.
     """
     rxns = _as_list(reactions)
     components, nu = _stack(rxns)
@@ -162,8 +172,8 @@ def equilibrium(
         span = xi_hi - xi_lo
         lo = xi_lo + 1e-7 * span
         hi = xi_hi - 1e-7 * span
-        xi_star = bracketed_root(residual_scalar, theta, lo, hi, tol)
-        extent = jnp.reshape(xi_star, (1,))
+        solved = bracketed_root_with_info(residual_scalar, theta, lo, hi, tol)
+        extent = jnp.reshape(solved.value, (1,))
     else:
 
         def residual_vec(extent: Array, th: tuple[Array, Array, Array]) -> Array:
@@ -178,12 +188,16 @@ def equilibrium(
         cap = jnp.min(
             jnp.where(reactant, n_feed[None, :] / jnp.where(reactant, -nu, 1.0), jnp.inf), axis=1
         )
-        extent = newton_system(residual_vec, 0.1 * cap, theta, tol, max_iter)
+        solved = newton_system_with_info(residual_vec, 0.1 * cap, theta, tol, max_iter)
+        extent = solved.value
 
     n_eq = moles_of(extent)
     y_eq = n_eq / jnp.sum(n_eq)
     k = jnp.stack([jnp.exp(_ln_k(nu[j], t, hf, gf, coeffs)) for j in range(nu.shape[0])])
-    return EquilibriumResult(extent=extent, moles=n_eq, y=y_eq, k=k)
+    feasible = jnp.all(n_eq >= -1e-12 * jnp.maximum(jnp.sum(n_feed), 1.0))
+    report = with_status(solved.report, ~feasible, SolveStatus.INFEASIBLE)
+    extent, n_eq, y_eq, k = nan_unless_converged((extent, n_eq, y_eq, k), report)
+    return EquilibriumResult(extent=extent, moles=n_eq, y=y_eq, k=k, report=report)
 
 
 def conversion(result: EquilibriumResult, n_feed: Array, component_index: int) -> Array:

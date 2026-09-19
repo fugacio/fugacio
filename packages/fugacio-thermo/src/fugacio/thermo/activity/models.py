@@ -151,6 +151,14 @@ class Wilson:
 # --- Binary two-parameter models ----------------------------------------------
 
 
+def _binary(x: Array, model: str) -> Array:
+    """Return ``x`` as an array, rejecting anything but a binary composition."""
+    x = jnp.asarray(x)
+    if x.shape != (2,):
+        raise ValueError(f"the {model} model is binary; got composition shape {x.shape}")
+    return x
+
+
 @dataclass(frozen=True)
 class Margules:
     """Two-parameter Margules binary model with ``A = a + b/T``.
@@ -166,8 +174,12 @@ class Margules:
     b21: Array
 
     def ln_gamma(self, x: Array, t: ArrayLike) -> Array:
-        """Log activity coefficients ``[ln(gamma_1), ln(gamma_2)]`` for the binary."""
-        x = jnp.asarray(x)
+        """Log activity coefficients ``[ln(gamma_1), ln(gamma_2)]`` for the binary.
+
+        Raises:
+            ValueError: If ``x`` isn't a binary composition.
+        """
+        x = _binary(x, "Margules")
         t = jnp.asarray(t)
         a12 = self.a12 + self.b12 / t
         a21 = self.a21 + self.b21 / t
@@ -190,8 +202,12 @@ class VanLaar:
     b21: Array
 
     def ln_gamma(self, x: Array, t: ArrayLike) -> Array:
-        """Log activity coefficients ``[ln(gamma_1), ln(gamma_2)]`` for the binary."""
-        x = jnp.asarray(x)
+        """Log activity coefficients ``[ln(gamma_1), ln(gamma_2)]`` for the binary.
+
+        Raises:
+            ValueError: If ``x`` isn't a binary composition.
+        """
+        x = _binary(x, "van Laar")
         t = jnp.asarray(t)
         a12 = self.a12 + self.b12 / t
         a21 = self.a21 + self.b21 / t

@@ -125,11 +125,12 @@ mixing assumptions are visible too. Provenance describes the constructed
 package; if application code replaces parameter arrays, it must also update the
 evidence rather than retaining the original fit's attribution.
 
-`package_for(..., "nrtl")` and UNIQUAC reject missing pairs by default. To choose
-zero interactions explicitly, pass `parameter_policy="allow_ideal"`. Existing
-explicit `strict=False` calls remain an opt-in. UNIQUAC still includes its
-combinatorial term when energetic interactions are zero. Predictive UNIFAC and
-Dortmund are explicit method choices, never silent fallbacks.
+`package_for(..., "nrtl")` and UNIQUAC reject missing pairs by default
+(`parameter_policy="strict"`). To choose zero interactions explicitly, pass
+`parameter_policy="allow_ideal"`; the package evidence records the assumption.
+An option the method doesn't accept raises `TypeError`. UNIQUAC still includes
+its combinatorial term when energetic interactions are zero. Predictive UNIFAC
+and Dortmund are explicit method choices, never silent fallbacks.
 
 Measured fits carry observed temperature, pressure, and composition bounds.
 Checked calculations reject extrapolation by default. An explicit
@@ -150,11 +151,13 @@ require_accepted(result.report)
 print(result.report.to_dict())
 ```
 
-`flash_pt_with_info` retains the actual cubic, gamma-phi, or PC-SAFT iteration
-report. `flash_pt_checked` adds input validity, component balance, present-phase
-normalization, equifugacity, applicability, and a tangent-plane search in both
-liquid and vapor phases. Only present phases require normalization. Exactly
-absent components remain outside the stability-search support.
+`pkg.flash_pt_with_info` retains the actual cubic, gamma-phi, or PC-SAFT
+iteration report. `flash_pt_checked` adds input validity, component balance,
+present-phase normalization, equifugacity, applicability, and a tangent-plane
+search in both liquid and vapor phases. Only present phases require
+normalization. Exactly absent components remain outside the stability-search
+support. `result.report.failures()` lists each failed criterion in plain
+language, and `PhysicalAcceptanceError` messages include the same reasons.
 
 The stability search starts from the feed, returned phases, and each component
 enrichment. Acceptance requires stationary trials and no negative observed
@@ -167,13 +170,20 @@ their primals for diagnosis and have nonfinite forward and reverse derivatives.
 targets use `prop="entropy"`. The existing PH/PS report now includes
 equifugacity. Energy-balanced units independently verify their returned phase
 inventories, equilibrium residual, and parameter bounds before passing an
-outlet downstream. Full stability checks are available through `heater_checked`,
-`valve_checked`, and `audit_stream` after the numerical solve.
+outlet downstream. An eager `flash_drum` also warns with
+`PhysicalAcceptanceWarning` when an outlet is unstable. Full stability checks
+are available through `flash_drum_checked`, `heater_checked`, `valve_checked`,
+and `audit_stream` after the numerical solve, and through
+`Flowsheet(model=pkg)`, which audits every solved stream.
 
 `audit_balance` verifies component and enthalpy flow closure using explicit heat
 and shaft work, positive into the fluid. `audit_flowsheet` requires declared
 `BalanceBoundary` objects, since stream endpoints alone don't specify heat or
-work. Empty streams have no physical equilibrium composition and fail a full
+work. A boundary's heat and work are its explicit `heat` and `work` plus those
+the solved result retained for the units it names in `units`, so a
+`Flowsheet.solve_with_info` result supplies its own duties. `audit_flowsheet`
+also accepts an equation-oriented `EOSolution`, whose boundaries must state
+their heat and work explicitly. Empty streams have no physical equilibrium composition and fail a full
 stream audit. Reactive boundaries require explicit component generation and a
 formation-consistent enthalpy model.
 

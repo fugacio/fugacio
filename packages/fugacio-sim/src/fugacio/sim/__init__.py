@@ -7,20 +7,23 @@ The layer provides:
   `molar_enthalpy`, `molar_entropy`, `mass_flow`) that gives any
   stream a two-phase-aware enthalpy/entropy via `fugacio.thermo`;
 * unit operations with rigorous material *and* energy balances
-  (`flash_drum`, `heater`, `valve`, `pump`,
+  (`flash_drum`, `adiabatic_flash`, `heater`, `valve`, `pump`,
   `compressor`, `turbine`, `mix`, `splitter`,
-  `component_separator`);
-* a thermodynamic-model bridge (`eos_model_for`, `nrtl_model_for`,
-  `uniquac_model_for`, `unifac_model_for`, `saft_model_for`) that turns
-  component names into a ready EOS, gamma-phi, or PC-SAFT `EquilibriumModel`;
-* non-ideal separation units (`flash_vle`, `decanter`,
+  `component_separator`), each a compile-once kernel that reports failures
+  (see `fugacio.sim.units` for the contract and `fugacio.sim.unit_limits` for
+  the operating limits);
+* `enable_compilation_cache`, an opt-in persistent compilation cache so a
+  new process reuses the compiled kernels of an earlier one;
+* `package_for`, which turns component names and a method name into a ready
+  cubic, gamma-phi, PC-SAFT, or reference-fluid `fugacio.thermo.PropertyPackage`;
+* liquid-liquid and three-phase separators (`decanter`,
   `three_phase_flash`) and binary diagram / azeotrope / residue-curve helpers
   (`pxy_diagram`, `txy_diagram`, `azeotrope_pressure`,
   `azeotrope_temperature`, `residue_curve`, `residue_curve_map`);
 * reactor unit operations (`equilibrium_reactor`,
   `stoichiometric_reactor`, `cstr`, `pfr`,
   `batch_reactor`) and reactive separations (`reactive_flash`,
-  `reactive_distillation`);
+  `reactive_column`);
 * a differentiable optimization toolkit (`minimize`, `argmin`,
   `least_squares`) that differentiates *through the optimum* by the
   implicit function theorem;
@@ -51,16 +54,15 @@ The layer provides:
 """
 
 from fugacio.sim.column import (
-    ColumnResult,
     ShortcutResult,
     fenske_min_stages,
     gilliland_stages,
     kirkbride_feed_stage,
     relative_volatility,
     shortcut_column,
-    solve_column,
     underwood_min_reflux,
 )
+from fugacio.sim.compilation import enable_compilation_cache
 from fugacio.sim.continuation import ContinuationResult, ContinuationStep, continuation_solve
 
 # Dynamic simulation & control (time-domain). Imported last; these layers build on
@@ -212,6 +214,7 @@ from fugacio.sim.flowsheet import (
     FlowsheetResult,
     Partition,
     TearResult,
+    UnitRecord,
     tear_solve,
     tear_solve_with_info,
 )
@@ -246,13 +249,8 @@ from fugacio.sim.integration import (
 from fugacio.sim.models import (
     METHODS,
     UnifacModel,
-    eos_model_for,
     helmholtz_package_for,
-    nrtl_model_for,
     package_for,
-    saft_model_for,
-    unifac_model_for,
-    uniquac_model_for,
 )
 
 # Advanced process control (model predictive control + state estimation). Builds on
@@ -295,6 +293,7 @@ from fugacio.sim.mpc import (
 from fugacio.sim.optimize import (
     OptimizeResult,
     argmin,
+    argmin_with_info,
     least_squares,
     minimize,
 )
@@ -318,14 +317,13 @@ from fugacio.sim.properties import (
 )
 from fugacio.sim.reaction_units import ReactionResult, reaction_reactor
 from fugacio.sim.reactive import (
-    ReactiveColumnResult,
     ReactiveFlashResult,
     reactive_column,
-    reactive_distillation,
     reactive_flash,
 )
 from fugacio.sim.reactors import (
-    ReactorResult,
+    BatchResult,
+    StoichiometricResult,
     batch_reactor,
     conversion,
     cstr,
@@ -333,15 +331,18 @@ from fugacio.sim.reactors import (
     pfr,
     stoichiometric_reactor,
 )
-from fugacio.sim.separations import decanter, flash_vle, three_phase_flash
+from fugacio.sim.separations import decanter, three_phase_flash
 from fugacio.sim.stream import Stream
 from fugacio.sim.units import (
+    FlashDrumResult,
     HeaterResult,
     PumpResult,
     WorkResult,
+    adiabatic_flash,
     component_separator,
     compressor,
     flash_drum,
+    flash_drum_with_info,
     heater,
     mix,
     pump,
@@ -380,10 +381,10 @@ __all__ = [
     "STEAM_LEVELS",
     "TEAR_METHODS",
     "AzeotropeResult",
+    "BatchResult",
     "Block",
     "ClosedLoop",
     "ColumnFeed",
-    "ColumnResult",
     "ColumnSpec",
     "ComponentSeparator",
     "CompositeCurves",
@@ -409,6 +410,7 @@ __all__ = [
     "ExtendedKalmanFilter",
     "FOPDTModel",
     "Flash",
+    "FlashDrumResult",
     "Flowsheet",
     "FlowsheetOptResult",
     "FlowsheetResult",
@@ -445,9 +447,7 @@ __all__ = [
     "QPSolution",
     "ReactionResult",
     "ReactionSet",
-    "ReactiveColumnResult",
     "ReactiveFlashResult",
-    "ReactorResult",
     "ReferenceRate",
     "ResidueCurve",
     "RigorousColumnResult",
@@ -464,6 +464,7 @@ __all__ = [
     "SteamHeatingResult",
     "SteamTurbineResult",
     "StepInfo",
+    "StoichiometricResult",
     "Stream",
     "SuperTargetResult",
     "TearResult",
@@ -471,17 +472,20 @@ __all__ = [
     "Turbine",
     "TxyDiagram",
     "UnifacModel",
+    "UnitRecord",
     "UnitsTarget",
     "UnscentedKalmanFilter",
     "Utility",
     "Valve",
     "WorkResult",
     "absorber",
+    "adiabatic_flash",
     "amigo",
     "annualized_capital",
     "antoine_psat",
     "area_target",
     "argmin",
+    "argmin_with_info",
     "azeotrope_pressure",
     "azeotrope_temperature",
     "bare_module_cost",
@@ -519,16 +523,16 @@ __all__ = [
     "discretize",
     "distillate_rate",
     "dlqr",
+    "enable_compilation_cache",
     "enthalpy_flow",
     "entropy_flow",
-    "eos_model_for",
     "equilibrium_reactor",
     "estimate_dynamics",
     "fenske_min_stages",
     "first_order_step",
     "fit_fopdt",
     "flash_drum",
-    "flash_vle",
+    "flash_drum_with_info",
     "fopdt_step",
     "frequency_response",
     "gilliland_stages",
@@ -571,7 +575,6 @@ __all__ = [
     "nonlinear_feedback",
     "nonlinear_mpc",
     "npv",
-    "nrtl_model_for",
     "odeint",
     "odeint_final",
     "optimal_control",
@@ -593,7 +596,6 @@ __all__ = [
     "quadratic_tracking",
     "reaction_reactor",
     "reactive_column",
-    "reactive_distillation",
     "reactive_flash",
     "reboiler_duty",
     "recovery",
@@ -605,14 +607,12 @@ __all__ = [
     "residue_curve_map",
     "rigorous_column",
     "rise_time",
-    "saft_model_for",
     "saturated_steam_temperature",
     "second_order_step",
     "settling_time",
     "shortcut_column",
     "simulate",
     "simulate_closed_loop",
-    "solve_column",
     "solve_design",
     "solve_qp",
     "solve_qp_canonical",
@@ -638,8 +638,6 @@ __all__ = [
     "turbine",
     "txy_diagram",
     "underwood_min_reflux",
-    "unifac_model_for",
-    "uniquac_model_for",
     "units_target",
     "utility_cost",
     "valve",

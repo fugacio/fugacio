@@ -13,10 +13,11 @@ variables, which is the basis for gradient-based flowsheet optimisation.
 
 ## Stream properties
 
-Any `Stream` has a two-phase-aware enthalpy and entropy (via the
-`fugacio.thermo` energy core), so unit operations close *energy* balances, not
-just material balances: `molar_enthalpy`, `molar_entropy`, `enthalpy_flow`,
-`entropy_flow`, `mass_flow`, `molar_mass`.
+Any `Stream` has a two-phase-aware enthalpy and entropy (from its property
+package), so unit operations close *energy* balances, not just material
+balances: `molar_enthalpy`, `molar_entropy`, `enthalpy_flow`, `entropy_flow`,
+`mass_flow`, `molar_mass`. A stream also keeps a resolved vapor inventory, so a
+pure fluid's saturation quality survives from one unit to the next.
 
 ## Property packages
 
@@ -24,34 +25,55 @@ Every energy-balanced unit, the rigorous column, the two-sided heat exchanger,
 and the equation-oriented engine take a `model=` argument: a
 `fugacio.thermo.PropertyPackage` built with `package_for(components, method)`
 for any method in `METHODS` (`"pr"`, `"srk"`, `"rk"`, `"vdw"`, `"nrtl"`,
-`"uniquac"`, `"unifac"`, `"dortmund"`, `"pcsaft"`, `"iapws"`). Omitting it keeps
-the Peng-Robinson default.
+`"uniquac"`, `"unifac"`, `"dortmund"`, `"pcsaft"`, `"iapws"`). Omitting it selects
+Peng-Robinson over the stream's components, and a `model` that isn't a package
+raises `TypeError`. NRTL and UNIQUAC packages reject missing binary pairs unless
+you pass `parameter_policy="allow_ideal"`.
 
 ## Unit operations (rigorous material + energy balances)
 
-- `flash_drum`: isothermal-isobaric vapour/liquid separator.
-- `heater`: heater/cooler on a temperature **or** a duty specification.
+- `flash_drum` / `flash_drum_with_info`: isothermal-isobaric vapor/liquid
+  separator; the second form also returns the duty and report.
+- `adiabatic_flash`: separator at a pressure and a heat duty (zero for an
+  adiabatic drum), the model for a letdown into a drum.
+- `heater`: heater/cooler on an outlet temperature, a duty, **or** an outlet
+  vapor fraction.
 - `valve`: isenthalpic (Joule-Thomson) pressure letdown.
 - `pump`: incompressible-liquid pump with an efficiency.
 - `compressor` / `turbine`: isentropic machines with an efficiency.
 - `mix`: adiabatic, energy-balanced mixer (exact material balance).
-- `splitter` / `component_separator`: flow split and idealised component split.
+- `splitter` / `component_separator`: flow split and idealized component split.
 - `heat_exchanger`: two-sided countercurrent (or parallel) exchanger with
   rigorous T-Q curves on both sides, zone-wise LMTD, and one closing spec
   (`duty`, `t_hot_out`, `t_cold_out`, `min_approach`, or `ua`); each side may
   use its own property package.
 - `bubble_pressure` / `antoine_psat`: lightweight modified-Raoult helpers.
 
+Every unit is one compiled kernel with the property package and every
+operating value as dynamic arguments, so it compiles once per package structure
+and specification kind. An eager call raises `ConvergenceError` for a failed
+solve and `ValueError` for a violated operating limit (`fugacio.sim.unit_limits`);
+a traced call returns NaN outlets. Results such as `HeaterResult`,
+`FlashDrumResult`, `PumpResult`, and `WorkResult` carry a `report` and expose
+their `outlets`. An eager `flash_drum` warns with `PhysicalAcceptanceWarning`
+when an outlet would split further, for example into two liquids.
+`enable_compilation_cache(directory)` keeps compiled kernels on disk for later
+processes.
+
 ## Flowsheets with recycle
 
 `tear_solve` closes a recycle by solving the tear fixed point
-`tear = g(tear, theta)` by Wegstein acceleration, Broyden, or full Newton
-(`method=`), and differentiates the *converged* flowsheet by the implicit
+`tear = g(tear, theta)` by Broyden (the default), Wegstein acceleration, or full
+Newton (`method=`), and differentiates the *converged* flowsheet by the implicit
 function theorem: a gradient through the recycle costs one adjoint solve
 regardless of iteration count. `Flowsheet` is the declarative builder on top of
 it: register feeds and units in any order and `partition` finds the strongly
 connected blocks (Tarjan), orders them, and selects the tear streams; `solve`
 converges every loop and returns all named streams, differentiable in `theta`.
+`solve_with_info` returns a `FlowsheetResult` with every block's report and each
+unit's heat and work, and `Flowsheet(model=pkg)` audits every solved stream for
+physical acceptance. Recycle maps are cached, so solving again at a new `theta`
+doesn't recompile.
 
 ## Equation-oriented flowsheeting
 
@@ -100,17 +122,18 @@ sol["vapor"].total
   and design specs as equations (`reflux_ratio`, `distillate_rate`,
   `bottoms_rate`, `boilup_ratio`, `condenser_duty`, `purity`, `recovery`,
   `component_flow`, `stage_temperature`). `absorber` and `stripper` wrap it.
-- **Constant molar overflow** `solve_column`: the lighter Wang-Henke
-  bubble-point column, kept for quick estimates.
+  The result exposes `outlets` and `heat`, so a flowsheet unit can return it
+  directly.
 
 ## Non-ideal separations & diagrams
 
-Built on the `fugacio.thermo` property system (via the `eos_model_for`,
-`nrtl_model_for`, `uniquac_model_for`, `unifac_model_for`, and `saft_model_for`
-bridges, the last building a molecular PC-SAFT model from component names):
+Built on property packages from `package_for` (NRTL, UNIQUAC, UNIFAC, or
+PC-SAFT for non-ideal mixtures):
 
-- `flash_vle`, `decanter`, `three_phase_flash`: activity-based VLE / LLE / VLLE
-  drums for real, non-ideal mixtures.
+- `flash_drum` with a gamma-phi package: activity-based VLE drums.
+- `decanter`, `three_phase_flash`: LLE and VLLE separators, which require a
+  gamma-phi package. A feed that isn't three-phase raises with a hint naming
+  `flash_drum` or `decanter`.
 - `pxy_diagram`, `txy_diagram`, `azeotrope_pressure`, `azeotrope_temperature`:
   binary phase diagrams and azeotrope finders.
 - `residue_curve`, `residue_curve_map`: ternary open-evaporation trajectories for
@@ -119,17 +142,23 @@ bridges, the last building a molecular PC-SAFT model from component names):
 ## Reactors
 
 Energy-balanced reactor unit operations over one or more `fugacio.thermo`
-`Reaction`s, each runnable isothermally (reporting the heat `duty`) or
-adiabatically (solving the outlet temperature) and returning a `ReactorResult`:
-`equilibrium_reactor` (chemical equilibrium), `stoichiometric_reactor` (specified
-extent or conversion), and kinetic `cstr`, `pfr`, and `batch_reactor` sized by
-volume (and time). `conversion` is a small helper on the inlet/outlet streams.
+`Reaction`s or a `ReactionSet`. The flow reactors use the property package's
+fugacities, phase volumes, and enthalpies plus formation enthalpies, and take
+`t_out` (the result reports the heat `duty` that holds it) or `duty` (zero for
+adiabatic operation, solving the outlet temperature): `equilibrium_reactor` (chemical
+equilibrium), `cstr(feed, reactions, volume, rate_laws)`, and
+`pfr(feed, reactions, volume, rate_laws)` return a `ReactionResult`, and
+`stoichiometric_reactor` (specified extent or conversion) returns a
+`StoichiometricResult`. `batch_reactor` integrates a closed, constant-volume
+ideal-gas vessel over time and returns a `BatchResult`. `conversion` is a small
+helper on the inlet/outlet streams.
 
 ## Reactive separations
 
 Reaction coupled to phase separation, both differentiable through the joint solve:
-`reactive_flash` (simultaneous chemical + vapour-liquid equilibrium in a drum) and
-`reactive_distillation` (a rate-based column with per-stage reaction source terms).
+`reactive_flash` (simultaneous chemical + vapor-liquid equilibrium in a drum) and
+`reactive_column` (energy-balanced reactive MESH, the same solver as
+`rigorous_column(..., reactions=..., reaction_volumes=...)`).
 
 ## Example: differentiate a flash drum
 
@@ -146,7 +175,7 @@ feed = Stream.from_fractions(
 vapor, liquid = flash_drum(feed, 320.0, 20e5)
 vapor.total, liquid.total  # ~74.7 and ~25.3 mol/s
 
-# Sensitivity of vapour product flow to drum temperature:
+# Sensitivity of vapor product flow to drum temperature:
 d_vapor_dT = jax.grad(lambda T: flash_drum(feed, T, 20e5)[0].total)
 d_vapor_dT(320.0)
 ```

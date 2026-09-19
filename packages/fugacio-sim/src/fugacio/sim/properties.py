@@ -14,15 +14,13 @@ temperature, and pressure (the component constants are not differentiated, which
 is exactly right: they are reference data, not decision variables).
 
 Which *thermodynamic method* evaluates those properties is set by the ``model``
-argument, a `fugacio.thermo.PropertyPackage`. Left unset, the stream's
-components resolve to a Peng-Robinson `fugacio.thermo.CubicPackage` (the
-historical default, still selectable through the ``eos`` / ``kij`` arguments).
-Pass an NRTL/UNIFAC gamma-phi package, a PC-SAFT package, or a reference-fluid
-package instead and every unit operation downstream uses it for its energy
-balance as well as its phase split. `resolve_package` performs that resolution
-and also upgrades a bare equilibrium model (`EOSModel`, `GammaPhiModel`,
-`SAFTModel`) to the matching package by attaching the components' ideal-gas
-heat capacities.
+argument, a `fugacio.thermo.PropertyPackage` (build one by name with
+`fugacio.sim.models.package_for`). Left unset, the stream's components resolve
+to a Peng-Robinson `fugacio.thermo.CubicPackage`. Pass an NRTL/UNIFAC gamma-phi
+package, a PC-SAFT package, or a reference-fluid package instead and every unit
+operation downstream uses it for its energy balance as well as its phase split.
+`resolve_package` performs that resolution and checks that the package
+describes the stream's components in the stream's order.
 
 Sizing-grade physical properties are surfaced too: phase densities and
 volumetric flows (`liquid_density`, `vapor_volumetric_flow`),
@@ -38,7 +36,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import replace
 from functools import cache, partial
-from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -50,16 +47,11 @@ from fugacio.thermo import (
     PR,
     CubicEOS,
     CubicPackage,
-    EOSModel,
-    GammaPhiModel,
     PropertyPackage,
-    SAFTModel,
     component_arrays,
     cubic_package,
-    gamma_phi_package,
     get,
     ideal_gas_coeffs,
-    saft_package,
 )
 from fugacio.thermo import (
     gas_mixture_thermal_conductivity as _gas_k,
@@ -79,16 +71,13 @@ from fugacio.thermo import (
 from fugacio.thermo import (
     mixture_surface_tension as _surface_tension,
 )
-from fugacio.thermo import (
-    vapor_density as _vapor_density,
-)
 
 ArrayLike = Array | float
 CpCoeffs = tuple[Array, Array, Array, Array, Array]
 
-#: Anything a unit accepts as its thermodynamic method: a property package, a
-#: bare equilibrium model (upgraded on the fly), or ``None`` for the cubic default.
-Model = PropertyPackage | EOSModel | GammaPhiModel | SAFTModel | None
+#: What a unit accepts as its thermodynamic method: a property package, or
+#: ``None`` for the Peng-Robinson default over the stream's components.
+Model = PropertyPackage | None
 
 
 @cache
@@ -125,73 +114,21 @@ def default_package(
     )
 
 
-def as_package(model: Any, components: Sequence[str]) -> PropertyPackage:
-    """Upgrade an equilibrium model to a property package for ``components``.
-
-    A `PropertyPackage` is returned unchanged. An `EOSModel`, `GammaPhiModel`, or
-    `SAFTModel` (which know equilibrium but not energy) is completed with the
-    components' ideal-gas heat capacities into the matching package, so the
-    existing model factories in `fugacio.sim.models` can feed any unit.
-
-    Raises:
-        TypeError: if ``model`` is none of the supported kinds.
-    """
-    if isinstance(model, PropertyPackage):
-        return model
-    _, _, _, _, cp = _resolve(tuple(components))
-    if isinstance(model, EOSModel):
-        return replace(
-            cubic_package(model.tc, model.pc, model.omega, cp, kij=model.kij, eos=model.eos),
-            component_names=tuple(get(c).name for c in components),
-        )
-    if isinstance(model, GammaPhiModel):
-        return replace(
-            gamma_phi_package(
-                model.activity,
-                model.tc,
-                model.pc,
-                model.omega,
-                cp,
-                kij=model.kij,
-                eos=model.eos,
-                vapor=model.vapor,
-                poynting=model.poynting,
-                phi_saturation=model.phi_saturation,
-            ),
-            component_names=tuple(get(c).name for c in components),
-        )
-    if isinstance(model, SAFTModel):
-        return replace(
-            saft_package(model.params, model.tc, model.pc, model.omega, cp),
-            component_names=tuple(get(c).name for c in components),
-        )
-    raise TypeError(
-        f"unsupported thermodynamic model {type(model).__name__}; pass a PropertyPackage "
-        "(CubicPackage, GammaPhiPackage, SAFTPackage, HelmholtzPackage) or an "
-        "EOSModel / GammaPhiModel / SAFTModel"
-    )
-
-
-def resolve_package(
-    components: Sequence[str],
-    model: Model = None,
-    *,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
-) -> PropertyPackage:
+def resolve_package(components: Sequence[str], model: Model = None) -> PropertyPackage:
     """Pick the property package a unit should use for ``components``.
 
-    ``model`` wins when given (upgraded through `as_package` if it is a bare
-    equilibrium model); otherwise the cubic default built from ``eos`` / ``kij``.
+    ``model`` wins when given; otherwise the Peng-Robinson default.
 
     Raises:
-        ValueError: if the package's component count does not match the stream's.
+        TypeError: if ``model`` isn't a property package.
+        ValueError: if the package's components don't match the stream's.
     """
-    pkg = (
-        default_package(components, eos=eos, kij=kij)
-        if model is None
-        else as_package(model, components)
-    )
+    if model is not None and not isinstance(model, PropertyPackage):
+        raise TypeError(
+            f"unsupported thermodynamic model {type(model).__name__}; pass a PropertyPackage "
+            "(for example, fugacio.sim.package_for(components, 'nrtl'))"
+        )
+    pkg = default_package(components) if model is None else model
     if pkg.n_components != len(components):
         raise ValueError(
             f"property package describes {pkg.n_components} components but the stream has "
@@ -242,35 +179,24 @@ def _stream_property(stream: Stream, pkg: PropertyPackage, prop: str) -> Array:
     return jax.lax.cond(stream.phase_known, resolved, unspecified, None)
 
 
-def molar_enthalpy(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
+def molar_enthalpy(stream: Stream, *, model: Model = None) -> Array:
     """Molar enthalpy of the stream (J/mol), relative to the package's reference."""
-    pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return _stream_property(stream, pkg, "enthalpy")
+    return _stream_property(stream, resolve_package(stream.components, model), "enthalpy")
 
 
-def molar_entropy(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
+def molar_entropy(stream: Stream, *, model: Model = None) -> Array:
     """Molar entropy of the stream (J/mol/K), relative to the package's reference."""
-    pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return _stream_property(stream, pkg, "entropy")
+    return _stream_property(stream, resolve_package(stream.components, model), "entropy")
 
 
-def molar_volume(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
+def molar_volume(stream: Stream, *, model: Model = None) -> Array:
     """Two-phase-aware molar volume of the stream (m^3/mol)."""
-    pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
-    return _stream_property(stream, pkg, "volume")
+    return _stream_property(stream, resolve_package(stream.components, model), "volume")
 
 
-def vapor_fraction(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
-    """Equilibrium molar vapour fraction of the stream at its ``(T, P)``."""
-    pkg = resolve_package(stream.components, model, eos=eos, kij=kij)
+def vapor_fraction(stream: Stream, *, model: Model = None) -> Array:
+    """Molar vapour fraction: the retained inventory, else the equilibrium at ``(T, P)``."""
+    pkg = resolve_package(stream.components, model)
     return jax.lax.cond(
         stream.phase_known,
         lambda _: jnp.sum(jnp.asarray(stream.vapor_n)) / jnp.maximum(stream.total, 1e-300),
@@ -279,25 +205,19 @@ def vapor_fraction(
     )
 
 
-def enthalpy_flow(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
+def enthalpy_flow(stream: Stream, *, model: Model = None) -> Array:
     """Total enthalpy flow of the stream (W = J/s)."""
-    return stream.total * molar_enthalpy(stream, model=model, eos=eos, kij=kij)
+    return stream.total * molar_enthalpy(stream, model=model)
 
 
-def entropy_flow(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
+def entropy_flow(stream: Stream, *, model: Model = None) -> Array:
     """Total entropy flow of the stream (W/K)."""
-    return stream.total * molar_entropy(stream, model=model, eos=eos, kij=kij)
+    return stream.total * molar_entropy(stream, model=model)
 
 
-def volumetric_flow(
-    stream: Stream, *, model: Model = None, eos: CubicEOS = PR, kij: Array | None = None
-) -> Array:
+def volumetric_flow(stream: Stream, *, model: Model = None) -> Array:
     """Actual volumetric flow of the stream at its state (m^3/s)."""
-    return stream.total * molar_volume(stream, model=model, eos=eos, kij=kij)
+    return stream.total * molar_volume(stream, model=model)
 
 
 def molar_mass(stream: Stream) -> Array:
@@ -326,9 +246,11 @@ def liquid_density(stream: Stream) -> Array:
     return _liquid_density(_names(stream), stream.t, _composition(stream.n))
 
 
-def vapor_density(stream: Stream, *, eos: CubicEOS = PR) -> Array:
-    """Vapour mass density from the EOS at the stream's ``(T, P)`` (kg/m^3)."""
-    return _vapor_density(_names(stream), stream.t, stream.p, _composition(stream.n), eos=eos)
+def vapor_density(stream: Stream, *, model: Model = None) -> Array:
+    """Vapor mass density on the package's vapor branch at the stream's ``(T, P)`` (kg/m^3)."""
+    pkg = resolve_package(stream.components, model)
+    volume = pkg.volume(stream.t, stream.p, _composition(stream.n), phase="vapor")
+    return molar_mass(stream) * 1.0e-3 / volume
 
 
 def liquid_volumetric_flow(stream: Stream) -> Array:
@@ -336,9 +258,9 @@ def liquid_volumetric_flow(stream: Stream) -> Array:
     return mass_flow(stream) / liquid_density(stream)
 
 
-def vapor_volumetric_flow(stream: Stream, *, eos: CubicEOS = PR) -> Array:
-    """Volumetric flow if the stream is all vapour (m^3/s)."""
-    return mass_flow(stream) / vapor_density(stream, eos=eos)
+def vapor_volumetric_flow(stream: Stream, *, model: Model = None) -> Array:
+    """Volumetric flow if the stream is all vapor (m^3/s)."""
+    return mass_flow(stream) / vapor_density(stream, model=model)
 
 
 def liquid_viscosity(stream: Stream) -> Array:
@@ -372,6 +294,7 @@ def column_diameter_for(
     *,
     k_drum: ArrayLike = 0.07,
     flooding: ArrayLike = 0.8,
+    model: Model = None,
 ) -> Array:
     """Souders-Brown column/drum diameter sized from the actual stream states (m).
 
@@ -380,7 +303,7 @@ def column_diameter_for(
     its own temperature, the saturated-liquid view of the same material, a
     sensible drum approximation).
     """
-    rho_v = vapor_density(vapor)
+    rho_v = vapor_density(vapor, model=model)
     rho_l = liquid_density(liquid if liquid is not None else vapor)
     return column_diameter(
         vapor.total,

@@ -11,16 +11,16 @@ Clapeyron.jl cross-checks in ``test_saft_oracles.py``.
 import jax.numpy as jnp
 import pytest
 
-from fugacio.thermo import component_arrays
+from fugacio.thermo import component_arrays, get
+from fugacio.thermo.ideal import ideal_gas_coeffs
+from fugacio.thermo.package import SAFTPackage, saft_package
 from fugacio.thermo.saft import (
-    SAFTModel,
     alpha_residual,
     compressibility_factor,
     ln_fugacity_coefficients,
     molar_density,
     pressure,
     psat_saft,
-    saft_model,
     saft_parameters_for,
     segment_diameter,
     site_fractions,
@@ -34,10 +34,11 @@ def _wilson_guess(component: str, t: float) -> float:
     return pc * float(jnp.exp(5.373 * (1.0 + omega) * (1.0 - tc / t)))
 
 
-def _model(components: list[str]) -> SAFTModel:
+def _model(components: list[str]) -> SAFTPackage:
     arr = component_arrays(components)
     params = saft_parameters_for(components)
-    return saft_model(params, arr["tc"], arr["pc"], arr["omega"])
+    cp = ideal_gas_coeffs([get(c) for c in components])
+    return saft_package(params, arr["tc"], arr["pc"], arr["omega"], cp)
 
 
 # ---------------------------------------------------------------------------

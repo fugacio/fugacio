@@ -1,4 +1,4 @@
-"""Compile portable registered units into the existing flowsheet engines."""
+"""Registered case units as equation-oriented blocks."""
 
 from __future__ import annotations
 
@@ -11,24 +11,8 @@ from jax import Array
 
 from fugacio.sim.cases.registry import UnitDefinition, evaluate_unit
 from fugacio.sim.eo.blocks import Block, Context
-from fugacio.sim.flowsheet import Flowsheet, Partition
 from fugacio.sim.properties import molar_enthalpy
 from fugacio.sim.stream import Stream
-
-
-class CaseFlowsheet(Flowsheet):
-    """Fixed case topology with reusable maps and explicit dynamic feed inputs."""
-
-    def freeze_maps(self) -> None:
-        """Build callbacks before tracing; case definitions don't mutate afterward."""
-        self._case_maps = {
-            block: super(CaseFlowsheet, self)._block_map(block)
-            for block in self.partition()
-            if block.cyclic
-        }
-
-    def _block_map(self, block: Partition) -> Any:
-        return self._case_maps[block]
 
 
 @dataclass(frozen=True)

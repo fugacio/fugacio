@@ -5,6 +5,59 @@ structured solvers solve the same residual equations as their dense references.
 A short runtime doesn't establish convergence, derivative accuracy, or measured
 qualification. Failed runs and resource limits remain visible in saved evidence.
 
+## Compile-once kernels
+
+JAX compiles a program the first time it sees a new structure, and that
+compilation, not the arithmetic, dominates the first call to a process
+calculation. Fugacio arranges its calculations so a structure compiles once:
+
+- Every unit operation in `fugacio.sim.units` is one compiled kernel. The
+  property package and every operating value (temperatures, pressures, duties,
+  efficiencies, split fractions) are dynamic arguments, so a unit compiles once
+  per package structure and specification kind. A new operating point, or new
+  package parameters such as fitted NRTL coefficients, reuses the executable.
+  Changing the specification kind (a heater on `t_out` instead of `duty`) or the
+  package structure (another component count or method) compiles a new kernel.
+- Property-package solve methods (`flash_pt`, `stability`, the bubble and dew
+  calls, `flash_ph`, `mixture_enthalpy`, and so on) run through kernels cached
+  per method and static options, with the package as a dynamic argument. A
+  package whose pytree holds a non-array leaf, such as an unregistered
+  activity-model object, runs eagerly instead.
+- `Flowsheet` caches each recycle block's map, so solving again at a new
+  `theta` reuses the compiled recycle iteration. Registering a unit or a tear
+  clears the cache.
+- Saved-case unit templates are shared by every `CaseRunner` in a process,
+  keyed by the template's fixed settings, so another case with the same unit
+  structure reuses them.
+
+A new process compiles again. To keep compiled programs on disk and reuse them
+across processes (a CLI run, a sweep worker, a notebook restart), enable JAX's
+persistent compilation cache before the first calculation:
+
+```python
+from fugacio.sim import enable_compilation_cache
+
+enable_compilation_cache(".jax_cache")   # created if missing; returns the resolved path
+```
+
+By default it stores every program, however quickly it compiled, because
+process kernels are small individually but numerous; pass
+`min_compile_time_s` to store only slower ones. A later call also works: the
+cache is reinitialized so the next compilation uses it. The cache is keyed by
+the JAX version, the backend, and the exact program, so a stale entry is never
+reused for a different computation. It grows with every distinct program, so
+it's opt-in. The CLI enables it with `--jax-cache DIR` on `run`, `sweep`,
+`optimize`, `sensitivities`, `profile`, and `replay`, or with the
+`FUGACIO_JAX_CACHE` environment variable:
+
+```bash
+uv run fugacio run examples/process-cases/depropanizer.json --jax-cache .jax_cache
+export FUGACIO_JAX_CACHE="$PWD/.jax_cache"      # or set it once for every command
+```
+
+A warm cache reduces compilation time, not the peak memory each compilation
+needs.
+
 ## Numerical choices
 
 ```python
@@ -123,8 +176,8 @@ mixture energy solves after the profiles have already converged.
 uv run fugacio diagnose examples/process-cases/depropanizer.json
 ```
 
-Case runners share compiled unit templates when their numerical structure and
-fixed settings match. Each instance binds its own parameter values; renaming
+Case runners in one process share compiled unit templates when their numerical
+structure and fixed settings match. Each instance binds its own parameter values; renaming
 units, streams, or parameters doesn't require another executable. Scalar inputs
 keep their precision but use consistent JAX scalar types across cold starts,
 recycles, and derivative replays. Structural diagnostics report the instance

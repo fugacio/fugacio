@@ -17,10 +17,8 @@ from jax import Array
 
 from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
-from fugacio.thermo.acceptance import accepted_value
 from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
-from fugacio.thermo.implicit import newton_system_with_info
-from fugacio.thermo.package import flash_pt_with_info
+from fugacio.thermo.implicit import gate_derivative, newton_system_with_info
 from fugacio.thermo.reaction_system import ReactionSet, ReferenceRate
 
 
@@ -51,6 +49,16 @@ class ReactionResult(NamedTuple):
     temperature_profile: Array
     pressure_profile: Array
     rate_profile: Array
+
+    @property
+    def outlets(self) -> tuple[Stream]:
+        """The single outlet, as a flowsheet output tuple."""
+        return (self.outlet,)
+
+    @property
+    def heat(self) -> Array:
+        """Heat into the fluid (W)."""
+        return self.duty
 
     @property
     def converged(self) -> Array:
@@ -90,7 +98,7 @@ def _enthalpy(n: Array, t: Array, p: Array, package: Any, system: ReactionSet) -
 
 def _phase_error(n: Array, t: Array, p: Array, package: Any, system: ReactionSet) -> Array:
     z = n / jnp.maximum(jnp.sum(n), 1e-30)
-    solved = flash_pt_with_info(package, t, p, z)
+    solved = package.flash_pt_with_info(t, p, z)
     return jnp.where(
         solved.report.converged,
         jnp.abs(solved.value.beta - (1.0 if system.phase == "vapor" else 0.0)),
@@ -172,7 +180,7 @@ def _complete(
     if check:
         require_converged(final, "reactor")
     n, t, p, extent, duty, coordinate, ns, ts, ps, rates = jax.tree_util.tree_map(
-        lambda v: accepted_value(v, ok), (n, t, p, extent, duty, coordinate, ns, ts, ps, rates)
+        lambda v: gate_derivative(v, ok), (n, t, p, extent, duty, coordinate, ns, ts, ps, rates)
     )
     outlet = Stream(n, t, p, feed.components, n if system.phase == "vapor" else jnp.zeros_like(n))
     return ReactionResult(

@@ -67,8 +67,8 @@ def kij_from_database(components: list[str]) -> Array:
     """Assemble the symmetric Peng-Robinson ``k_ij`` matrix from curated pairs.
 
     Pairs without a curated value default to ``0`` (ideal van der Waals mixing).
-    The result is an ``(n, n)`` array suitable for
-    `fugacio.thermo.eos_model` / `fugacio.sim.eos_model_for`.
+    The result is an ``(n, n)`` array suitable for `fugacio.thermo.cubic_package`
+    (or ``package_for(..., kij=...)`` in `fugacio.sim`).
     """
     n = len(components)
     k = [[0.0] * n for _ in range(n)]

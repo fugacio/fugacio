@@ -93,73 +93,6 @@ def _residual_linearization(
     return value, lambda v: push(v, zeros), direction
 
 
-@partial(jax.custom_jvp, nondiff_argnums=(0, 4, 5))
-def bracketed_root(
-    residual: ResidualFn,
-    params: Any,
-    lo: Array,
-    hi: Array,
-    tol: float = 1e-12,
-    max_iter: int = 200,
-) -> Array:
-    """Solve a scalar ``residual(x, params) = 0`` for ``x`` in ``[lo, hi]`` by bisection.
-
-    The forward pass uses only residual *values*, so it is robust through the
-    poles and kinks that scalar equilibrium residuals (bubble/dew temperature,
-    Underwood roots, saturation lines) routinely exhibit at the bracket ends. The
-    root is differentiated with respect to the parameter pytree ``params`` by the
-    implicit function theorem in the ``custom_jvp`` rule below; the locators
-    ``lo``/``hi`` carry no gradient.
-
-    Args:
-        residual: Scalar function ``residual(x, params) -> r`` with a single sign
-            change on ``[lo, hi]``.
-        params: Differentiable parameter pytree forwarded to ``residual``.
-        lo: Lower bracket (``residual`` must straddle zero across ``[lo, hi]``).
-        hi: Upper bracket.
-        tol: Absolute width of the final bracket.
-        max_iter: Bisection iteration cap.
-
-    Returns:
-        The bracketed root ``x*``; differentiable with respect to ``params``.
-    """
-
-    def cond(carry: tuple[Array, Array, Array, Array]) -> Array:
-        lo_, hi_, _flo, i = carry
-        return ((hi_ - lo_) > tol) & (i < max_iter)
-
-    def body(carry: tuple[Array, Array, Array, Array]) -> tuple[Array, Array, Array, Array]:
-        lo_, hi_, flo, i = carry
-        mid = 0.5 * (lo_ + hi_)
-        fmid = residual(mid, params)
-        same = jnp.sign(fmid) == jnp.sign(flo)
-        lo_new = jnp.where(same, mid, lo_)
-        hi_new = jnp.where(same, hi_, mid)
-        flo_new = jnp.where(same, fmid, flo)
-        return lo_new, hi_new, flo_new, i + 1
-
-    flo0 = residual(lo, params)
-    init = (lo, hi, flo0, jnp.asarray(0))
-    lo_star, hi_star, _, _ = jax.lax.while_loop(cond, body, init)
-    return 0.5 * (lo_star + hi_star)
-
-
-@partial(bracketed_root.defjvp, symbolic_zeros=True)
-def _bracketed_root_jvp(
-    residual: ResidualFn,
-    tol: float,
-    max_iter: int,
-    primals: tuple[Any, Array, Array],
-    tangents: tuple[Any, Array, Array],
-) -> tuple[Array, Array]:
-    params, lo, hi = primals
-    params_dot, _, _ = tangents
-    root = bracketed_root(residual, params, lo, hi, tol, max_iter)
-    _, push, r_dot = _residual_linearization(residual, root, params, params_dot)
-    r_root = push(jnp.ones_like(root))
-    return root, -r_dot / r_root
-
-
 @partial(jax.custom_jvp, nondiff_argnums=(0, 3, 4, 5))
 def newton_root(
     residual: ResidualFn,
@@ -174,12 +107,16 @@ def newton_root(
     The forward Newton step uses the *autodiff* slope ``dr/dx`` and an optional
     ``damping`` (step multiplier in ``(0, 1]``) for stability; the converged root
     is differentiated with respect to ``params`` by the implicit function theorem
-    (the iteration itself is not traced). Prefer `bracketed_root` when a
-    reliable bracket is available; ``newton_root`` is for smooth residuals where a
-    good initial guess is cheap (saturation updates, Poynting corrections).
+    (the iteration itself is not traced).
+
+    This is the inner-loop primitive for density branches, where a solve is
+    repeated inside every property evaluation and the caller selects among
+    branches. It doesn't verify convergence: callers must check the residual at
+    the returned point (as the SAFT and reference-fluid branch selectors do)
+    before accepting it. Use `newton_root_with_info` for a checked scalar root.
 
     Returns:
-        The root ``x*``; differentiable with respect to ``params``.
+        The final iterate; differentiable with respect to ``params``.
     """
 
     def cond(carry: tuple[Array, Array, Array]) -> Array:
@@ -214,6 +151,37 @@ def _newton_root_jvp(
     _, push, r_dot = _residual_linearization(residual, x_star, params, params_dot)
     r_x = push(jnp.ones_like(x_star))
     return x_star, -r_dot / r_x
+
+
+@jax.custom_jvp
+def gate_derivative(value: Array, valid: Array) -> Array:
+    """Return ``value`` unchanged, with nonfinite derivatives unless ``valid``.
+
+    Use this when a solve's acceptance depends on checks made after its
+    iteration (a trivial solution, a domain limit, a physical audit). The primal
+    is retained for diagnosis; downstream optimizers can't consume its
+    sensitivity.
+    """
+    return value
+
+
+@gate_derivative.defjvp
+def _gate_derivative_jvp(primals: tuple[Array, Array], tangents: tuple[Any, Any]) -> tuple:
+    value, valid = primals
+    tangent, _ = tangents
+    return value, tangent * jnp.where(valid, 1.0, jnp.nan)
+
+
+def gate_tree(tree: Any, valid: Array) -> Any:
+    """Apply `gate_derivative` to every floating leaf of a pytree."""
+
+    def gate(leaf: Any) -> Any:
+        leaf = jnp.asarray(leaf)
+        if not jnp.issubdtype(leaf.dtype, jnp.inexact):
+            return leaf
+        return gate_derivative(leaf, valid)
+
+    return jax.tree_util.tree_map(gate, tree)
 
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 4))
@@ -382,6 +350,8 @@ def newton_system_with_info(
     lower: Array | None = None,
     upper: Array | None = None,
     jacobian: JacobianFn | None = None,
+    stall_tol: float = 0.0,
+    gate: bool = True,
 ) -> SolveResult:
     """Solve a square residual system and report convergence independently.
 
@@ -397,6 +367,11 @@ def newton_system_with_info(
         upper: Optional upper bounds used only during initialization and search.
         jacobian: Optional exact structured Jacobian factory ``(x, theta)``.
             It must describe the original residual, before the supplied scales.
+        stall_tol: Residual accepted when no Newton step can reduce it further,
+            i.e. at the floating-point floor of a cancelling residual. Zero (the
+            default) never accepts a stalled iterate.
+        gate: Give an unconverged root nonfinite derivatives. Pass ``False``
+            only when the caller selects among roots and gates the result.
 
     Returns:
         Best iterate and a :class:`SolveReport`. Bounds and scales are numerical
@@ -406,8 +381,8 @@ def newton_system_with_info(
     Raises:
         ValueError: If the tolerance or iteration cap is invalid.
     """
-    if tol <= 0 or max_iter < 0:
-        raise ValueError("tol must be positive and max_iter must be nonnegative")
+    if tol <= 0 or max_iter < 0 or stall_tol < 0:
+        raise ValueError("tolerances must be positive and max_iter must be nonnegative")
     x0 = jnp.asarray(x0, dtype=float)
     ones = jnp.ones_like(x0)
     sc = ones if scale is None else jnp.broadcast_to(jnp.asarray(scale), x0.shape)
@@ -417,12 +392,17 @@ def newton_system_with_info(
     args = jax.lax.stop_gradient((x0, theta, sc, rs, lo, hi))
     raw = _newton_iterations(residual, args[0], args[1], tol, max_iter, *args[2:], jacobian)
     valid_input = jnp.all((sc > 0) & (rs > 0) & jnp.isfinite(sc) & jnp.isfinite(rs) & (lo <= hi))
-    report = raw.report._replace(
-        status=jnp.where(valid_input, raw.report.status, SolveStatus.INVALID_INPUT)
-    )
+    status = raw.report.status
+    floor = (status == SolveStatus.STALLED) & (raw.report.residual_norm <= stall_tol)
+    status = jnp.where(floor, SolveStatus.CONVERGED, status)
+    report = raw.report._replace(status=jnp.where(valid_input, status, SolveStatus.INVALID_INPUT))
     report = jax.lax.stop_gradient(report)
     value = implicit_solution(
-        residual, jax.lax.stop_gradient(raw.value), theta, report.converged, jacobian
+        residual,
+        jax.lax.stop_gradient(raw.value),
+        theta,
+        report.converged if gate else jnp.asarray(True),
+        jacobian,
     )
     return SolveResult(value, report)
 
@@ -503,18 +483,47 @@ def bracketed_root_with_info(
     max_iter: int = 200,
     *,
     residual_tol: float = 1e-8,
+    relative_tol: float = 1e-6,
+    gate: bool = True,
 ) -> SolveResult:
     """Bisect a validated scalar bracket and check the resulting residual.
 
-    ``tol`` limits bracket width; ``residual_tol`` independently limits the
-    function residual in its own units. A sign change across a discontinuity
-    can reduce the width without satisfying the equation and is reported as a
-    failure. Endpoints that already solve the equation take zero iterations.
+    The forward pass uses only residual values, so it is robust through the
+    poles and kinks that scalar equilibrium residuals (bubble/dew temperature,
+    Underwood roots, saturation lines) exhibit near bracket ends. ``tol`` stops
+    the bisection by bracket width; acceptance is judged independently from the
+    residual at the returned point. A root is converged only when
+
+    * both endpoint residuals are finite and differ in sign (a bracket without a
+      sign change is reported as ``INVALID_INPUT`` rather than returning an
+      endpoint), and
+    * ``|residual(root)| <= max(residual_tol, relative_tol * min(|f(lo)|, |f(hi)|))``,
+      so a sign change across a pole or jump, whose residual stays large as the
+      bracket shrinks, is reported as a failure.
+
+    Endpoints that already solve the equation take zero iterations.
+
+    Args:
+        residual: Scalar function ``residual(x, params) -> r``.
+        params: Differentiable parameter pytree forwarded to ``residual``.
+        lo: Lower bracket; carries no derivative.
+        hi: Upper bracket; carries no derivative.
+        tol: Bracket-width stopping tolerance.
+        max_iter: Bisection iteration cap.
+        residual_tol: Absolute residual floor, in the residual's units.
+        relative_tol: Residual tolerance relative to the smaller endpoint residual.
+        gate: Give an unconverged root nonfinite derivatives. Pass ``False`` only
+            when the caller selects among several roots and gates the selected
+            value itself (a zero cotangent times a NaN gate is still NaN).
+
+    Returns:
+        The best root estimate and its report; the value is differentiable with
+        respect to ``params`` by the implicit function theorem.
 
     Raises:
         ValueError: If tolerances or the iteration limit are invalid.
     """
-    if tol <= 0 or residual_tol <= 0 or max_iter < 0:
+    if tol <= 0 or residual_tol <= 0 or relative_tol < 0 or max_iter < 0:
         raise ValueError("tolerances must be positive and max_iter nonnegative")
     lower, upper, theta = jax.lax.stop_gradient(
         (jnp.asarray(lo, dtype=float), jnp.asarray(hi, dtype=float), params)
@@ -526,45 +535,122 @@ def bracketed_root_with_info(
         & (lower <= upper)
         & ((jnp.sign(fl) != jnp.sign(fu)) | (fl == 0) | (fu == 0))
     )
+    allowed = jnp.maximum(residual_tol, relative_tol * jnp.minimum(jnp.abs(fl), jnp.abs(fu)))
+    allowed = jnp.where(jnp.isfinite(allowed), allowed, residual_tol)
     endpoint = (jnp.abs(fl) <= residual_tol) | (jnp.abs(fu) <= residual_tol)
 
     def cond(state: tuple) -> Array:
-        left, right, _, _, i = state
+        left, right, _, i = state
         return valid & ~endpoint & ((right - left) > tol) & (i < max_iter)
 
     def body(state: tuple) -> tuple:
-        left, right, fleft, _, i = state
+        left, right, fleft, i = state
         mid = (left + right) / 2
         fm = residual(mid, theta)
+        # A nonfinite midpoint moves the bracket left, toward the finite side.
         same = jnp.sign(fm) == jnp.sign(fleft)
         return (
             jnp.where(same, mid, left),
             jnp.where(same, right, mid),
             jnp.where(same, fm, fleft),
-            fm,
             i + 1,
         )
 
-    left, right, _, _, iterations = jax.lax.while_loop(
-        cond, body, (lower, upper, fl, fu, jnp.asarray(0))
-    )
+    left, right, _, iterations = jax.lax.while_loop(cond, body, (lower, upper, fl, jnp.asarray(0)))
     root = jnp.where(
         endpoint, jnp.where(jnp.abs(fl) <= residual_tol, lower, upper), (left + right) / 2
     )
+    final = residual(root, theta)
     report = residual_report(
-        jnp.atleast_1d(residual(root, theta)),
-        residual_tol,
-        iterations=iterations,
-        step_norm=right - left,
+        jnp.atleast_1d(final / allowed), 1.0, iterations=iterations, step_norm=right - left
     )
-    report = report._replace(status=jnp.where(valid, report.status, SolveStatus.INVALID_INPUT))
+    report = report._replace(
+        status=jnp.where(valid, report.status, SolveStatus.INVALID_INPUT),
+        residual_norm=jnp.abs(final),
+    )
+    report = jax.lax.stop_gradient(report)
     value = implicit_solution(
         lambda x, th: jnp.atleast_1d(residual(x[0], th)),
         jnp.atleast_1d(root),
         params,
-        report.converged,
+        report.converged if gate else jnp.asarray(True),
     )[0]
     return SolveResult(value, report)
+
+
+def scanned_root_with_info(
+    residual: ResidualFn,
+    params: Any,
+    lo: Array,
+    hi: Array,
+    tol: float = 1e-12,
+    max_iter: int = 200,
+    *,
+    points: int = 12,
+    residual_tol: float = 1e-8,
+    relative_tol: float = 1e-6,
+) -> SolveResult:
+    """Locate the first increasing sign change of ``residual`` on a grid, then bisect it.
+
+    Saturation residuals are often undefined (NaN) over part of a physically
+    wide bracket: a bubble pressure doesn't exist above a mixture's critical
+    region, and a reference state doesn't exist above a component's critical
+    temperature. A grid of ``points`` values finds the first cell whose ends
+    are finite with ``f <= 0 < f``; that cell is bisected by
+    `bracketed_root_with_info`. No such cell is reported as ``INVALID_INPUT``.
+
+    Returns:
+        The root and its report, differentiable with respect to ``params``.
+
+    Raises:
+        ValueError: If fewer than two grid points are requested.
+    """
+    if points < 2:
+        raise ValueError("a bracket scan needs at least two points")
+    lower, upper, theta = jax.lax.stop_gradient(
+        (jnp.asarray(lo, dtype=float), jnp.asarray(hi, dtype=float), params)
+    )
+    grid = jnp.linspace(lower, upper, points)
+    values = jax.vmap(lambda x: residual(x, theta))(grid)
+    rising = (
+        jnp.isfinite(values[:-1])
+        & jnp.isfinite(values[1:])
+        & (values[:-1] <= 0.0)
+        & (values[1:] > 0.0)
+    )
+    found = jnp.any(rising)
+    cell = jnp.argmax(rising)
+    solved = bracketed_root_with_info(
+        residual,
+        params,
+        jnp.where(found, grid[cell], lower),
+        jnp.where(found, grid[cell + 1], upper),
+        tol,
+        max_iter,
+        residual_tol=residual_tol,
+        relative_tol=relative_tol,
+    )
+    report = solved.report._replace(
+        status=jnp.where(found, solved.report.status, SolveStatus.INVALID_INPUT)
+    )
+    return SolveResult(gate_derivative(solved.value, report.converged), report)
+
+
+def bracketed_root(
+    residual: ResidualFn,
+    params: Any,
+    lo: Array,
+    hi: Array,
+    tol: float = 1e-12,
+    max_iter: int = 200,
+) -> Array:
+    """Return a validated bisection root with implicit forward and reverse derivatives.
+
+    The value is the best estimate of :func:`bracketed_root_with_info`. An
+    invalid bracket or an unconverged residual gives nonfinite derivatives; use
+    the ``_with_info`` form to accept or reject the value itself.
+    """
+    return bracketed_root_with_info(residual, params, lo, hi, tol, max_iter).value
 
 
 def newton_root_with_info(

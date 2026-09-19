@@ -31,21 +31,41 @@ from jax import Array
 
 from fugacio.thermo.constants import BAR, R
 from fugacio.thermo.eos import CubicEOS, ln_phi_pure, molar_volume
-from fugacio.thermo.equilibrium import psat_eos
+from fugacio.thermo.equilibrium import psat_eos_with_info
 
 ArrayLike = Array | float
 
 
-def saturation_pressures(eos: CubicEOS, t: ArrayLike, tc: Array, pc: Array, omega: Array) -> Array:
-    """Vector of pure-component saturation pressures ``Psat_i(T)`` (Pa) from the EOS.
+def saturation_pressures_with_info(
+    eos: CubicEOS, t: ArrayLike, tc: Array, pc: Array, omega: Array
+) -> tuple[Array, Array]:
+    """Pure-component saturation pressures (Pa) and per-component convergence.
 
-    Maps the differentiable `fugacio.thermo.equilibrium.psat_eos` over every
-    component, so the result carries Clapeyron ``dPsat/dT`` derivatives.
+    Maps `fugacio.thermo.equilibrium.psat_eos_with_info` over the components.
+    Values are always finite: a supercritical component carries its Wilson
+    extrapolation with a finite derivative, so a mixture model can hold an
+    absent supercritical component. Callers must reject states in which an
+    unconverged component is present.
+
+    Returns:
+        ``(psat, converged)``, each aligned with ``tc``.
     """
     tc = jnp.asarray(tc)
     pc = jnp.asarray(pc)
     omega = jnp.asarray(omega)
-    return jax.vmap(lambda a, b, c: psat_eos(eos, t, a, b, c))(tc, pc, omega)
+    solved = jax.vmap(lambda a, b, c: psat_eos_with_info(eos, t, a, b, c))(tc, pc, omega)
+    return solved.value, solved.report.converged
+
+
+def saturation_pressures(eos: CubicEOS, t: ArrayLike, tc: Array, pc: Array, omega: Array) -> Array:
+    """Pure-component saturation pressures ``Psat_i(T)`` (Pa); NaN where none exists.
+
+    The value-only form of `saturation_pressures_with_info`: each entry carries
+    Clapeyron ``dPsat/dT`` derivatives, and a component above its critical
+    temperature (or whose solve failed) is NaN.
+    """
+    psat, converged = saturation_pressures_with_info(eos, t, tc, pc, omega)
+    return jnp.where(converged, psat, jnp.nan)
 
 
 def antoine_psat(t: ArrayLike, a: ArrayLike, b: ArrayLike, c: ArrayLike) -> Array:
@@ -113,8 +133,10 @@ def liquid_reference_fugacity(
     Returns:
         ``(f_ref, psat)``: the reference fugacities and the saturation pressures
         used to build them (the latter is handy for K-value initialisation).
+        Supercritical components carry extrapolated values; gamma-phi callers
+        reject states in which such a component is present.
     """
-    psat = saturation_pressures(eos, t, tc, pc, omega)
+    psat, _ = saturation_pressures_with_info(eos, t, tc, pc, omega)
     f_ref = psat
     if phi_saturation:
         f_ref = f_ref * jax.vmap(

@@ -1,27 +1,16 @@
-"""Model bridge: turn component *names* + a method choice into an equilibrium model.
+"""Model bridge: turn component *names* + a method choice into a property package.
 
-The thermo equilibrium models (`EOSModel` and
-`GammaPhiModel`) take *array* constants (``tc``, ``pc``,
-``omega``) and, for gamma-phi, an activity model. A flowsheet, however, works in
-component *names*. This module resolves names to those arrays (reusing the cached
-lookup in `fugacio.sim.properties`) and assembles the activity model from the
-curated binary database (NRTL / UNIQUAC) or predictive group contribution
-(UNIFAC / modified UNIFAC), returning a ready, differentiable
-`EquilibriumModel`.
-
-The returned object is what the gamma-phi-aware unit operations
-(`fugacio.sim.separations`) and the T-x-y / P-x-y / azeotrope helpers
-(`fugacio.sim.diagrams`) consume, so a flowsheet can switch from
-Peng-Robinson to NRTL by swapping one constructor call, and stays end-to-end
-differentiable, including with respect to the activity-model parameters.
-
-`package_for` is the one-stop constructor for a full
-`fugacio.thermo.PropertyPackage` (equilibrium *and* energy) by method name:
-``"pr"``, ``"srk"``, ``"nrtl"``, ``"unifac"``, ``"pcsaft"``, ``"iapws"``, and so
-on. Its result is what every energy-balanced unit operation, the rigorous
-column, and the equation-oriented engine accept through their ``model``
-argument; `as_package` upgrades any of the bare equilibrium models above to the
-same interface.
+A flowsheet works in component *names*. `package_for` resolves those names to
+the curated constants (reusing the cached lookup in `fugacio.sim.properties`),
+assembles the activity model from the curated binary database (NRTL /
+UNIQUAC) or predictive group contribution (UNIFAC / modified UNIFAC), or the
+PC-SAFT and reference-fluid parameters, and returns a ready, differentiable
+`fugacio.thermo.PropertyPackage` (equilibrium *and* energy) with explicit
+parameter provenance. Its result is what every unit operation, the rigorous
+column, the phase diagrams, and the equation-oriented engine accept through
+their ``model`` argument, so a flowsheet switches from Peng-Robinson to NRTL by
+changing one method name, and stays end-to-end differentiable, including with
+respect to the thermodynamic parameters.
 """
 
 from __future__ import annotations
@@ -33,27 +22,23 @@ from typing import Any
 import jax
 from jax import Array
 
-from fugacio.sim.properties import _resolve, as_package, default_package, resolve_package
+from fugacio.sim.properties import _resolve, default_package, resolve_package
 from fugacio.thermo import (
     PR,
     RK,
     SRK,
     VDW,
     CubicEOS,
-    EOSModel,
-    GammaPhiModel,
     HelmholtzPackage,
     PropertyPackage,
-    SAFTModel,
-    eos_model,
-    gamma_phi_model,
+    gamma_phi_package,
     get,
     helmholtz_package,
     kij_from_database,
     modified_unifac_activity,
     nrtl_from_database,
     reference_fluid,
-    saft_model,
+    saft_package,
     saft_parameters_for,
     unifac_activity,
     uniquac_from_database,
@@ -76,82 +61,6 @@ METHODS: tuple[str, ...] = (
     "pcsaft",
     "iapws",
 )
-
-
-def eos_model_for(
-    components: Sequence[str],
-    *,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
-    use_database_kij: bool = False,
-) -> EOSModel:
-    """Build an `EOSModel` for named ``components``.
-
-    Pass ``use_database_kij=True`` to fill the binary interaction matrix from the
-    curated ChemSep Peng-Robinson ``k_ij`` set (`fugacio.thermo.kij_from_database`);
-    pairs without a curated value stay at zero. An explicit ``kij`` takes precedence.
-    """
-    tc, pc, omega, _, _ = _resolve(tuple(components))
-    if kij is None and use_database_kij:
-        kij = kij_from_database(list(components))
-    return eos_model(tc, pc, omega, kij=kij, eos=eos)
-
-
-def nrtl_model_for(
-    components: Sequence[str],
-    *,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
-    vapor: str = "ideal",
-    poynting: bool = False,
-    phi_saturation: bool = False,
-    strict: bool = False,
-    alpha_default: float = 0.3,
-) -> GammaPhiModel:
-    """Gamma-phi model with NRTL liquid from the curated binary database.
-
-    Pairs absent from the database default to athermal interaction unless
-    ``strict=True``; see `fugacio.thermo.nrtl_from_database`.
-    """
-    tc, pc, omega, _, _ = _resolve(tuple(components))
-    activity = nrtl_from_database(list(components), strict=strict, alpha_default=alpha_default)
-    return gamma_phi_model(
-        activity,
-        tc,
-        pc,
-        omega,
-        kij=kij,
-        eos=eos,
-        vapor=vapor,
-        poynting=poynting,
-        phi_saturation=phi_saturation,
-    )
-
-
-def uniquac_model_for(
-    components: Sequence[str],
-    *,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
-    vapor: str = "ideal",
-    poynting: bool = False,
-    phi_saturation: bool = False,
-    strict: bool = False,
-) -> GammaPhiModel:
-    """Gamma-phi model with UNIQUAC liquid from the curated database (with ``r``/``q``)."""
-    tc, pc, omega, _, _ = _resolve(tuple(components))
-    activity = uniquac_from_database(list(components), strict=strict)
-    return gamma_phi_model(
-        activity,
-        tc,
-        pc,
-        omega,
-        kij=kij,
-        eos=eos,
-        vapor=vapor,
-        poynting=poynting,
-        phi_saturation=phi_saturation,
-    )
 
 
 @dataclass(frozen=True)
@@ -181,69 +90,6 @@ jax.tree_util.register_dataclass(
 )
 
 
-def saft_model_for(
-    components: Sequence[str],
-    *,
-    kij: Array | None = None,
-    use_database_kij: bool = True,
-) -> SAFTModel:
-    """Build a PC-SAFT `fugacio.thermo.SAFTModel` for named components.
-
-    Resolves the component names to PC-SAFT parameters from the curated bank
-    (`fugacio.thermo.saft_parameters_for`) and to the critical constants used to
-    seed the flash K-values, returning a ready, differentiable
-    `fugacio.thermo.EquilibriumModel`. Switching a flowsheet to PC-SAFT, the
-    molecular-based route that handles associating fluids (water, alcohols), is
-    then a single constructor swap from `eos_model_for` / `nrtl_model_for`.
-
-    Args:
-        components: Component names present in the PC-SAFT parameter bank.
-        kij: Explicit ``(n, n)`` binary-correction matrix; takes precedence over
-            the curated bank.
-        use_database_kij: Fill binary corrections from the curated PC-SAFT
-            ``k_ij`` set when ``kij`` is not given.
-
-    Returns:
-        A `fugacio.thermo.SAFTModel` over the named components.
-
-    Raises:
-        KeyError: If any component lacks curated PC-SAFT parameters.
-    """
-    tc, pc, omega, _, _ = _resolve(tuple(components))
-    params = saft_parameters_for(list(components), kij=kij, use_database_kij=use_database_kij)
-    return saft_model(params, tc, pc, omega)
-
-
-def unifac_model_for(
-    components: Sequence[str],
-    *,
-    dortmund: bool = False,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
-    vapor: str = "ideal",
-    poynting: bool = False,
-    phi_saturation: bool = False,
-) -> GammaPhiModel:
-    """Gamma-phi model with a predictive UNIFAC liquid (no fitted parameters needed).
-
-    Set ``dortmund=True`` for modified UNIFAC (Dortmund) with temperature-dependent
-    group interactions; otherwise classic UNIFAC is used.
-    """
-    tc, pc, omega, _, _ = _resolve(tuple(components))
-    activity = UnifacModel(components=tuple(components), dortmund=dortmund)
-    return gamma_phi_model(
-        activity,
-        tc,
-        pc,
-        omega,
-        kij=kij,
-        eos=eos,
-        vapor=vapor,
-        poynting=poynting,
-        phi_saturation=phi_saturation,
-    )
-
-
 def helmholtz_package_for(component: str) -> HelmholtzPackage:
     """One-component reference-fluid package for a named pure fluid (water, CO2, ...).
 
@@ -255,60 +101,61 @@ def helmholtz_package_for(component: str) -> HelmholtzPackage:
     )
 
 
-def _package_for_unchecked(
-    components: Sequence[str],
-    method: str = "pr",
-    **options: Any,
-) -> PropertyPackage:
-    """Build the property package for named ``components`` by ``method``.
+_GAMMA_PHI_OPTIONS = frozenset({"eos", "kij", "vapor", "poynting", "phi_saturation"})
 
-    This is the constructor a flowsheet author reaches for. Every energy-balanced
-    unit (`fugacio.sim.units`), the rigorous column
-    (`fugacio.sim.distillation`), the two-sided heat exchanger, and the
-    equation-oriented engine take its result through their ``model`` argument.
 
-    Args:
-        components: Component names (from the curated database).
-        method: One of `METHODS`:
-
-            * ``"pr"`` / ``"srk"`` / ``"rk"`` / ``"vdw"``: phi-phi cubic package
-              (options: ``kij``, ``use_database_kij``);
-            * ``"nrtl"`` / ``"uniquac"``: gamma-phi package with the curated
-              binary parameters (options: ``vapor``, ``poynting``,
-              ``phi_saturation``, ``strict``, ``eos``, ``kij``, and
-              ``alpha_default`` for NRTL);
-            * ``"unifac"`` / ``"dortmund"``: gamma-phi package with predictive
-              (modified) UNIFAC (same options);
-            * ``"pcsaft"``: PC-SAFT package (options: ``kij``, ``use_database_kij``);
-            * ``"iapws"``: a single reference fluid (one component only).
-        **options: Forwarded to the underlying model factory as listed above.
-
-    Returns:
-        A `fugacio.thermo.PropertyPackage` over ``components``.
+def _build(names: tuple[str, ...], key: str, options: dict[str, Any]) -> PropertyPackage:
+    """The package for ``names`` by method ``key``, consuming its ``options``.
 
     Raises:
-        ValueError: for an unknown ``method`` or a multi-component ``"iapws"``.
+        TypeError: For an option the method doesn't accept.
+        ValueError: For an unknown method or a multi-component reference fluid.
     """
-    key = method.lower()
-    comps = list(components)
+    options = dict(options)
+
+    def take(allowed: frozenset[str]) -> dict[str, Any]:
+        unknown = sorted(set(options) - allowed)
+        if unknown:
+            raise TypeError(f"method {key!r} doesn't accept option(s) {unknown}")
+        return options
+
+    comps = list(names)
+    tc, pc, omega, _, cp = _resolve(names)
     if key in _CUBICS:
-        kij = options.get("kij")
-        if kij is None and options.get("use_database_kij", False):
+        opts = take(frozenset({"kij", "use_database_kij"}))
+        kij = opts.get("kij")
+        if kij is None and opts.get("use_database_kij", False):
             kij = kij_from_database(comps)
         return default_package(comps, eos=_CUBICS[key], kij=kij)
-    if key == "nrtl":
-        return as_package(nrtl_model_for(comps, **options), comps)
-    if key == "uniquac":
-        return as_package(uniquac_model_for(comps, **options), comps)
-    if key in ("unifac", "dortmund"):
-        return as_package(unifac_model_for(comps, dortmund=key == "dortmund", **options), comps)
+    if key in ("nrtl", "uniquac", "unifac", "dortmund"):
+        extra = {"nrtl": {"strict", "alpha_default"}, "uniquac": {"strict"}}.get(key, set())
+        opts = take(_GAMMA_PHI_OPTIONS | frozenset(extra))
+        activity: Any
+        if key == "nrtl":
+            activity = nrtl_from_database(
+                comps,
+                strict=opts.pop("strict", False),
+                alpha_default=opts.pop("alpha_default", 0.3),
+            )
+        elif key == "uniquac":
+            activity = uniquac_from_database(comps, strict=opts.pop("strict", False))
+        else:
+            activity = UnifacModel(components=names, dortmund=key == "dortmund")
+        return replace(
+            gamma_phi_package(activity, tc, pc, omega, cp, **opts), component_names=names
+        )
     if key == "pcsaft":
-        return as_package(saft_model_for(comps, **options), comps)
+        opts = take(frozenset({"kij", "use_database_kij"}))
+        params = saft_parameters_for(
+            comps, kij=opts.get("kij"), use_database_kij=opts.get("use_database_kij", True)
+        )
+        return replace(saft_package(params, tc, pc, omega, cp), component_names=names)
     if key in ("iapws", "helmholtz", "reference"):
+        take(frozenset())
         if len(comps) != 1:
             raise ValueError("the reference-fluid package describes exactly one pure component")
         return helmholtz_package_for(comps[0])
-    raise ValueError(f"unknown thermodynamic method {method!r}; choose one of {METHODS}")
+    raise ValueError(f"unknown thermodynamic method {key!r}; choose one of {METHODS}")
 
 
 def package_for(
@@ -319,17 +166,42 @@ def package_for(
     measured_fit: Any = None,
     **options: Any,
 ) -> PropertyPackage:
-    """Build a package with explicit parameter provenance and model assumptions.
+    """Build the property package for named ``components`` by ``method``.
 
-    Missing NRTL/UNIQUAC interactions raise by default. Pass
-    ``parameter_policy='allow_ideal'`` to explicitly permit zero interactions,
-    or choose a predictive method. The legacy explicit ``strict=False`` is an
-    equivalent opt-in. Cubic zero-kij assumptions remain visible in evidence.
+    This is the constructor a flowsheet author reaches for; every unit
+    operation, the rigorous column, the two-sided heat exchanger, the phase
+    diagrams, and the equation-oriented engine take its result through their
+    ``model`` argument.
 
-    A ``measured_fit`` is a converged MeasuredFit for binary NRTL. Its observed
-    bounds travel with the package; checked calculations reject extrapolation
-    unless their acceptance policy explicitly permits it. Curated tables have
-    unknown validation bounds, which are reported as unknown.
+    Args:
+        components: Component names (from the curated database).
+        method: One of `METHODS`:
+
+            * ``"pr"`` / ``"srk"`` / ``"rk"`` / ``"vdw"``: phi-phi cubic package
+              (options: ``kij``, ``use_database_kij``);
+            * ``"nrtl"`` / ``"uniquac"``: gamma-phi package with the curated
+              binary parameters (options: ``vapor``, ``poynting``,
+              ``phi_saturation``, ``eos``, ``kij``, and ``alpha_default`` for NRTL);
+            * ``"unifac"`` / ``"dortmund"``: gamma-phi package with predictive
+              (modified) UNIFAC (same options, no fitted parameters);
+            * ``"pcsaft"``: PC-SAFT package (options: ``kij``, ``use_database_kij``);
+            * ``"iapws"``: a single reference fluid (one component only).
+        parameter_policy: ``"strict"`` (default) raises for missing NRTL/UNIQUAC
+            interactions; ``"allow_ideal"`` explicitly permits zero interactions.
+            Cubic zero-kij assumptions remain visible in the package evidence.
+        measured_fit: A converged `fugacio.thermo.measured_regression.MeasuredFit`
+            for binary NRTL. Its observed bounds travel with the package, and
+            checked calculations reject extrapolation unless their acceptance
+            policy explicitly permits it.
+        **options: Method options as listed above.
+
+    Returns:
+        A `fugacio.thermo.PropertyPackage` with explicit provenance.
+
+    Raises:
+        ValueError: For an unknown method, an invalid policy, or an unusable fit.
+        TypeError: For an option the method doesn't accept.
+        KeyError: For missing curated parameters under the strict policy.
     """
     from fugacio.thermo.measured_regression import MeasuredFit
     from fugacio.thermo.provenance import PackageEvidence, PairEvidence, database_evidence
@@ -340,7 +212,9 @@ def package_for(
     if len(set(names)) != len(names) or not names:
         raise ValueError("package needs distinct components")
     key = method.lower()
-    allow = parameter_policy == "allow_ideal" or options.get("strict") is False
+    if "strict" in options:
+        raise TypeError("use parameter_policy='allow_ideal' instead of strict=False")
+    allow = parameter_policy == "allow_ideal"
     if measured_fit is not None:
         if key != "nrtl" or not isinstance(measured_fit, MeasuredFit) or len(names) != 2:
             raise ValueError("measured_fit requires a binary NRTL package")
@@ -351,8 +225,8 @@ def package_for(
                 "measured fits retain the exact ideal-vapor PR reference used in fitting"
             )
         activity = measured_fit.model((names[0], names[1]))
-        tc, pc, omega, _, _ = _resolve(names)
-        pkg = as_package(gamma_phi_model(activity, tc, pc, omega), names)
+        tc, pc, omega, _, cp = _resolve(names)
+        fitted = replace(gamma_phi_package(activity, tc, pc, omega, cp), component_names=names)
         xr = measured_fit.composition_range
         if names != measured_fit.components:
             xr = (1 - xr[1], 1 - xr[0])
@@ -369,10 +243,10 @@ def package_for(
             measured_fit.pressure_range,
             xr,
         )
-        return replace(pkg, evidence=evidence)  # type: ignore[type-var]
+        return replace(fitted, evidence=evidence)
     if key in ("nrtl", "uniquac"):
-        options.setdefault("strict", not allow)
-    pkg = _package_for_unchecked(names, key, **options)
+        options = {**options, "strict": not allow}
+    pkg = _build(names, key, options)
     evidence = database_evidence(
         names,
         key,
@@ -403,13 +277,7 @@ def package_for(
 __all__ = [
     "METHODS",
     "UnifacModel",
-    "as_package",
-    "eos_model_for",
     "helmholtz_package_for",
-    "nrtl_model_for",
     "package_for",
     "resolve_package",
-    "saft_model_for",
-    "unifac_model_for",
-    "uniquac_model_for",
 ]

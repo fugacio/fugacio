@@ -1,33 +1,38 @@
-"""Tangent-plane stability analysis for an arbitrary fugacity model.
+"""Tangent-plane stability analysis: does a phase split at all?
 
-A mixture of overall composition ``z`` is *stable* as a single phase only if no
-trial composition ``w`` lowers the Gibbs energy, i.e. if the (modified)
-tangent-plane distance
+A mixture of overall composition ``z`` is stable as a single phase only if no
+trial phase ``w`` lies below the Gibbs-energy tangent plane at ``z``, i.e. if the
+reduced tangent-plane distance
 
-    tm(w) = 1 + sum_i W_i (ln W_i + ln coeff_i(w) - d_i - 1),   d_i = ln z_i + ln coeff_i(z)
+    tpd(w) = sum_i w_i (ln w_i + ln coeff_i(w) - d_i),   d_i = ln z_i + ln coeff_i(z)
 
-stays non-negative at every stationary point (``w = W / sum W``). Here
-``coeff_i`` is whatever turns a composition into a fugacity: the activity
-coefficient ``gamma_i`` for a liquid activity model, or the fugacity coefficient
-``phi_i`` for an equation of state. Casting the test in terms of a generic
-``ln_coeff_fn`` makes one implementation serve both worlds.
+is non-negative at every stationary point. ``coeff_i`` is whatever turns a
+composition into a fugacity: the activity coefficient ``gamma_i`` of a liquid
+activity model, or the fugacity coefficient ``phi_i`` of any phase branch of a
+property package. Casting the test in terms of trial-phase functions lets one
+search serve every model, and lets a caller test against any reference phase
+(the feed's own lowest-Gibbs phase, or a returned flash phase).
 
-The companion of equilibrium: while `fugacio.thermo.equilibrium` answers
-"given that it splits, into what?", this module answers "does it split at all?",
-the test that decides whether a feed is one phase, needs a VLE flash, or (for
-a liquid activity model with a miscibility gap) needs the liquid-liquid solver in
-`fugacio.thermo.lle`. The most negative trial result also gives an excellent
-*initial guess* for those splits, which those modules consume directly.
+`tpd_search` is that one search: a damped successive substitution in
+``ln w`` from several starts on every trial branch, tracking the most negative
+distance observed. Components absent from the feed stay exactly absent, so
+feeds with zero entries are routine. A finite-start search can't prove a global
+minimum; the result reports whether every trial reached a stationary point, and
+a stability verdict is only established when it did.
+
+Package-level tests live on every `fugacio.thermo.package.PropertyPackage`
+(``stability``); `liquid_stability` tests a liquid against a second liquid for
+activity models and seeds `fugacio.thermo.lle.flash_lle`.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import NamedTuple
 
 import jax
 import jax.numpy as jnp
-from jax import Array
+from jax import Array, lax
 
 from fugacio.thermo.activity.models import ActivityModel
 
@@ -35,88 +40,136 @@ ArrayLike = Array | float
 LnCoeffFn = Callable[[Array], Array]
 
 
-class TangentPlaneResult(NamedTuple):
+class StabilityResult(NamedTuple):
     """Outcome of a tangent-plane stability search.
 
     Attributes:
-        stable: ``True`` if the feed is single-phase stable (no negative ``tm``).
-        tpd: The smallest modified tangent-plane distance found across all trials.
-        split: The (normalised) trial composition that achieved ``tpd``, a ready
-            initial guess for the incipient phase when the feed is unstable.
+        stable: ``True`` if no trial phase reached a distance below ``-tol``.
+        tpd: The most negative reduced tangent-plane distance observed.
+        trial: The final (normalized) composition of the most negative trial, a
+            ready initial guess for the incipient phase of an unstable feed.
+        branch: Index of the trial branch that produced ``trial`` (for package
+            tests, 0 is liquid-like and 1 is vapour-like).
+        converged: Whether every trial reached a finite stationary point. A
+            verdict of stability is established only when this is also true.
     """
 
     stable: Array
     tpd: Array
-    split: Array
+    trial: Array
+    branch: Array
+    converged: Array
+
+
+def _normalize(w: Array, support: Array) -> Array:
+    w = jnp.where(support, jnp.maximum(w, 0.0), 0.0)
+    return w / jnp.maximum(jnp.sum(w), 1e-300)
 
 
 def tangent_plane_distance(ln_coeff_fn: LnCoeffFn, z: Array, w: Array) -> Array:
-    """Gibbs tangent-plane distance of trial phase ``w`` relative to feed ``z``.
+    """Reduced tangent-plane distance of trial phase ``w`` relative to feed ``z``.
 
     ``tpd(w) = sum_i w_i (ln w_i + ln coeff_i(w) - ln z_i - ln coeff_i(z))``; a
     negative value means the trial phase ``w`` lies below the tangent plane at
-    ``z`` and the feed can lower its Gibbs energy by forming it.
+    ``z`` and the feed can lower its Gibbs energy by forming it. Components
+    absent from ``z`` must be absent from ``w``; they contribute nothing.
     """
     z = jnp.asarray(z)
     w = jnp.asarray(w)
-    d = jnp.log(z) + ln_coeff_fn(z)
-    return jnp.sum(w * (jnp.log(w) + ln_coeff_fn(w) - d))
+    support = z > 0
+    d = jnp.log(jnp.where(support, z, 1.0)) + ln_coeff_fn(z)
+    term = jnp.log(jnp.where(support, w, 1.0)) + ln_coeff_fn(w) - d
+    return jnp.sum(jnp.where(support, w * term, 0.0))
 
 
-def _run_trial(ln_coeff_fn: LnCoeffFn, d: Array, w0: Array, iters: int) -> tuple[Array, Array]:
-    """Successive-substitution trial from ``w0``; returns ``(tm, w_converged)``."""
-
-    def body(_: int, big_w: Array) -> Array:
-        w = big_w / jnp.sum(big_w)
-        return jnp.exp(d - ln_coeff_fn(w))
-
-    big_w = jax.lax.fori_loop(0, iters, body, w0)
-    w = big_w / jnp.sum(big_w)
-    tm = 1.0 + jnp.sum(big_w * (jnp.log(big_w) + ln_coeff_fn(w) - d - 1.0))
-    return tm, w
-
-
-def stability_analysis_general(
-    ln_coeff_fn: LnCoeffFn,
-    z: Array,
-    trials: Array,
+def tpd_search(
+    branches: Sequence[LnCoeffFn],
+    d: Array,
+    support: Array,
+    starts: Array,
     *,
-    iters: int = 50,
-    tol: float = 1e-8,
-) -> TangentPlaneResult:
-    """Michelsen stability test for a generic ``ln_coeff_fn`` and trial set.
+    iterations: int = 160,
+    tol: float = 1e-7,
+) -> StabilityResult:
+    """Search trial phases on every branch against the reference potentials ``d``.
 
     Args:
-        ln_coeff_fn: Maps a composition to ``ln(coeff_i)`` (``ln gamma`` or ``ln phi``)
-            at the fixed temperature/pressure of interest.
-        z: Feed composition.
-        trials: Stack of initial trial-phase compositions, shape ``(n_trials, n)``.
-        iters: Successive-substitution iterations per trial.
-        tol: Negative-``tm`` threshold below which the feed is declared unstable.
+        branches: Trial-phase functions ``w -> ln coeff(w)``, one per phase branch.
+        d: Reference potentials ``ln x_i + ln coeff_i(x)`` of the tested phase.
+        support: Components present in the tested system; others stay absent.
+        starts: Initial trial compositions, shape ``(n_starts, n)``.
+        iterations: Damped successive-substitution steps per start.
+        tol: Stationarity tolerance on trial compositions and the stability
+            threshold on the distance.
 
     Returns:
-        A `TangentPlaneResult`.
+        The most negative distance observed and its trial phase. The search is
+        a classification and carries no derivative.
     """
-    z = jnp.asarray(z)
-    trials = jnp.asarray(trials)
-    d = jnp.log(z) + ln_coeff_fn(z)
-    tms, ws = jax.vmap(lambda w0: _run_trial(ln_coeff_fn, d, w0, iters))(trials)
-    best = jnp.argmin(tms)
-    tpd = tms[best]
-    return TangentPlaneResult(stable=tpd >= -tol, tpd=tpd, split=ws[best])
+    branches = tuple(branches)
+    d, support, starts = lax.stop_gradient((jnp.asarray(d), jnp.asarray(support), starts))
+    d = jnp.where(support, d, 0.0)
+    starts = jax.vmap(lambda w: _normalize(w, support))(jnp.asarray(starts, dtype=float))
+
+    def composition(logw: Array) -> Array:
+        return jax.nn.softmax(jnp.where(support, logw, -jnp.inf))
+
+    def trial(fn: LnCoeffFn, w0: Array) -> tuple[Array, Array, Array]:
+        def distance(w: Array) -> Array:
+            term = jnp.log(jnp.maximum(w, 1e-300)) + fn(w) - d
+            return jnp.sum(jnp.where(support, w * term, 0.0))
+
+        def body(_: int, state: tuple[Array, Array]) -> tuple[Array, Array]:
+            logw, lowest = state
+            w = composition(logw)
+            proposed = jnp.clip(d - fn(w), -690.0, 690.0)
+            return 0.5 * logw + 0.5 * proposed, jnp.minimum(lowest, distance(w))
+
+        logw, lowest = lax.fori_loop(
+            0, iterations, body, (jnp.log(jnp.maximum(w0, 1e-300)), distance(w0))
+        )
+        w = composition(logw)
+        final = composition(d - fn(w))
+        ok = (jnp.max(jnp.abs(w - final)) <= tol) & jnp.all(jnp.isfinite(w))
+        value = jnp.minimum(lowest, distance(w))
+        # A nonfinite trial (a branch that doesn't exist at this state) offers no
+        # evidence of a split, but it does leave the verdict unestablished.
+        value = jnp.where(jnp.isfinite(value), value, jnp.inf)
+        return value, w, ok
+
+    results = [jax.vmap(lambda w0, fn=fn: trial(fn, w0))(starts) for fn in branches]
+    distances = jnp.stack([r[0] for r in results])
+    trials = jnp.stack([r[1] for r in results])
+    oks = jnp.stack([r[2] for r in results])
+    flat = jnp.argmin(distances)
+    branch, start = jnp.unravel_index(flat, distances.shape)
+    lowest = distances[branch, start]
+    return lax.stop_gradient(
+        StabilityResult(
+            stable=lowest >= -tol,
+            tpd=lowest,
+            trial=trials[branch, start],
+            branch=branch,
+            converged=jnp.all(oks),
+        )
+    )
 
 
-def _enrichment_trials(z: Array, *, strength: float = 0.9) -> Array:
-    """Trial compositions enriched toward each pure component (LLE seeds).
+def enrichment_starts(z: Array, *, strength: float = 0.95) -> Array:
+    """Trial compositions enriched toward each pure component, plus the feed."""
+    z = jnp.asarray(z, dtype=float)
+    spikes = strength * jnp.eye(z.shape[0]) + (1.0 - strength) * z[None, :]
+    return jnp.concatenate((z[None, :], spikes))
 
-    For each component ``i``, builds a composition that mixes the feed with a spike
-    toward pure ``i``, a robust starting set for detecting a miscibility gap.
-    """
-    z = jnp.asarray(z)
-    n = z.shape[0]
-    eye = jnp.eye(n)
-    spikes = (1.0 - strength) * z[None, :] + strength * eye
-    return spikes / jnp.sum(spikes, axis=1, keepdims=True)
+
+def feed_potentials(branches: Sequence[LnCoeffFn], z: Array, support: Array) -> Array:
+    """Reference potentials of the feed's lowest-Gibbs single-phase branch."""
+    z = jnp.asarray(z, dtype=float)
+    ln_z = jnp.log(jnp.where(support, z, 1.0))
+    values = jnp.stack([fn(z) for fn in branches])
+    gibbs = jnp.sum(jnp.where(support, z * (ln_z + values), 0.0), axis=1)
+    gibbs = jnp.where(jnp.isfinite(gibbs), gibbs, jnp.inf)
+    return ln_z + values[jnp.argmin(gibbs)]
 
 
 def liquid_stability(
@@ -124,17 +177,30 @@ def liquid_stability(
     t: ArrayLike,
     z: Array,
     *,
-    iters: int = 60,
-    tol: float = 1e-8,
-    strength: float = 0.9,
-) -> TangentPlaneResult:
+    iterations: int = 160,
+    tol: float = 1e-7,
+) -> StabilityResult:
     """Test a liquid of composition ``z`` for splitting into two liquids at ``T``.
 
-    Uses the activity coefficients as the ``ln_coeff_fn`` and trial phases enriched
+    Uses the activity coefficients as the trial function and starts enriched
     toward each pure component. A negative ``tpd`` flags a miscibility gap; the
-    returned ``split`` seeds `fugacio.thermo.lle.flash_lle`.
+    returned ``trial`` seeds `fugacio.thermo.lle.flash_lle`.
     """
-    trials = _enrichment_trials(z, strength=strength)
-    return stability_analysis_general(
-        lambda w: model.ln_gamma(w, t), z, trials, iters=iters, tol=tol
-    )
+    z = jnp.asarray(z, dtype=float)
+    support = z > 0
+
+    def ln_gamma(w: Array) -> Array:
+        return model.ln_gamma(w, t)
+
+    d = jnp.log(jnp.where(support, z, 1.0)) + ln_gamma(z)
+    return tpd_search((ln_gamma,), d, support, enrichment_starts(z), iterations=iterations, tol=tol)
+
+
+__all__ = [
+    "StabilityResult",
+    "enrichment_starts",
+    "feed_potentials",
+    "liquid_stability",
+    "tangent_plane_distance",
+    "tpd_search",
+]

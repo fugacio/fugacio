@@ -18,7 +18,12 @@ uv run fugacio run examples/process-cases/measured-heater.json --report measured
 uv run fugacio profile examples/process-cases/depropanizer.json examples/process-cases/depropanizer-profile.json
 uv run fugacio sensitivities examples/process-cases/ethanol-train.json examples/process-cases/ethanol-train-sensitivities.json
 uv run fugacio sensitivities examples/process-cases/heater-bank.json examples/process-cases/heater-bank-sensitivities.json
+uv run fugacio run examples/process-cases/jt-separator.json --report jt-separator.md
 ```
+
+`jt-separator` expands a rich natural gas from 90 bar to 25 bar across a
+Joule-Thomson valve and separates the chilled outlet in a flash drum at zero
+duty (an adiabatic drum). Its feed composition is illustrative.
 
 The first rigorous plant solve and gradient compilation can take tens of
 minutes and require substantial memory, particularly on Intel Macs. Studies
@@ -29,17 +34,20 @@ peak memory.
 The [performance guide](../../docs/performance.md) covers structured columns,
 explicit solver options, profiling, and isolated benchmarks with resource limits.
 
-To reuse compilation work across CLI invocations, enable JAX's persistent cache
-in your checkout before running the commands:
+To reuse compilation work across CLI invocations, pass `--jax-cache DIR` to
+`run`, `sweep`, `optimize`, `sensitivities`, `profile`, or `replay`, or set the
+`FUGACIO_JAX_CACHE` environment variable once for every command:
 
 ```bash
-export JAX_COMPILATION_CACHE_DIR="$PWD/.jax_cache"
+uv run fugacio run examples/process-cases/heater.json --jax-cache .jax_cache
+export FUGACIO_JAX_CACHE="$PWD/.jax_cache"
 ```
 
 Results go to `.fugacio-cases` unless `--workspace` selects another directory.
 The printed `artifact_id` identifies a saved run or study. Use `fugacio inspect`
-to reopen it, and `fugacio compare` to compare compatible baseline and candidate
-runs. Failed points remain visible in study manifests.
+to reopen it (`--report` renders any artifact as Markdown), and
+`fugacio compare` to compare compatible baseline and candidate runs. Failed
+points remain visible in study manifests.
 
 The recycle example declares both split fractions. If those defaults are
 edited, update both so they sum to one. The temperature parameter can be swept
@@ -65,4 +73,4 @@ uv run fugacio optimize examples/process-cases/reactive-separation.json examples
 ```
 
 See [reactive workflows](../../docs/reactive-workflows.md) for rate units,
-thermal references, phase restrictions, numerical acceptance, and API migration.
+thermal references, phase restrictions, and numerical acceptance.

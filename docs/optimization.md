@@ -175,15 +175,25 @@ final answer plus a full transcript. Swap in a real provider to go live.
 
 ```python
 from fugacio.copilot import run_llm_agent
-from fugacio.copilot.llm import OpenAIProvider   # needs the `openai` extra
+from fugacio.copilot.llm import AnthropicProvider, OpenAIProvider   # need the `llm` extra
 
 result = run_llm_agent(
     "Size and cost a cooler that removes 1 MW with cooling water.",
-    OpenAIProvider(model="gpt-4o-mini"),
+    OpenAIProvider(model="gpt-5-mini"),     # or AnthropicProvider(), which defaults to claude-opus-5
 )
 result.answer        # natural-language summary
 result.transcript    # ordered tool calls + results
+result.stop_reason   # "answer", "budget", "refusal", or "max_tokens"
 ```
+
+The providers send a sampling `temperature` only when you pass one, since
+recent reasoning models reject it, and cap each reply at 16,000 output tokens
+by default (`max_tokens`). Failed tool calls go back to the model flagged as
+errors, so it can correct its arguments. A refused reply, or one cut off at
+the token cap, ends the loop with that `stop_reason` instead of an answer, and a
+paused turn is resent so the model can finish it. The Anthropic provider also
+replays thinking blocks verbatim and requests Anthropic's server-side refusal
+fallbacks; pass `fallbacks=None` on platforms that don't offer them.
 
 Finally, `fugacio.copilot.report` turns results into Markdown an engineer expects:
 `stream_table`, `summarize_optimization`, `summarize_economics`, and

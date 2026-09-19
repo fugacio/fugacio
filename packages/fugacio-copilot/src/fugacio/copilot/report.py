@@ -16,6 +16,7 @@ from fugacio.sim import Stream, bubble_pressure
 
 if TYPE_CHECKING:  # avoid any import-order coupling at runtime
     from fugacio.copilot.agent import AgentResult
+    from fugacio.copilot.design_agent import DesignAgentResult
     from fugacio.sim import EquipmentCost
 
 Antoine = tuple[float, float, float]
@@ -255,14 +256,38 @@ def summarize_mpc_simulation(result: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def summarize_transcript(result: AgentResult, *, max_chars: int = 200) -> str:
-    """Render an agent run (its tool calls and final answer) as a Markdown report."""
+def summarize_transcript(result: AgentResult | DesignAgentResult, *, max_chars: int = 200) -> str:
+    """Render an agent run (its tool calls, events, and final answer) as a Markdown report.
+
+    Tool calls render with their arguments and clipped results. Entries without
+    a ``"tool"`` key, such as the design agent's ``unverified_text`` events,
+    render with their event name, whether the text was accepted, and the clipped
+    content.
+
+    Args:
+        result: A `run_agent` / `run_llm_agent` or `run_design_agent` result.
+        max_chars: Characters kept from each tool result or event content.
+
+    Returns:
+        The Markdown report.
+    """
     lines = ["### Copilot run", ""]
-    for i, step in enumerate(result.transcript, start=1):
-        args = ", ".join(f"{k}={v!r}" for k, v in step["arguments"].items())
-        result_str = str(step["result"])
-        if len(result_str) > max_chars:
-            result_str = result_str[:max_chars] + "..."
-        lines.append(f"{i}. **{step['tool']}**({args}) -> `{result_str}`")
+    for i, entry in enumerate(result.transcript, start=1):
+        if "tool" in entry:
+            args = ", ".join(f"{k}={v!r}" for k, v in entry.get("arguments", {}).items())
+            lines.append(
+                f"{i}. **{entry['tool']}**({args}) -> `{_clip(entry.get('result'), max_chars)}`"
+            )
+            continue
+        event = str(entry.get("event", "event"))
+        if "accepted" in entry:
+            event += " (accepted)" if entry["accepted"] else " (not accepted)"
+        lines.append(f"{i}. _{event}_: `{_clip(entry.get('content', ''), max_chars)}`")
     lines += ["", f"**Answer:** {result.answer}"]
     return "\n".join(lines)
+
+
+def _clip(value: Any, max_chars: int) -> str:
+    """``str(value)``, cut to ``max_chars`` characters with a trailing ellipsis."""
+    text = str(value)
+    return text[:max_chars] + "..." if len(text) > max_chars else text

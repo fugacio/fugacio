@@ -34,7 +34,8 @@ from jax import Array
 
 from fugacio.sim.optimize import minimize
 from fugacio.sim.stream import Stream
-from fugacio.thermo.implicit import bracketed_root, newton_system
+from fugacio.thermo.diagnostics import nan_unless_converged
+from fugacio.thermo.implicit import bracketed_root_with_info, newton_system_with_info
 
 ArrayLike = Array | float
 
@@ -117,7 +118,8 @@ def meet_spec(
         max_iter: Iteration cap.
 
     Returns:
-        The manipulated value meeting the spec; differentiable in ``theta``.
+        The manipulated value meeting the spec, differentiable in ``theta``; NaN
+        when the search fails (no sign change on ``[lo, hi]``, or no convergence).
     """
     tgt = jnp.asarray(target)
 
@@ -125,16 +127,24 @@ def meet_spec(
         return measure(u, th) - tgt
 
     if lo is not None and hi is not None:
-        return bracketed_root(residual, theta, jnp.asarray(lo), jnp.asarray(hi), tol, max_iter)
+        bracketed = bracketed_root_with_info(
+            residual,
+            theta,
+            jnp.asarray(lo, dtype=float),
+            jnp.asarray(hi, dtype=float),
+            tol,
+            max_iter,
+        )
+        return nan_unless_converged(bracketed.value, bracketed.report)
     # Newton on a 1-vector keeps the same implicit-diff machinery as multi-spec.
-    root = newton_system(
+    solved = newton_system_with_info(
         lambda u, th: jnp.atleast_1d(residual(u[0], th)),
         jnp.atleast_1d(jnp.asarray(u0, dtype=float)),
         theta,
         tol,
         max_iter,
     )
-    return root[0]
+    return nan_unless_converged(solved.value[0], solved.report)
 
 
 def solve_design(
@@ -171,7 +181,11 @@ def solve_design(
         return SpecResult(dict(theta), streams, jnp.zeros((0,)), jnp.zeros((0,)), jnp.asarray(True))
 
     keys = [s.manipulated for s in specs]
-    u0 = jnp.array([float(jnp.asarray(theta[k])) for k in keys])
+    lower = jnp.array([s.lo for s in specs], dtype=float)
+    upper = jnp.array([s.hi for s in specs], dtype=float)
+    if bool(jnp.any(lower > upper)):
+        raise ValueError("each design spec needs lo <= hi")
+    u0 = jnp.clip(jnp.array([float(jnp.asarray(theta[k])) for k in keys]), lower, upper)
     targets = jnp.array([s.target for s in specs])
     measures = tuple(s.measure for s in specs)
 
@@ -186,12 +200,13 @@ def solve_design(
         measured = jnp.array([m(streams) for m in measures])
         return measured - targets
 
-    u_star = newton_system(residual, u0, theta, tol, max_iter)
+    solved = newton_system_with_info(residual, u0, theta, tol, max_iter, lower=lower, upper=upper)
+    u_star = solved.value
     theta_star = _inject(theta, u_star)
     streams = simulate(theta_star)
     res = jnp.array([m(streams) for m in measures]) - targets
-    converged = jnp.max(jnp.abs(res)) <= jnp.sqrt(jnp.asarray(tol))
-    return SpecResult(theta_star, streams, u_star, res, converged)
+    within = jnp.all((u_star >= lower) & (u_star <= upper))
+    return SpecResult(theta_star, streams, u_star, res, solved.report.converged & within)
 
 
 def controller(

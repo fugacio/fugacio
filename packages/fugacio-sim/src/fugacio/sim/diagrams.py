@@ -1,15 +1,15 @@
-"""Binary phase-diagram data and azeotrope finding for an equilibrium model.
+"""Binary phase-diagram data and azeotrope finding for a property package.
 
 Conceptual design and column screening lean on the binary picture: the P-x-y and
 T-x-y envelopes and, above all, *where the azeotrope is* (it bounds what ordinary
-distillation can reach). These helpers turn any binary
-`EquilibriumModel` into:
+distillation can reach). These helpers turn any binary property package (see
+`fugacio.sim.package_for`) into:
 
 * `pxy_diagram` / `txy_diagram`: the bubble (liquid) and the
   equilibrium-vapour curves on a composition grid, from one bubble sweep each; and
 * `azeotrope_pressure` / `azeotrope_temperature`: the azeotropic
   composition (where ``y_1 = x_1``) at fixed ``T`` or ``P``, returned with an
-  ``exists`` flag so a non-azeotropic system is reported, not faked.
+  ``exists`` flag and a NaN locus for a non-azeotropic system, so none is faked.
 
 All outputs are differentiable: the diagram arrays through the bubble solves, and
 the azeotrope locus through the bracketed root's implicit derivative, so an
@@ -26,7 +26,8 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.thermo.implicit import bracketed_root
+from fugacio.thermo.diagnostics import nan_unless_converged
+from fugacio.thermo.implicit import bracketed_root_with_info
 
 ArrayLike = Array | float
 
@@ -81,15 +82,14 @@ class TxyDiagram(NamedTuple):
 
 
 class AzeotropeResult(NamedTuple):
-    """A binary azeotrope locus (or the best bracketed point if none exists).
+    """A binary azeotrope locus.
 
     Attributes:
-        exists: ``True`` if ``y_1 - x_1`` changes sign on the search bracket (a
-            genuine azeotrope); ``False`` means the returned point is just a
-            bracket end and should be ignored.
-        x1: Azeotropic composition (``y_1 = x_1`` there).
-        t: Temperature (K).
-        p: Pressure (Pa).
+        exists: ``True`` if ``y_1 - x_1`` changes sign on the search bracket and
+            the root converged (a genuine azeotrope).
+        x1: Azeotropic composition (``y_1 = x_1`` there); NaN unless ``exists``.
+        t: Temperature (K); NaN unless ``exists`` (for a fixed-pressure search).
+        p: Pressure (Pa); NaN unless ``exists`` (for a fixed-temperature search).
     """
 
     exists: Array
@@ -154,19 +154,21 @@ def azeotrope_pressure(
 
     Brackets the root of ``y_1(x_1) - x_1`` from the bubble-pressure relation. The
     returned ``x1`` and ``p`` are differentiable with respect to the model
-    parameters; check ``exists`` before trusting them.
+    parameters, and NaN when the bracket holds no azeotrope.
     """
 
     def resid(x1: Array, m: _BinaryModel) -> Array:
         _, y = m.bubble_pressure(t, jnp.array([x1, 1.0 - x1]))
         return y[0] - x1
 
-    f_lo = resid(jnp.asarray(x_lo), model)
-    f_hi = resid(jnp.asarray(x_hi), model)
-    exists = jnp.sign(f_lo) != jnp.sign(f_hi)
-    x_az = bracketed_root(resid, model, jnp.asarray(x_lo), jnp.asarray(x_hi), tol, max_iter)
+    solved = bracketed_root_with_info(
+        resid, model, jnp.asarray(x_lo), jnp.asarray(x_hi), tol, max_iter
+    )
+    x_az = nan_unless_converged(solved.value, solved.report)
     p_az, _ = model.bubble_pressure(t, jnp.array([x_az, 1.0 - x_az]))
-    return AzeotropeResult(exists=exists, x1=x_az, t=jnp.asarray(t), p=p_az)
+    return AzeotropeResult(
+        exists=solved.report.converged, x1=x_az, t=jnp.asarray(t, dtype=float), p=p_az
+    )
 
 
 def azeotrope_temperature(
@@ -190,12 +192,14 @@ def azeotrope_temperature(
         _, y = m.bubble_temperature(p, jnp.array([x1, 1.0 - x1]), t_min=t_min, t_max=t_max)
         return y[0] - x1
 
-    f_lo = resid(jnp.asarray(x_lo), model)
-    f_hi = resid(jnp.asarray(x_hi), model)
-    exists = jnp.sign(f_lo) != jnp.sign(f_hi)
-    x_az = bracketed_root(resid, model, jnp.asarray(x_lo), jnp.asarray(x_hi), tol, max_iter)
+    solved = bracketed_root_with_info(
+        resid, model, jnp.asarray(x_lo), jnp.asarray(x_hi), tol, max_iter
+    )
+    x_az = nan_unless_converged(solved.value, solved.report)
     t_az, _ = model.bubble_temperature(p, jnp.array([x_az, 1.0 - x_az]), t_min=t_min, t_max=t_max)
-    return AzeotropeResult(exists=exists, x1=x_az, t=t_az, p=jnp.asarray(p))
+    return AzeotropeResult(
+        exists=solved.report.converged, x1=x_az, t=t_az, p=jnp.asarray(p, dtype=float)
+    )
 
 
 class ResidueCurve(NamedTuple):
@@ -257,8 +261,8 @@ def residue_curve(
     solve (`_bubble_ty`) reused across every step and every curve.
 
     Args:
-        model: Any object with a ``bubble_temperature(p, x)`` method (e.g. an
-            `EquilibriumModel` from `fugacio.sim.models`).
+        model: A property package (see `fugacio.sim.package_for`), or any
+            object with a ``bubble_temperature(p, x)`` method.
         x0: Starting liquid composition, shape ``(n,)``.
         p: Pressure (Pa).
         steps: Number of integration steps.

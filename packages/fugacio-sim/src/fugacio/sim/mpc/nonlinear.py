@@ -36,21 +36,22 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.sim.dynamics.integrate import odeint_final
-from fugacio.sim.optimize import OptimizeResult, argmin
+from fugacio.sim.optimize import OptimizeResult, argmin_with_info
 
 ArrayLike = Array | float
 
 
-def _all_finite(v: ArrayLike) -> bool:
-    """Whether every entry of a *static* bound is finite, as a plain Python bool.
+def _any_finite(v: ArrayLike) -> bool:
+    """Whether any entry of a *static* bound is finite, as a plain Python bool.
 
     Whether a move-rate limit is enforced fixes the optimization's structure, so it
     must be a Python bool (not a traced value); reading the concrete bound here lets
-    the controller be built inside a traced function (e.g. ``tune_mpc``).
+    the controller be built inside a traced function (e.g. ``tune_mpc``). A limit on
+    some inputs only is enforced on those inputs.
     """
     data: Any = v.tolist() if hasattr(v, "tolist") else v  # concrete array -> Python floats
     if isinstance(data, (list, tuple)):
-        return all(_all_finite(x) for x in data)
+        return any(_any_finite(x) for x in data)
     return math.isfinite(float(data))
 
 
@@ -231,10 +232,12 @@ class NonlinearMPC:
             def ineq(u_seq: Array, _theta: Any) -> Array:
                 seq = jnp.concatenate([u_prev_a[None, :], u_seq], axis=0)
                 d = seq[1:] - seq[:-1]
-                limit = jnp.broadcast_to(self.du_max, d.shape)
+                # An input without a rate limit gets a constraint that never binds.
+                finite = jnp.where(jnp.isfinite(self.du_max), self.du_max, 1e12)
+                limit = jnp.broadcast_to(finite, d.shape)
                 return jnp.concatenate([(d - limit).ravel(), (-d - limit).ravel()])
 
-        u_star = argmin(
+        u_star, primal = argmin_with_info(
             self._cost,
             u0,
             (x0, theta),
@@ -243,17 +246,14 @@ class NonlinearMPC:
             method=self.method,
             max_iter=self.max_iter,
         )
-        # Recompute trajectory/cost/result at the optimum (cheap, and gives diagnostics).
+        if not any(
+            isinstance(leaf, jax.core.Tracer) for leaf in jax.tree_util.tree_leaves((x0, theta))
+        ):
+            primal.check()
+        # Recompute the trajectory and cost at the optimum; the diagnostics are the solver's.
         traj = self.rollout(x0, u_star, theta)
         cost = self._cost(u_star, (x0, theta))
-        res = OptimizeResult(
-            x=u_star,
-            fun=cost,
-            grad_norm=jnp.asarray(0.0),
-            n_iter=jnp.asarray(self.max_iter),
-            converged=jnp.asarray(True),
-            constraint_violation=jnp.asarray(0.0),
-        )
+        res = primal._replace(x=u_star, fun=cost)
         return NMPCResult(u=u_star[0], u_sequence=u_star, trajectory=traj, cost=cost, result=res)
 
     def step(
@@ -320,7 +320,7 @@ def nonlinear_mpc(
         u_min=_vec(u_min),
         u_max=_vec(u_max),
         du_max=du_vec,
-        has_rate_limit=_all_finite(du_max),
+        has_rate_limit=_any_finite(du_max),
         method=method,
         max_iter=int(max_iter),
     )

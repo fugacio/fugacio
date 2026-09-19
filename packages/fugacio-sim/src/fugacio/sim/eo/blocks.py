@@ -57,8 +57,7 @@ from fugacio.sim.units import (
 from fugacio.sim.units import (
     valve as _valve_unit,
 )
-from fugacio.thermo import CubicEOS, PropertyPackage
-from fugacio.thermo.eos import PR
+from fugacio.thermo import PropertyPackage
 
 ArrayLike = Array | float
 
@@ -67,6 +66,10 @@ ArrayLike = Array | float
 #: can be made a differentiable parameter, or the manipulated variable of a
 #: design spec, simply by naming it).
 Spec = float | Array | str
+
+
+#: Temperature cross (K) an exchanger solution may show before it's infeasible.
+_APPROACH_TOLERANCE = 1e-3
 
 
 @dataclass(frozen=True)
@@ -104,17 +107,12 @@ class Context:
 
     Attributes:
         components: The flowsheet's component names (shared by all streams).
-        eos: Cubic equation of state for the default package (when ``model`` is
-            unset).
-        kij: Optional binary-interaction matrix for the default package.
         scales: Residual / variable scales (see `Scales`).
-        model: Property package (or bare equilibrium model) used for every
-            equilibrium / property call; ``None`` selects the cubic default.
+        model: Property package used for every equilibrium / property call;
+            ``None`` selects Peng-Robinson over ``components``.
     """
 
     components: tuple[str, ...]
-    eos: CubicEOS = PR
-    kij: Array | None = None
     scales: Scales = field(default_factory=Scales)
     model: Model = None
     # Local to one residual assembly. Pure-fluid enthalpy coordinates are
@@ -129,7 +127,7 @@ class Context:
     @property
     def package(self) -> PropertyPackage:
         """The resolved property package every block evaluates properties with."""
-        return resolve_package(self.components, self.model, eos=self.eos, kij=self.kij)
+        return resolve_package(self.components, self.model)
 
 
 def resolve(spec: Spec, params: Mapping[str, Any]) -> Array:
@@ -266,6 +264,21 @@ class Block:
         """Scaled residual vector for the block (length `n_residuals`)."""
         raise NotImplementedError
 
+    def feasible(
+        self,
+        streams: Mapping[str, Stream],
+        aux: Mapping[str, Array],
+        params: Mapping[str, Any],
+        ctx: Context,
+    ) -> Array:
+        """Whether a solved block state is physically realizable (checked after solving).
+
+        The equations can have solutions no equipment achieves (a heat
+        exchanger with a temperature cross). A block that can tell overrides
+        this; the flowsheet reports an infeasible solution as not converged.
+        """
+        return jnp.asarray(True)
+
     # -- shared residual helpers ------------------------------------------- #
     def _material(self, out: Stream, inflow: Array, ctx: Context) -> Array:
         """Component material balance ``out.n - inflow`` (scaled by the flow scale)."""
@@ -311,7 +324,7 @@ class Mixer(Block):
         ins = [streams[name] for name in self.inlets]
         t = None if self.t is None else resolve(self.t, params)
         p = None if self.p is None else resolve(self.p, params)
-        return {self.outlets[0]: mix(ins, t=t, p=p, model=ctx.model, eos=ctx.eos, kij=ctx.kij)}
+        return {self.outlets[0]: mix(ins, t=t, p=p, model=ctx.model)}
 
     def residuals(
         self,
@@ -431,8 +444,6 @@ class Heater(Block):
             duty=duty,
             dp=resolve(self.dp, params),
             model=ctx.model,
-            eos=ctx.eos,
-            kij=ctx.kij,
         )
         return {self.outlets[0]: res.outlet}
 
@@ -477,9 +488,7 @@ class Valve(Block):
     ) -> dict[str, Stream]:
         """Evaluate via `fugacio.sim.units.valve`."""
         feed = streams[self.inlets[0]]
-        out = _valve_unit(
-            feed, resolve(self.p_out, params), model=ctx.model, eos=ctx.eos, kij=ctx.kij
-        )
+        out = _valve_unit(feed, resolve(self.p_out, params), model=ctx.model)
         return {self.outlets[0]: out}
 
     def residuals(
@@ -526,8 +535,6 @@ class Pump(Block):
             resolve(self.p_out, params),
             efficiency=resolve(self.efficiency, params),
             model=ctx.model,
-            eos=ctx.eos,
-            kij=ctx.kij,
         )
         return {self.outlets[0]: res.outlet}
 
@@ -612,8 +619,6 @@ class _Machine(Block):
             resolve(self.p_out, params),
             efficiency=resolve(self.efficiency, params),
             model=ctx.model,
-            eos=ctx.eos,
-            kij=ctx.kij,
         )
         return {self.outlets[0]: res.outlet}
 
@@ -698,8 +703,6 @@ class Flash(Block):
             resolve(self.t, params),
             resolve(self.p, params),
             model=ctx.model,
-            eos=ctx.eos,
-            kij=ctx.kij,
         )
         return {self.outlets[0]: vapor, self.outlets[1]: liquid}
 
@@ -903,8 +906,6 @@ class HeatExchanger(Block):
             dp_cold=resolve(self.dp_cold, params),
             flow=self.flow,
             model=ctx.model,
-            eos=ctx.eos,
-            kij=ctx.kij,
             **self._spec_kwargs(params),
         )
         return {self.outlets[0]: res.hot_out, self.outlets[1]: res.cold_out}
@@ -964,19 +965,35 @@ class HeatExchanger(Block):
             spec = (q - ua * lmtd(dt1, dt2)) / sc.enthalpy_flow
         return jnp.concatenate([mat, pres, energy, jnp.reshape(spec, (1,))])
 
+    def feasible(
+        self,
+        streams: Mapping[str, Stream],
+        aux: Mapping[str, Array],
+        params: Mapping[str, Any],
+        ctx: Context,
+    ) -> Array:
+        """The second law: a positive duty needs a positive approach at both ends."""
+        hot_in, cold_in = streams[self.inlets[0]], streams[self.inlets[1]]
+        hot_out, cold_out = streams[self.outlets[0]], streams[self.outlets[1]]
+        if self.flow == "counter":
+            approach = jnp.minimum(hot_in.t - cold_out.t, hot_out.t - cold_in.t)
+        else:
+            approach = jnp.minimum(hot_in.t - cold_in.t, hot_out.t - cold_out.t)
+        return (aux[self._aux_key()] <= 0.0) | (approach >= -_APPROACH_TOLERANCE)
+
 
 @dataclass(frozen=True)
 class StoichiometricReactor(Block):
-    """Fixed-conversion reactor on an ideal-gas (formation-based) energy balance.
+    """Fixed-conversion reactor with a formation-enthalpy energy balance.
 
     The reactions are given as a stoichiometric matrix ``nu`` of shape
     ``(n_reactions, n_components)`` (negative for reactants). Each reaction's
     extent is set by the fractional ``conversion`` of its ``key`` reactant, based
     on the inlet flow of that reactant, so the outlet is
-    ``n_out = n_in + extent @ nu``. The energy balance uses absolute ideal-gas
-    enthalpies (standard enthalpy of formation plus the ideal-gas heat-capacity
-    integral, the same basis as `fugacio.sim.reactors.stoichiometric_reactor`),
-    which is what carries the heat of reaction; specify either the outlet
+    ``n_out = n_in + extent @ nu``. The energy balance uses the package's bulk
+    enthalpy plus the ideal-gas standard enthalpies of formation, which carry the
+    heat of reaction: the same basis as
+    `fugacio.sim.reactors.stoichiometric_reactor`. Specify either the outlet
     temperature ``t_out`` or the ``duty`` (``0.0`` for adiabatic).
 
     Attributes:
@@ -1027,36 +1044,38 @@ class StoichiometricReactor(Block):
         return conv * feed.n[keys] / (-nu[jnp.arange(nu.shape[0]), keys])
 
     def _absolute_enthalpy(self, stream: Stream, ctx: Context) -> Array:
-        from fugacio.thermo.ideal import enthalpy_ig
         from fugacio.thermo.reactions import reaction_arrays
 
-        hf, _gf, (a, b, c, d, e) = reaction_arrays(list(ctx.components))
-        return jnp.sum(stream.n * (hf + enthalpy_ig(stream.t, a, b, c, d, e)))
+        hf, _gf, _cp = reaction_arrays(list(ctx.components))
+        return _bulk_enthalpy_flow(stream, ctx) + stream.n @ hf
 
     def forward(
         self, streams: Mapping[str, Stream], params: Mapping[str, Any], ctx: Context
     ) -> dict[str, Stream]:
-        """Explicit evaluation: stoichiometric outlet plus the isothermal or adiabatic balance."""
-        from fugacio.thermo.implicit import bracketed_root
+        """Evaluate via `fugacio.sim.reactors.stoichiometric_reactor` (same energy basis)."""
+        from fugacio.sim.reactors import stoichiometric_reactor
+        from fugacio.thermo.reactions import Reaction
 
         feed = streams[self.inlets[0]]
         nu = jnp.asarray(self.nu, dtype=float)
-        n_out = feed.n + self._extents(feed, params) @ nu
-        p_out = feed.p - resolve(self.dp, params)
-        if self.t_out is not None:
-            t_out = resolve(self.t_out, params)
-        else:
-            h_target = self._absolute_enthalpy(feed, ctx) + resolve(self.duty, params)  # type: ignore[arg-type]
-
-            def residual(t: Array, theta: tuple[Array, Array]) -> Array:
-                n, h = theta
-                probe = Stream(n=n, t=t, p=p_out, components=ctx.components)
-                return (self._absolute_enthalpy(probe, ctx) - h) / ctx.scales.enthalpy_flow
-
-            t_out = bracketed_root(
-                residual, (n_out, h_target), jnp.asarray(200.0), jnp.asarray(4000.0), 1e-10, 200
-            )
-        return {self.outlets[0]: Stream(n=n_out, t=t_out, p=p_out, components=ctx.components)}
+        reactions = [Reaction(ctx.components, row) for row in nu]
+        energy: dict[str, Any] = (
+            {"t_out": resolve(self.t_out, params)}
+            if self.t_out is not None
+            else {"duty": resolve(self.duty, params)}  # type: ignore[arg-type]
+        )
+        result = stoichiometric_reactor(
+            feed,
+            reactions,
+            extent=self._extents(feed, params),
+            dp=resolve(self.dp, params),
+            model=ctx.model,
+            **energy,
+        )
+        outlet = result.outlet
+        return {
+            self.outlets[0]: Stream(n=outlet.n, t=outlet.t, p=outlet.p, components=ctx.components)
+        }
 
     def residuals(
         self,
@@ -1147,8 +1166,6 @@ class Column(Block):
             specs=specs,
             efficiency=resolve(self.efficiency, params),
             model=ctx.model,
-            eos=ctx.eos,
-            kij=ctx.kij,
             **dict(self.options),
         )
 

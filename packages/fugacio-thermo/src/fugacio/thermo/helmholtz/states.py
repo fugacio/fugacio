@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import partial
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -52,7 +53,7 @@ from fugacio.thermo.helmholtz.saturation import (
     saturation_densities,
     saturation_temperature,
 )
-from fugacio.thermo.implicit import bracketed_root, newton_root
+from fugacio.thermo.implicit import bracketed_root_with_info, newton_root
 
 ArrayLike = Array | float
 
@@ -172,11 +173,28 @@ def _newton_density_from(fluid: HelmholtzFluid, t: Array, p: Array, rho_init: Ar
     return jnp.exp(x_star) * fluid.rho_reducing
 
 
-def _bracketed_density_at(fluid: HelmholtzFluid, t: Array, p: Array) -> Array:
+def _bracketed_density_at(fluid: HelmholtzFluid, t: Array, p: Array) -> tuple[Array, Array]:
+    """Whole-range density bisection and whether it converged (ungated: callers select)."""
     lo = jnp.log(jnp.asarray(1e-10))
     hi = jnp.log(jnp.asarray(fluid.rho_max / fluid.rho_reducing))
-    x_star = bracketed_root(log_delta_residual, (fluid, t, p), lo, hi, 1e-14, 300)
-    return jnp.exp(x_star) * fluid.rho_reducing
+    solved = bracketed_root_with_info(
+        log_delta_residual, (fluid, t, p), lo, hi, 1e-14, 300, gate=False
+    )
+    return jnp.exp(solved.value) * fluid.rho_reducing, solved.report.converged
+
+
+def _nan_unless(ok: Array, state: FluidState) -> FluidState:
+    """The state itself, or NaN in every floating field when ``ok`` is false.
+
+    Applied after all branch selections, so discarded branches keep finite
+    primals and a zero cotangent never meets a NaN.
+    """
+
+    def gate(leaf: Array) -> Array:
+        leaf = jnp.asarray(leaf)
+        return jnp.where(ok, leaf, jnp.nan) if jnp.issubdtype(leaf.dtype, jnp.inexact) else leaf
+
+    return jax.tree_util.tree_map(gate, state)
 
 
 @partial(jax.jit, static_argnames=("phase",))
@@ -186,7 +204,8 @@ def _state_tp(fluid: HelmholtzFluid, t: Array, p: Array, phase: str) -> FluidSta
     elif phase == "vapor":
         rho = _newton_density_from(fluid, t, p, vapor_density_guess(fluid, t, p))
     elif phase == "supercritical":
-        rho = _bracketed_density_at(fluid, t, p)
+        rho, ok = _bracketed_density_at(fluid, t, p)
+        return _nan_unless(ok, _single_phase_state(fluid, t, p, rho))
     else:  # auto: stability against the solved saturation line, branch-free.
         t_sat = jnp.clip(t, fluid.t_triple, T_SAT_MAX_FRACTION * fluid.t_critical)
         rho_l_sat, rho_v_sat = saturation_densities(fluid, t_sat)
@@ -195,8 +214,9 @@ def _state_tp(fluid: HelmholtzFluid, t: Array, p: Array, phase: str) -> FluidSta
         liquid_like = subcritical & (p > psat)
         seed = jnp.where(liquid_like, rho_l_sat, vapor_density_guess(fluid, t, p))
         rho_newton = _newton_density_from(fluid, t, p, seed)
-        rho_bracketed = _bracketed_density_at(fluid, t, p)
+        rho_bracketed, bracketed_ok = _bracketed_density_at(fluid, t, p)
         rho = jnp.where(subcritical, rho_newton, rho_bracketed)
+        return _nan_unless(subcritical | bracketed_ok, _single_phase_state(fluid, t, p, rho))
     return _single_phase_state(fluid, t, p, rho)
 
 
@@ -271,26 +291,40 @@ def _inverse_state(fluid: HelmholtzFluid, p: Array, target: Array, prop: str) ->
 
     def supercritical_residual(t: Array, params: tuple[HelmholtzFluid, Array, Array]) -> Array:
         f, pp, tt = params
-        rho = _bracketed_density_at(f, t, pp)
+        rho, _ = _bracketed_density_at(f, t, pp)
         return (value(f, rho, t) - tt) / scale
 
     t_floor = jnp.asarray(fluid.t_triple)
     t_ceiling = jnp.asarray(fluid.t_max)
     params = (fluid, p, target)
-    t_liquid = bracketed_root(liquid_residual, params, t_floor, t_sat, 1e-9, 200)
-    t_vapor = bracketed_root(vapor_residual, params, t_sat, t_ceiling, 1e-9, 200)
-    t_super = bracketed_root(supercritical_residual, params, t_floor, t_ceiling, 1e-9, 200)
+
+    def root(residual: Any, lo: Array, hi: Array) -> Any:
+        # Three candidate roots are solved and one is selected, so none is
+        # gated here; the selected root's validity gates the final state.
+        return bracketed_root_with_info(residual, params, lo, hi, 1e-9, 200, gate=False)
+
+    liquid = root(liquid_residual, t_floor, t_sat)
+    vapor = root(vapor_residual, t_sat, t_ceiling)
+    supercritical = root(supercritical_residual, t_floor, t_ceiling)
 
     liquid_side = target < value_liquid
-    t_single = jnp.where(subcritical, jnp.where(liquid_side, t_liquid, t_vapor), t_super)
+    t_single = jnp.where(
+        subcritical, jnp.where(liquid_side, liquid.value, vapor.value), supercritical.value
+    )
+    single_ok = jnp.where(
+        subcritical,
+        jnp.where(liquid_side, liquid.report.converged, vapor.report.converged),
+        supercritical.report.converged,
+    )
     rho_liquid = _newton_density_from(fluid, t_single, p, liquid_density_guess(fluid, t_single))
     rho_vapor = _newton_density_from(fluid, t_single, p, vapor_density_guess(fluid, t_single, p))
-    rho_super = _bracketed_density_at(fluid, t_single, p)
+    rho_super, super_ok = _bracketed_density_at(fluid, t_single, p)
     rho_single = jnp.where(subcritical, jnp.where(liquid_side, rho_liquid, rho_vapor), rho_super)
+    single_ok = single_ok & (subcritical | super_ok)
 
     single = _single_phase_state(fluid, t_single, p, rho_single)
     mixture = _mixture_state(fluid, t_sat, p, q)
-    return _select(two_phase, mixture, single)
+    return _nan_unless(two_phase | single_ok, _select(two_phase, mixture, single))
 
 
 @jax.jit

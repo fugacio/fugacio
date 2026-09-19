@@ -101,10 +101,14 @@ The `fugacio.sim` layer evaluates all of these at a stream's own state:
 `liquid_density`, `vapor_density`, `liquid_volumetric_flow`,
 `vapor_volumetric_flow`, `liquid_viscosity`, `vapor_viscosity`,
 `liquid_thermal_conductivity`, `vapor_thermal_conductivity`, and
-`surface_tension` each take a `Stream`. `column_diameter_for` chains them into
-a Souders-Brown column/drum diameter sized from actual stream densities, and
-because everything is JAX, the diameter is differentiable with respect to feed
-conditions through the flash *and* the property correlations.
+`surface_tension` each take a `Stream`. `vapor_density` and
+`vapor_volumetric_flow` evaluate the vapor branch of a property package, set
+with `model=` (Peng-Robinson by default); the liquid and transport properties
+use the correlations above. `column_diameter_for` chains them into a
+Souders-Brown column/drum diameter sized from actual stream densities, and it
+also takes `model=` for its vapor density. Because everything is JAX, the
+diameter is differentiable with respect to feed conditions through the flash
+*and* the property correlations.
 
 ```python
 import jax.numpy as jnp
@@ -117,7 +121,7 @@ feed = Stream.from_fractions(
 )
 vap, liq = flash_drum(feed, 320.0, 20e5)
 rho_l = liquid_density(liq)                 # kg/m^3 at the drum state
-d = column_diameter_for(vap, liq)           # Souders-Brown diameter (m)
+d = column_diameter_for(vap, liq)           # Souders-Brown diameter (m), PR vapor density
 ```
 
 The copilot exposes the same capability as JSON tools: `physical_properties`
