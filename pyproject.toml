@@ -25,9 +25,12 @@ package = false
 exclude-newer = "7 days"
 # Recent jaxlib releases ship no Intel-macOS wheels, so make the resolver keep a
 # compatible (older) jax/jaxlib fork for x86_64 Macs instead of producing a lock
-# that cannot be synced there.
+# that cannot be synced there. The last such wheels are jaxlib 0.4.38's, which
+# stop at CPython 3.13, so bound the requirement: without the bound, resolution
+# fails outright once a newer interpreter enters uv's universe, because no
+# jax/jaxlib version can satisfy an Intel Mac there.
 required-environments = [
-    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64' and python_full_version < '3.14'",
 ]
 
 [tool.uv.workspace]
