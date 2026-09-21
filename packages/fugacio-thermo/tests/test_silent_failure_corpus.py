@@ -6,6 +6,8 @@ derivative. None may report convergence with a wrong value. Each case records
 the behavior that the corpus guards against.
 """
 
+import gc
+
 import jax
 import jax.numpy as jnp
 import pytest
@@ -31,6 +33,20 @@ from fugacio.thermo.groupcontrib.unifac import unifac_activity
 from fugacio.thermo.saft import ln_fugacity_coefficients, molar_density
 
 ATM = 101325.0
+
+
+@pytest.fixture(autouse=True)
+def _release_compiled_programs():
+    """Keep this suite's resident memory bounded.
+
+    Every case compiles its own solver programs, and JAX keeps each compiled
+    executable alive for the life of the process. Holding all of them at once
+    takes more memory than a 16 GB runner has, so each test releases them
+    afterwards; the persistent compilation cache keeps the next test cheap.
+    """
+    yield
+    jax.clear_caches()
+    gc.collect()
 
 
 def _arrays(names):

@@ -7,6 +7,7 @@ and fugacity balances, invert its own saturation and energy calculations, and
 keep its enthalpy consistent with its Gibbs energy and fugacity coefficients.
 """
 
+import gc
 from dataclasses import dataclass
 from typing import Any
 
@@ -76,6 +77,20 @@ class IdealSolutionPackage(_PackageBase):
 jax.tree_util.register_dataclass(
     IdealSolutionPackage, data_fields=["tc", "pc", "omega", "cp"], meta_fields=[]
 )
+
+
+@pytest.fixture(autouse=True)
+def _release_compiled_programs():
+    """Keep this suite's resident memory bounded.
+
+    Every case compiles its own solver programs, and JAX keeps each compiled
+    executable alive for the life of the process. Holding all of them at once
+    takes more memory than a 16 GB runner has, so each test releases them
+    afterwards; the persistent compilation cache keeps the next test cheap.
+    """
+    yield
+    jax.clear_caches()
+    gc.collect()
 
 
 def _arrays(names):

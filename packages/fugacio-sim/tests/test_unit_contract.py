@@ -7,6 +7,7 @@ a traced call returns NaN. Pure fluids keep their phase inventory between units,
 and specifications that can't determine a state are rejected by name.
 """
 
+import gc
 import warnings
 
 import jax
@@ -39,6 +40,21 @@ from fugacio.thermo.diagnostics import ConvergenceError
 WATER = ("water",)
 LIGHT = ("methane", "propane", "n-pentane")
 ATM = 101325.0
+
+
+@pytest.fixture(autouse=True)
+def _release_compiled_programs():
+    """Keep this suite's resident memory bounded.
+
+    Each unit, flowsheet, and audit here compiles its own programs, and JAX
+    keeps every compiled executable alive for the life of the process. Holding
+    all of them at once takes more memory than a 16 GB runner has, so each test
+    releases them afterwards; the persistent compilation cache keeps the next
+    test cheap.
+    """
+    yield
+    jax.clear_caches()
+    gc.collect()
 
 
 def _light(flow: float = 10.0, t: float = 320.0, p: float = 20e5) -> Stream:
