@@ -320,6 +320,25 @@ outputs inherit a 7 GB guarantee. The default-allocator cold run reached
 Failed resource observations remain in the benchmark record. A warm persistent
 cache can reduce compilation time without reducing peak resident memory.
 
+### What checked solves cost
+
+Checked solves, retained reports, and per-unit kernels enlarge the compiled
+process graph, so the same studies need more compile memory and time than they
+did before the engine reported every failure. Measured on the same CI runner,
+same case, and same JAX 0.10.1: the depropanizer optimization's audited
+baseline run went from 2.533 GB and 88 seconds to 3.148 GB and 139 seconds, and
+its first plant linearization from 6.104 GB to more than 7 GB, which is why
+that job's limit is now 9 GB. The 12-stage ethanol/water train's audited run
+went from 5.984 GB and 379 seconds to 8.041 GB and 654 seconds, and its first
+linearization no longer fits a 16 GB runner at all (it passed 12 GB before
+completing), so CI bounds the 8-stage train instead. A local comparison on one
+macOS host attributes the increase to the process graph rather than to the
+retained kernels: the same depropanizer solve moved from 3.794 GB and 122
+seconds to 4.758 GB and 158 seconds, while its per-unit kernels *reduced* peak
+memory (4.755 GB with them, 4.987 GB without), and the heat exchanger's
+compiled program is about three times smaller yet still costs 24% more memory
+to build.
+
 The Linux memory-budget workflow limits glibc's allocation arenas to reduce
 retained allocation memory. Set `MALLOC_ARENA_MAX=2` before starting Python to
 reproduce that runtime configuration. This changes allocation behavior, not
@@ -371,11 +390,13 @@ uv run python scripts/benchmark_process.py \
 
 uv run python scripts/benchmark_process.py \
   --scenario depropanizer --study optimization --release-caches \
-  --max-rss-gb 7 --timeout-seconds 3000 \
+  --max-rss-gb 9 --timeout-seconds 3000 \
   --output artifacts/performance/depropanizer-optimization
 
+# CI bounds the 8-stage train; the 12-stage train needs a host with more than
+# 16 GB of RAM (see the measurements below).
 uv run python scripts/benchmark_process.py \
-  --scenario ethanol-train --stages 12 --study sensitivities --release-caches \
+  --scenario ethanol-train --stages 8 --study sensitivities --release-caches \
   --max-rss-gb 12 --timeout-seconds 3000 \
   --output artifacts/performance/ethanol-train
 
@@ -409,8 +430,9 @@ pure execution time.
 
 The process-performance CI workflow runs 32- and 64-stage columns, the saved
 depropanizer optimization, the NRTL train, and a 24-variable study in separate
-jobs. The depropanizer, columns, and heater bank have a 7 GB process limit;
-the NRTL sensitivity train has a separate 12 GB budget. All these Linux jobs
+jobs. The columns and heater bank have a 7 GB process limit, the depropanizer
+optimization a 9 GB limit, and the 8-stage NRTL sensitivity train a separate
+12 GB budget. All these Linux jobs
 set `MALLOC_ARENA_MAX=2` before process startup. The NRTL job needs enough
 additional RAM for the runner and operating system. GitHub documents 16 GB
 for public-repository Linux runners; private forks need to select a runner

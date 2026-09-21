@@ -499,7 +499,10 @@ def bracketed_root_with_info(
       endpoint), and
     * ``|residual(root)| <= max(residual_tol, relative_tol * min(|f(lo)|, |f(hi)|))``,
       so a sign change across a pole or jump, whose residual stays large as the
-      bracket shrinks, is reported as a failure.
+      bracket shrinks, is reported as a failure. The residual of the last
+      bisected point is reused for that check: it lies within ``tol`` of the
+      returned root, and evaluating it again would compile a second copy of the
+      residual (an exchanger or column solve).
 
     Endpoints that already solve the equation take zero iterations.
 
@@ -540,11 +543,11 @@ def bracketed_root_with_info(
     endpoint = (jnp.abs(fl) <= residual_tol) | (jnp.abs(fu) <= residual_tol)
 
     def cond(state: tuple) -> Array:
-        left, right, _, i = state
+        left, right, _, _, i = state
         return valid & ~endpoint & ((right - left) > tol) & (i < max_iter)
 
     def body(state: tuple) -> tuple:
-        left, right, fleft, i = state
+        left, right, fleft, _, i = state
         mid = (left + right) / 2
         fm = residual(mid, theta)
         # A nonfinite midpoint moves the bracket left, toward the finite side.
@@ -553,14 +556,16 @@ def bracketed_root_with_info(
             jnp.where(same, mid, left),
             jnp.where(same, right, mid),
             jnp.where(same, fm, fleft),
+            fm,
             i + 1,
         )
 
-    left, right, _, iterations = jax.lax.while_loop(cond, body, (lower, upper, fl, jnp.asarray(0)))
-    root = jnp.where(
-        endpoint, jnp.where(jnp.abs(fl) <= residual_tol, lower, upper), (left + right) / 2
+    left, right, _, f_last, iterations = jax.lax.while_loop(
+        cond, body, (lower, upper, fl, fl, jnp.asarray(0))
     )
-    final = residual(root, theta)
+    at_lower = jnp.abs(fl) <= residual_tol
+    root = jnp.where(endpoint, jnp.where(at_lower, lower, upper), (left + right) / 2)
+    final = jnp.where(endpoint, jnp.where(at_lower, fl, fu), f_last)
     report = residual_report(
         jnp.atleast_1d(final / allowed), 1.0, iterations=iterations, step_norm=right - left
     )
