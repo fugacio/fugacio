@@ -331,7 +331,11 @@ its first plant linearization from 6.104 GB to more than 7 GB, which is why
 that job's limit is now 9 GB. The 12-stage ethanol/water train's audited run
 went from 5.984 GB and 379 seconds to 8.041 GB and 654 seconds, and its first
 linearization no longer fits a 16 GB runner at all (it passed 12 GB before
-completing), so CI bounds the 8-stage train instead. A local comparison on one
+completing), so a pull request skips that benchmark. Shrinking the column
+doesn't recover it: at eight stages the same train has to work harder for the
+same distillate rate, and its audited run peaked higher still, at 10.494 GB.
+The depropanizer optimization now completes in 639 seconds at 8.043 GB, within
+its 9 GB limit. A local comparison on one
 macOS host attributes the increase to the process graph rather than to the
 retained kernels: the same depropanizer solve moved from 3.794 GB and 122
 seconds to 4.758 GB and 158 seconds, while its per-unit kernels *reduced* peak
@@ -393,11 +397,11 @@ uv run python scripts/benchmark_process.py \
   --max-rss-gb 9 --timeout-seconds 3000 \
   --output artifacts/performance/depropanizer-optimization
 
-# CI bounds the 8-stage train; the 12-stage train needs a host with more than
-# 16 GB of RAM (see the measurements below).
+# This train needs a host with more than 16 GB of RAM: CI runs it only on a
+# manual workflow dispatch (see the measurements below).
 uv run python scripts/benchmark_process.py \
-  --scenario ethanol-train --stages 8 --study sensitivities --release-caches \
-  --max-rss-gb 12 --timeout-seconds 3000 \
+  --scenario ethanol-train --stages 12 --study sensitivities --release-caches \
+  --max-rss-gb 16 --timeout-seconds 3000 \
   --output artifacts/performance/ethanol-train
 
 uv run python scripts/benchmark_process.py \
@@ -430,9 +434,10 @@ pure execution time.
 
 The process-performance CI workflow runs 32- and 64-stage columns, the saved
 depropanizer optimization, the NRTL train, and a 24-variable study in separate
-jobs. The columns and heater bank have a 7 GB process limit, the depropanizer
-optimization a 9 GB limit, and the 8-stage NRTL sensitivity train a separate
-12 GB budget. All these Linux jobs
+jobs. The columns and heater bank have a 7 GB process limit and the
+depropanizer optimization a 9 GB limit. The NRTL sensitivity train exceeds a
+16 GB runner with the checked engine, so a pull request skips it with a notice
+and it runs on a manual workflow dispatch, on a host with more memory. All these Linux jobs
 set `MALLOC_ARENA_MAX=2` before process startup. The NRTL job needs enough
 additional RAM for the runner and operating system. GitHub documents 16 GB
 for public-repository Linux runners; private forks need to select a runner
