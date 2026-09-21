@@ -206,7 +206,11 @@ version_variables = [
 # `assets`. uv isn't in the semantic-release container, so install it first.
 # This is the lockstep analog of Hydrateless's "npm install --package-lock-only"
 # and WeaveFFI's "cargo generate-lockfile" release steps.
-build_command = "python scripts/pin_workspace_deps.py && python -m pip install --quiet uv && uv lock"
+# Pin uv: `uv lock` re-resolves the whole lock here, and a newer uv can resolve
+# it differently (one failed the first v0.9.0 release on the Intel-macOS fork).
+# CI's release rehearsal (scripts/rehearse_release.py) runs this command on
+# every pull request, so a pull request that bumps the pin proves it first.
+build_command = "python scripts/pin_workspace_deps.py && python -m pip install --quiet uv==0.12.17 && uv lock"
 assets = ["uv.lock"]
 
 [tool.semantic_release.branches.main]
