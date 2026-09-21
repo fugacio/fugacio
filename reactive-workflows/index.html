@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2683,8 +2713,11 @@ coefficient units remain unambiguous.</p>
 </span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="n">result</span> <span class="o">=</span> <span class="n">reaction_reactor</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cstr&quot;</span><span class="p">,</span> <span class="n">volume</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="mf">400.0</span><span class="p">)</span>
 </span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="n">result</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
 </span></code></pre></div>
-<p><code>kind</code> selects <code>equilibrium</code>, <code>cstr</code>, or <code>pfr</code>. The default package is
-Peng-Robinson; <code>model</code> accepts the common package interface. Supply <code>t_out</code> for
+<p><code>kind</code> selects <code>equilibrium</code>, <code>cstr</code>, or <code>pfr</code>. The unit wrappers
+<code>equilibrium_reactor</code>, <code>cstr</code>, and <code>pfr</code> call <code>reaction_reactor</code> with the same
+arguments and accept either reactions or a <code>ReactionSet</code> (see
+<a href="../reactions/#reactors">reactions and reactors</a>). The default package is
+Peng-Robinson; <code>model</code> accepts any property package. Supply <code>t_out</code> for
 isothermal operation, or <code>duty</code> in W for a specified heat input. <code>duty=0</code> is
 adiabatic. These specifications are mutually exclusive. When both are omitted,
 the reactor retains the inlet temperature. Positive <code>dp</code> represents pressure
@@ -2705,7 +2738,9 @@ provide an adaptive stiff integrator or certify phase behavior between mesh
 points.</p>
 <p>These reactors require the declared homogeneous phase at the audited states.
 Use a reactive flash or column when reaction and phase separation occur
-together. <code>check=False</code> retains failed primals and reports. Failed outputs and
+together. A rejected concrete result raises <code>ConvergenceError</code>, and negative
+inventories are rejected rather than clipped. <code>check=False</code> retains failed
+primals and reports. Failed outputs and
 profiles have nonfinite derivatives; callers must inspect acceptance before
 using a design gradient. A finite PT flash alone isn't a global stability proof.
 Saved runs add the existing finite-start stability audit to process streams.</p>
@@ -2733,13 +2768,9 @@ flash. Its quotient uses a phase that's present, and its two products preserve
 phase inventories. The result contains duty, generation, a combined acceptance
 report, and the final PT <code>phase_report</code>. Property and thermochemical parameters
 pass explicitly through the implicit root, including under JIT differentiation.</p>
-<p>The older <code>reactive_distillation</code> function remains a constant-molar-overflow
-approximation with molar holdup and liquid <code>x * gamma</code> kinetic inputs. Its
-holdup isn't a volume, and its material closure doesn't establish energy
-closure. Use the MESH API for the saved workflows described here. Legacy
-<code>equilibrium_reactor</code>, <code>cstr</code>, and <code>pfr</code> calls without a package or <code>ReactionSet</code>
-retain their ideal-gas behavior. Supplying either selects the checked common
-implementation. The batch API remains separate.</p>
+<p><code>batch_reactor</code> remains a separate closed-vessel model: an ideal-gas,
+constant-volume batch integrated in time, whose adiabatic form conserves
+internal energy.</p>
 <h2 id="portable-definitions-and-measurements">Portable definitions and measurements<a class="headerlink" href="#portable-definitions-and-measurements" title="Permanent link">&para;</a></h2>
 <p>A case declares reusable sets under <code>reaction_sets</code>, then references a set by
 name in each unit's <code>settings.reaction_set</code>. Each set contains <code>phase</code>,

@@ -266,7 +266,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../phase-equilibrium/" class="md-tabs__link">
+        <a href="../../../upgrading/" class="md-tabs__link">
           
   
   
@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -473,6 +475,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1432,6 +1462,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fugacio.thermo.lle.LLESolveResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;LLESolveResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.lle.flash_lle_with_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;flash_lle_with_info
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fugacio.thermo.lle.flash_lle" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1519,6 +1571,28 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VLLEResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.vlle.VLLESolveResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VLLESolveResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.vlle.flash_vlle_with_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;flash_vlle_with_info
       
     </span>
   </a>
@@ -2623,6 +2697,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fugacio.thermo.lle.LLESolveResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;LLESolveResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.lle.flash_lle_with_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;flash_lle_with_info
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fugacio.thermo.lle.flash_lle" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2710,6 +2806,28 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VLLEResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.vlle.VLLESolveResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VLLESolveResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fugacio.thermo.vlle.flash_vlle_with_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;flash_vlle_with_info
       
     </span>
   </a>
@@ -2807,9 +2925,12 @@ the phase fraction <code>psi</code> now the mole fraction in phase <code>II</cod
 <div class="language-text highlight"><pre><span></span><code>sum_i z_i (K_i - 1) / (1 + psi (K_i - 1)) = 0,
 x_i^I = z_i / (1 + psi (K_i - 1)),   x_i^II = K_i x_i^I.
 </code></pre></div>
-<p>The catch is the ever-present <em>trivial</em> solution <code>x^I = x^II = z</code> (<code>K = 1</code>); we
-avoid it by seeding the iteration from the unstable trial phase found by the
-tangent-plane test in <code>fugacio.thermo.stability</code>. The converged split is
+<p>The flash is stability-first. The tangent-plane search of
+<code>fugacio.thermo.stability.liquid_stability</code> decides whether a split exists: an
+established stable liquid is returned as one phase (<code>psi = 0</code>), and an unstable
+one seeds the isoactivity iteration from its most negative trial phase, which
+avoids the ever-present trivial solution <code>x^I = x^II = z</code>. An iteration that
+still collapses onto it is reported as <code>TRIVIAL</code>. The converged split is
 differentiable in temperature, feed, and the model parameters via implicit
 differentiation of the fixed point, so tie-lines move smoothly under a gradient,
 which matters for solvent-selection optimisation and parameter fitting to
@@ -2843,6 +2964,14 @@ construction (it has no miscibility gap), so use NRTL, UNIQUAC, or UNIFAC.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLESolveResult">LLESolveResult</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Two-liquid flash and its report.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2859,10 +2988,18 @@ construction (it has no miscibility gap), so use NRTL, UNIQUAC, or UNIFAC.</p>
       </thead>
       <tbody>
             <tr class="doc-section-item">
-              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_lle&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.flash_lle&lt;/code&gt;)" href="#fugacio.thermo.lle.flash_lle">flash_lle</a></code></td>
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_lle_with_info&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.flash_lle_with_info&lt;/code&gt;)" href="#fugacio.thermo.lle.flash_lle_with_info">flash_lle_with_info</a></code></td>
               <td>
                 <div class="doc-md-description">
                   <p>Split feed <code>z</code> into two liquids at temperature <code>t</code> (isoactivity flash).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_lle&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.flash_lle&lt;/code&gt;)" href="#fugacio.thermo.lle.flash_lle">flash_lle</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Two-liquid flash value; NaN when <code>flash_lle_with_info</code> reports failure.</p>
                 </div>
               </td>
             </tr>
@@ -3018,24 +3155,77 @@ construction (it has no miscibility gap), so use NRTL, UNIQUAC, or UNIFAC.</p>
 
 </div>
 
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="fugacio.thermo.lle.LLESolveResult" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">LLESolveResult</span>
+
+
+<a href="#fugacio.thermo.lle.LLESolveResult" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="&lt;code&gt;typing.NamedTuple&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.NamedTuple">NamedTuple</a></code></p>
+
+
+
+        <p>Two-liquid flash and its report.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
 
 <div class="doc doc-object doc-function">
 
 
-<h3 id="fugacio.thermo.lle.flash_lle" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">flash_lle</span>
+<h3 id="fugacio.thermo.lle.flash_lle_with_info" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">flash_lle_with_info</span>
 
 
-<a href="#fugacio.thermo.lle.flash_lle" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">flash_lle</span><span class="p">(</span>
+<a href="#fugacio.thermo.lle.flash_lle_with_info" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">flash_lle_with_info</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">model</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ActivityModel&lt;/span&gt; (&lt;code&gt;fugacio.thermo.activity.models.ActivityModel&lt;/code&gt;)" href="../activity/#fugacio.thermo.activity.ActivityModel">ActivityModel</a></span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">t</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.lle.ArrayLike">ArrayLike</span></span><span class="p">,</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">z</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">k_guess</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLEResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLEResult">LLEResult</a></span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLESolveResult">LLESolveResult</a></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3095,7 +3285,7 @@ construction (it has no miscibility gap), so use NRTL, UNIQUAC, or UNIFAC.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Overall (feed) mole fractions.</p>
+                <p>Overall (feed) mole fractions; absent components stay absent.</p>
               </div>
             </td>
             <td>
@@ -3112,7 +3302,8 @@ construction (it has no miscibility gap), so use NRTL, UNIQUAC, or UNIFAC.</p>
             <td>
               <div class="doc-md-description">
                 <p>Optional initial distribution ratios <code>K_i</code>. If omitted, the
-tangent-plane stability test seeds a non-trivial split automatically.</p>
+tangent-plane stability test decides whether a split exists and seeds
+it.</p>
               </div>
             </td>
             <td>
@@ -3124,7 +3315,7 @@ tangent-plane stability test seeds a non-trivial split automatically.</p>
                 <code>tol</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3140,7 +3331,7 @@ tangent-plane stability test seeds a non-trivial split automatically.</p>
                 <code>max_iter</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3166,46 +3357,64 @@ tangent-plane stability test seeds a non-trivial split automatically.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLEResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLEResult">LLEResult</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLESolveResult">LLESolveResult</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>An <code>LLEResult</code>. If the feed is actually miscible the iteration</p>
+                <p>The split and its report. An established stable liquid converges to one</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLEResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLEResult">LLEResult</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLESolveResult">LLESolveResult</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>collapses toward the trivial <code>K = 1</code> (<code>psi</code> at a bound); call</p>
+                <p>phase (<code>psi = 0</code>, both compositions equal to <code>z</code>); a collapse onto the</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLEResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLEResult">LLEResult</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLESolveResult">LLESolveResult</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>fugacio.thermo.stability.liquid_stability</code> first to decide whether a</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLEResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLEResult">LLEResult</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>split exists.</p>
+                <p>trivial solution from an unstable feed is <code>TRIVIAL</code>.</p>
               </div>
             </td>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.thermo.lle.flash_lle" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">flash_lle</span>
+
+
+<a href="#fugacio.thermo.lle.flash_lle" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">flash_lle</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">model</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ActivityModel&lt;/span&gt; (&lt;code&gt;fugacio.thermo.activity.models.ActivityModel&lt;/code&gt;)" href="../activity/#fugacio.thermo.activity.ActivityModel">ActivityModel</a></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">t</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.lle.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">z</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">k_guess</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;LLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.lle.LLEResult&lt;/code&gt;)" href="#fugacio.thermo.lle.LLEResult">LLEResult</a></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Two-liquid flash value; NaN when <code>flash_lle_with_info</code> reports failure.</p>
 
 
     </div>
@@ -3225,9 +3434,9 @@ tangent-plane stability test seeds a non-trivial split automatically.</p>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">t</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.lle.ArrayLike">ArrayLike</span></span><span class="p">,</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">feed</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.lle.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3235,7 +3444,8 @@ tangent-plane stability test seeds a non-trivial split automatically.</p>
         <p>Mutual-solubility (binodal) compositions of a binary at temperature <code>t</code>.</p>
 <p>Returns <code>(x1_phase_I, x1_phase_II)</code>, the mole fraction of component 1 in
 each conjugate liquid (the tie-line ends). Any <code>feed</code> inside the gap gives the
-same pair; the default 50/50 feed sits squarely in a symmetric gap.</p>
+same pair; the default 50/50 feed sits squarely in a symmetric gap. Outside
+the gap (no split) both are NaN.</p>
 
 
     </div>
@@ -3255,9 +3465,9 @@ same pair; the default 50/50 feed sits squarely in a symmetric gap.</p>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">t</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.lle.ArrayLike">ArrayLike</span></span><span class="p">,</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">z</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3284,9 +3494,9 @@ compositions and the phase fraction, the unit of a ternary LLE diagram.</p>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">temperatures</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">feed</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.lle.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3295,7 +3505,7 @@ compositions and the phase fraction, the unit of a ternary LLE diagram.</p>
 <p>Maps <code>binary_binodal</code> across <code>temperatures</code> and returns
 <code>(x1_phase_I, x1_phase_II)</code> arrays aligned with the input, the two branches
 of the solubility envelope that meet at the upper (or lower) critical solution
-temperature.</p>
+temperature (NaN beyond it).</p>
 
 
     </div>
@@ -3341,8 +3551,11 @@ K_i^L = x_i^II / x_i^I = gamma_i^I / gamma_i^II,
 2x2 Newton with an analytic Jacobian), and the K-values are updated from the
 fugacity equalities until consistent.</p>
 <p>The flash is seeded from a VLE flash followed by a stability-driven split of its
-liquid, which is what makes the non-trivial three-phase root reliably found. The
-converged state is differentiable through the fixed point.</p>
+liquid. When no three-phase solution exists (the Rachford-Rice root leaves the
+phase-fraction simplex) the flash reports <code>INFEASIBLE</code> rather than clipping
+phase fractions away from their compositions: use the two-phase VLE or LLE
+flash there. A converged three-phase state is differentiable through the fixed
+point.</p>
 
 
 
@@ -3378,6 +3591,14 @@ converged state is differentiable through the fixed point.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLESolveResult">VLLESolveResult</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Three-phase flash and its report.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3394,10 +3615,18 @@ converged state is differentiable through the fixed point.</p>
       </thead>
       <tbody>
             <tr class="doc-section-item">
-              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_vlle&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.flash_vlle&lt;/code&gt;)" href="#fugacio.thermo.vlle.flash_vlle">flash_vlle</a></code></td>
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_vlle_with_info&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.flash_vlle_with_info&lt;/code&gt;)" href="#fugacio.thermo.vlle.flash_vlle_with_info">flash_vlle_with_info</a></code></td>
               <td>
                 <div class="doc-md-description">
                   <p>Isothermal-isobaric three-phase (V-L-L) flash of feed <code>z</code> at <code>(T, P)</code>.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;flash_vlle&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.flash_vlle&lt;/code&gt;)" href="#fugacio.thermo.vlle.flash_vlle">flash_vlle</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Three-phase flash value; NaN when <code>flash_vlle_with_info</code> reports failure.</p>
                 </div>
               </td>
             </tr>
@@ -3681,6 +3910,148 @@ converged state is differentiable through the fixed point.</p>
 
 </div>
 
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="fugacio.thermo.vlle.VLLESolveResult" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">VLLESolveResult</span>
+
+
+<a href="#fugacio.thermo.vlle.VLLESolveResult" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="&lt;code&gt;typing.NamedTuple&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.NamedTuple">NamedTuple</a></code></p>
+
+
+
+        <p>Three-phase flash and its report.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="fugacio.thermo.vlle.flash_vlle_with_info" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">flash_vlle_with_info</span>
+
+
+<a href="#fugacio.thermo.vlle.flash_vlle_with_info" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">flash_vlle_with_info</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">model</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ActivityModel&lt;/span&gt; (&lt;code&gt;fugacio.thermo.activity.models.ActivityModel&lt;/code&gt;)" href="../activity/#fugacio.thermo.activity.ActivityModel">ActivityModel</a></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">t</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.vlle.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">p</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.vlle.ArrayLike">ArrayLike</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">z</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tc</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">pc</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">omega</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">eos</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;CubicEOS&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt; (&lt;code&gt;fugacio.thermo.eos.CubicEOS&lt;/code&gt;)" href="../eos/#fugacio.thermo.eos.CubicEOS">CubicEOS</a></span> <span class="o">=</span> <span class="n"><span title="fugacio.thermo.eos.PR">PR</span></span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">kij</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">vapor</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;ideal&quot;</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">poynting</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">phi_saturation</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-11</span><span class="p">,</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLESolveResult">VLLESolveResult</a></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Isothermal-isobaric three-phase (V-L-L) flash of feed <code>z</code> at <code>(T, P)</code>.</p>
+<p>Seeds a vapour/liquid split from the gamma-phi VLE flash and a
+liquid/liquid split of its liquid from <code>fugacio.thermo.lle.flash_lle_with_info</code>,
+then drives both K-value sets to consistency with a 2x2 Rachford-Rice inner
+solve. Phase fractions and compositions come from the same root, so the
+returned state always closes the material balance.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLESolveResult">VLLESolveResult</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The state and its report. The report is <code>INFEASIBLE</code> (and the value</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLESolveResult">VLLESolveResult</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>must not be used) when the converged root has a phase fraction outside</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLESolveResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLESolveResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLESolveResult">VLLESolveResult</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>[0, 1]</code>, i.e. the feed isn't three-phase at <code>(T, P)</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 
@@ -3698,30 +4069,13 @@ converged state is differentiable through the fixed point.</p>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">tc</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">pc</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">omega</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="o">*</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">eos</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;CubicEOS&lt;/span&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt; (&lt;code&gt;fugacio.thermo.eos.CubicEOS&lt;/code&gt;)" href="../eos/#fugacio.thermo.eos.CubicEOS">CubicEOS</a></span> <span class="o">=</span> <span class="n"><span title="fugacio.thermo.eos.PR">PR</span></span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">kij</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">vapor</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;ideal&quot;</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">poynting</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">phi_saturation</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-11</span><span class="p">,</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLEResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLEResult">VLLEResult</a></span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VLLEResult&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.VLLEResult&lt;/code&gt;)" href="#fugacio.thermo.vlle.VLLEResult">VLLEResult</a></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Isothermal-isobaric three-phase (V-L-L) flash of feed <code>z</code> at <code>(T, P)</code>.</p>
-<p>Seeds a vapour/liquid split from <code>fugacio.thermo.gammaphi.flash_pt_gamma</code>
-and a liquid/liquid split from <code>fugacio.thermo.lle.flash_lle</code>, then drives
-both K-value sets to consistency with a 2x2 Rachford-Rice inner solve. Inspect
-<code>three_phase</code> to confirm a genuine three-phase root (otherwise one phase
-fraction has collapsed and the relevant two-phase flash applies).</p>
+        <p>Three-phase flash value; NaN when <code>flash_vlle_with_info</code> reports failure.</p>
 
 
     </div>
@@ -3750,10 +4104,10 @@ fraction has collapsed and the relevant two-phase flash applies).</p>
       &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt; (&lt;code&gt;fugacio.thermo.eos.CubicEOS&lt;/code&gt;)" href="../eos/#fugacio.thermo.eos.CubicEOS">CubicEOS</a></span> <span class="o">=</span> <span class="n"><span title="fugacio.thermo.eos.PR">PR</span></span><span class="p">,</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">feed</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.vlle.ArrayLike">ArrayLike</span></span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">t_min</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">250.0</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">t_max</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">500.0</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-09</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">t_min</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">250.0</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">t_max</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">500.0</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-09</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HeterogeneousAzeotrope&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.HeterogeneousAzeotrope&lt;/code&gt;)" href="#fugacio.thermo.vlle.HeterogeneousAzeotrope">HeterogeneousAzeotrope</a></span>
 </span></code></pre></div>
 
@@ -3765,7 +4119,7 @@ activities (<code>a_i = x_i gamma_i</code> matches across the LLE tie-line), so 
 necessarily boil to the <em>same</em> vapour <code>y_i = a_i Psat_i / P</code>. The
 heterogeneous azeotrope is the temperature at which that shared vapour's total
 pressure <code>sum_i a_i Psat_i</code> reaches the system pressure <code>P</code>, a single,
-well-posed scalar root, solved here with the bracketed solver and
+well-posed scalar root, located on a scanned bracket and
 differentiable in <code>P</code> and the model parameters.</p>
 
 
@@ -3794,7 +4148,17 @@ differentiable in <code>P</code> and the model parameters.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>compositions, and the common vapour). Use a <code>feed</code> mole fraction (of</p>
+                <p>compositions, and the common vapour), or NaN when no two-liquid boiling</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HeterogeneousAzeotrope&lt;/span&gt; (&lt;code&gt;fugacio.thermo.vlle.HeterogeneousAzeotrope&lt;/code&gt;)" href="#fugacio.thermo.vlle.HeterogeneousAzeotrope">HeterogeneousAzeotrope</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>point exists on <code>[t_min, t_max]</code>. Use a <code>feed</code> mole fraction (of</p>
               </div>
             </td>
           </tr>

@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -844,6 +874,17 @@
     <span class="md-ellipsis">
       
         How it's solved
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failures-and-flowsheets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failures and flowsheets
       
     </span>
   </a>
@@ -2534,6 +2575,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#failures-and-flowsheets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failures and flowsheets
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2575,8 +2627,7 @@ equilibrium-stage column. It solves the full MESH equations of every stage
 reboiler and any design specifications as one Newton system, with the Jacobian
 from JAX autodiff and the converged column differentiable in every input by the
 implicit function theorem.</p>
-<p>That replaces the earlier constant-molar-overflow column (<code>solve_column</code>, which
-stays available) with the model a process simulator actually needs:</p>
+<p>It's the model a process simulator needs:</p>
 <ul>
 <li>full stage energy balances, so vapor and liquid traffic vary down the column
   and the reboiler and condenser duties are consistent with the property
@@ -2734,6 +2785,17 @@ linear residual and uses a pivoted dense fallback if block elimination fails.
 <code>linear_solver="dense"</code> retains the reference implementation. See the
 <a href="../performance/">performance guide</a> for direction counts, scaling, fallback
 limits, and reproducible column benchmarks.</p>
+<h2 id="failures-and-flowsheets">Failures and flowsheets<a class="headerlink" href="#failures-and-flowsheets" title="Permanent link">&para;</a></h2>
+<p><code>rigorous_column</code> checks its own report. An eager solve that fails raises
+<code>ConvergenceError</code>, naming the stage equation (a material, equilibrium, or
+energy row) or the specification with the largest residual. A traced solve
+returns NaN products with nonfinite derivatives. <code>check=False</code> returns the best
+iterate with its <code>report</code> for diagnosis.</p>
+<p>The result exposes <code>outlets</code>, the distillate, the bottoms, and then any side
+draws, and <code>heat</code>, the condenser, reboiler, and intermediate stage duties
+together (<code>stage_duties</code> holds the intermediate duty on each stage). A
+<a href="../flowsheeting/">flowsheet</a> unit can therefore return the result directly, and
+the flowsheet keeps the column's heat and report.</p>
 <p>The <code>Column</code> block in <a href="../equation-oriented/"><code>fugacio.sim.eo</code></a> embeds a
 converged <code>rigorous_column</code> inside an equation-oriented flowsheet, so a column
 can sit in the middle of a globally solved plant with recycles around it.</p>

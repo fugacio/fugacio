@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2733,15 +2763,24 @@ specific SDK.</p>
 tools, sees their results (and any errors, with schema validation), and returns a
 final answer plus a full transcript. Swap in a real provider to go live.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.copilot</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_llm_agent</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.copilot.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIProvider</span>   <span class="c1"># needs the `openai` extra</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.copilot.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnthropicProvider</span><span class="p">,</span> <span class="n">OpenAIProvider</span>   <span class="c1"># need the `llm` extra</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">run_llm_agent</span><span class="p">(</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s2">&quot;Size and cost a cooler that removes 1 MW with cooling water.&quot;</span><span class="p">,</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">OpenAIProvider</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">),</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">OpenAIProvider</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-5-mini&quot;</span><span class="p">),</span>     <span class="c1"># or AnthropicProvider(), which defaults to claude-opus-5</span>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">)</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">result</span><span class="o">.</span><span class="n">answer</span>        <span class="c1"># natural-language summary</span>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="n">result</span><span class="o">.</span><span class="n">transcript</span>    <span class="c1"># ordered tool calls + results</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">result</span><span class="o">.</span><span class="n">stop_reason</span>   <span class="c1"># &quot;answer&quot;, &quot;budget&quot;, &quot;refusal&quot;, or &quot;max_tokens&quot;</span>
 </span></code></pre></div>
+<p>The providers send a sampling <code>temperature</code> only when you pass one, since
+recent reasoning models reject it, and cap each reply at 16,000 output tokens
+by default (<code>max_tokens</code>). Failed tool calls go back to the model flagged as
+errors, so it can correct its arguments. A refused reply, or one cut off at
+the token cap, ends the loop with that <code>stop_reason</code> instead of an answer, and a
+paused turn is resent so the model can finish it. The Anthropic provider also
+replays thinking blocks verbatim and requests Anthropic's server-side refusal
+fallbacks; pass <code>fallbacks=None</code> on platforms that don't offer them.</p>
 <p>Finally, <code>fugacio.copilot.report</code> turns results into Markdown an engineer expects:
 <code>stream_table</code>, <code>summarize_optimization</code>, <code>summarize_economics</code>, and
 <code>summarize_transcript</code>.</p>

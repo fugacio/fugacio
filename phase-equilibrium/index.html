@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://fugacio.com/phase-equilibrium/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../upgrading/">
       
       
         <link rel="next" href="../property-packages/">
@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -544,10 +574,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-property-model" class="md-nav__link">
+  <a href="#the-property-package" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The γ–φ property model
+        The γ–φ property package
       
     </span>
   </a>
@@ -2491,10 +2521,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-property-model" class="md-nav__link">
+  <a href="#the-property-package" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The γ–φ property model
+        The γ–φ property package
       
     </span>
   </a>
@@ -2591,18 +2621,25 @@
 
 <h1 id="non-ideal-phase-equilibrium">Non-ideal phase equilibrium<a class="headerlink" href="#non-ideal-phase-equilibrium" title="Permanent link">&para;</a></h1>
 <p>Beyond cubic equations of state, Fugacio carries a full <strong>γ–φ property system</strong>:
-liquid-phase activity coefficients combined with a vapour-phase fugacity model,
-plus rigorous liquid-liquid and vapour-liquid-liquid equilibria. This is the route
+liquid-phase activity coefficients combined with a vapor-phase fugacity model,
+plus rigorous liquid-liquid and vapor-liquid-liquid equilibria. This is the route
 that captures azeotropes, partial miscibility, and strongly non-ideal mixtures,
-the regime where ideal-K and single-EOS methods quietly give wrong answers.</p>
-<h2 id="the-property-model">The γ–φ property model<a class="headerlink" href="#the-property-model" title="Permanent link">&para;</a></h2>
-<p>A <code>GammaPhiModel</code> pairs an activity model (NRTL, UNIQUAC, Wilson, Margules, van
+the regime where ideal-K and single-EOS methods give wrong answers.</p>
+<h2 id="the-property-package">The γ–φ property package<a class="headerlink" href="#the-property-package" title="Permanent link">&para;</a></h2>
+<p>A <code>GammaPhiPackage</code> pairs an activity model (NRTL, UNIQUAC, Wilson, Margules, van
 Laar, UNIFAC, …) with a pure-component reference fugacity (saturation pressure,
-Poynting correction, and saturation φ) and a vapour model. It exposes the <em>same</em>
-<code>flash_pt</code>, bubble, and dew calls as an <code>EOSModel</code>, so the rest of the stack
-switches thermodynamic method by swapping one differentiable object. The
-<code>fugacio.sim</code> helpers <code>eos_model_for</code>, <code>nrtl_model_for</code>, <code>uniquac_model_for</code>, and
-<code>unifac_model_for</code> build a ready model straight from component names.</p>
+Poynting correction, and saturation φ) and a vapor model. It's a
+<a href="../property-packages/">property package</a>, so it exposes the <em>same</em> <code>flash_pt</code>,
+bubble, dew, <code>stability</code>, and energy calls as a cubic <code>CubicPackage</code>, and the
+rest of the stack switches thermodynamic method by swapping one differentiable
+object. <code>fugacio.sim.package_for(components, "nrtl")</code> (or <code>"uniquac"</code>,
+<code>"unifac"</code>, <code>"dortmund"</code>) builds one straight from component names; the
+lower-level <code>fugacio.thermo.gamma_phi_package</code> builds one from an activity model
+and component constants.</p>
+<p>The saturation-based reference exists only below each component's critical
+temperature. A state in which a present component is supercritical is outside
+the package's domain: checked calls report <code>SolveStatus.OUT_OF_DOMAIN</code>, and the
+value-only calls return NaN.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">bubble_pressure_gamma</span><span class="p">,</span> <span class="n">component_arrays</span><span class="p">,</span> <span class="n">nrtl</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -2618,18 +2655,30 @@ switches thermodynamic method by swapping one differentiable object. The
 </span></code></pre></div>
 <p>The activity-based phase-equilibrium entry points are <code>flash_pt_gamma</code>,
 <code>bubble_pressure_gamma</code> / <code>bubble_temperature_gamma</code>, <code>dew_pressure_gamma</code> /
-<code>dew_temperature_gamma</code>, and the low-level <code>gamma_phi_k_values</code>. The reference
-state is assembled from <code>liquid_reference_fugacity</code>, <code>poynting_factor</code>,
+<code>dew_temperature_gamma</code>, and the low-level <code>gamma_phi_k_values</code>. Each has a
+checked <code>*_with_info</code> form that returns the best iterate and a <code>SolveReport</code>;
+the value-only form returns NaN when that report fails. The reference state is
+assembled from <code>liquid_reference_fugacity</code>, <code>poynting_factor</code>,
 <code>saturation_fugacity_coefficient</code>, and (for dissolved gases) <code>henry_constant</code>.</p>
 <h2 id="liquid-liquid-three-phase-equilibria">Liquid-liquid &amp; three-phase equilibria<a class="headerlink" href="#liquid-liquid-three-phase-equilibria" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>flash_lle</code>: isoactivity liquid-liquid flash, with <code>tie_line</code>, <code>binodal_curve</code>,
-  and <code>binary_binodal</code> for the miscibility envelope.</li>
-<li><code>flash_vlle</code>: three-phase vapour-liquid-liquid flash, plus the binary
+  and <code>binary_binodal</code> for the miscibility envelope. It's stability-first: a
+  liquid established as stable returns one phase (<code>psi = 0</code>), and an unstable
+  one seeds the split from its most negative trial phase, so the iteration
+  doesn't settle on the trivial solution. A collapse onto identical phases is
+  reported as <code>TRIVIAL</code>.</li>
+<li><code>flash_vlle</code>: three-phase vapor-liquid-liquid flash, plus the binary
   <code>heterogeneous_azeotrope</code> solver.</li>
-<li><strong>Tangent-plane stability</strong> (TPD): <code>tangent_plane_distance</code>, <code>liquid_stability</code>,
-  and the general <code>stability_analysis_general</code> decide how many phases are actually
-  present before a flash is attempted.</li>
+<li><strong>Tangent-plane stability</strong>: <code>tpd_search</code> is the one search behind every
+  stability test. It runs damped successive substitution from several starts
+  on each trial branch, keeps absent components exactly absent, and returns a
+  <code>StabilityResult(stable, tpd, trial, branch, converged)</code>. Every property
+  package exposes it as <code>pkg.stability(t, p, z)</code>, searching liquid and vapor
+  trial phases, and <code>liquid_stability(model, t, z)</code> tests an activity-model
+  liquid for a second liquid. A finite-start search can't prove a global
+  minimum: a negative <code>tpd</code> establishes instability, but a verdict of
+  stability holds only when <code>converged</code> is also true.</li>
 </ul>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">flash_lle</span><span class="p">,</span> <span class="n">nrtl</span>
@@ -2643,6 +2692,20 @@ state is assembled from <code>liquid_reference_fugacity</code>, <code>poynting_f
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">res</span> <span class="o">=</span> <span class="n">flash_lle</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="mf">298.15</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]))</span>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">res</span><span class="o">.</span><span class="n">x_i</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">x_ii</span>   <span class="c1"># the two conjugate liquid compositions (a tie line)</span>
 </span></code></pre></div>
+<p>The same search catches a vapor-liquid flash that should have found two
+liquids. Water and n-hexane are nearly immiscible, and a cubic package's
+stability test says so:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_for</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">pkg</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,</span> <span class="s2">&quot;n-hexane&quot;</span><span class="p">))</span>                      <span class="c1"># Peng-Robinson</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">result</span> <span class="o">=</span> <span class="n">pkg</span><span class="o">.</span><span class="n">stability</span><span class="p">(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">101325.0</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]))</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">result</span><span class="o">.</span><span class="n">stable</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">tpd</span>   <span class="c1"># False, and a strongly negative distance</span>
+</span></code></pre></div>
+<p>A two-phase flash considers one liquid and one vapor, so test stability
+wherever a second liquid can form. <code>fugacio.sim.flash_drum</code> warns when an
+outlet is unstable, and <code>fugacio.thermo.acceptance.flash_pt_checked</code> rejects
+such a state.</p>
 <h2 id="group-contribution-predicted-parameters">Group contribution &amp; predicted parameters<a class="headerlink" href="#group-contribution-predicted-parameters" title="Permanent link">&para;</a></h2>
 <p>When no fitted binary parameters are available, predict them. <code>unifac_activity</code>
 and the Dortmund <code>modified_unifac_activity</code> give activity coefficients straight
@@ -2661,16 +2724,16 @@ parameter pytrees, with residual builders (<code>bubble_pressure_residuals</code
 with <code>read_thermoml</code> / <code>load_sample</code>.</p>
 <h2 id="binary-diagrams-azeotropes-residue-curves">Binary diagrams, azeotropes &amp; residue curves<a class="headerlink" href="#binary-diagrams-azeotropes-residue-curves" title="Permanent link">&para;</a></h2>
 <p>The <code>fugacio.sim</code> layer builds the classic non-ideal diagrams from any binary
-model: <code>pxy_diagram</code>, <code>txy_diagram</code>, and the <code>azeotrope_pressure</code> /
+property package: <code>pxy_diagram</code>, <code>txy_diagram</code>, and the <code>azeotrope_pressure</code> /
 <code>azeotrope_temperature</code> finders. For ternary screening, <code>residue_curve</code> integrates
 a single open-evaporation trajectory and <code>residue_curve_map</code> sweeps a family of
 them, the standard tool for laying out distillation boundaries.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">nrtl_model_for</span><span class="p">,</span> <span class="n">residue_curve</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">nrtl_model_for</span><span class="p">((</span><span class="s2">&quot;acetone&quot;</span><span class="p">,</span> <span class="s2">&quot;methanol&quot;</span><span class="p">,</span> <span class="s2">&quot;water&quot;</span><span class="p">))</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">curve</span> <span class="o">=</span> <span class="n">residue_curve</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]),</span> <span class="mf">101325.0</span><span class="p">)</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">curve</span><span class="o">.</span><span class="n">x</span>   <span class="c1"># liquid-composition trajectory toward the high-boiling node</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_for</span><span class="p">,</span> <span class="n">residue_curve</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;acetone&quot;</span><span class="p">,</span> <span class="s2">&quot;methanol&quot;</span><span class="p">,</span> <span class="s2">&quot;water&quot;</span><span class="p">),</span> <span class="s2">&quot;nrtl&quot;</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">curve</span> <span class="o">=</span> <span class="n">residue_curve</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]),</span> <span class="mf">101325.0</span><span class="p">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">curve</span><span class="o">.</span><span class="n">x</span>   <span class="c1"># liquid-composition trajectory toward the high-boiling node (water)</span>
 </span></code></pre></div>
 <h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
 <p>The activity kernels are cross-checked in the opt-in oracle suite (<code>just oracles</code>)

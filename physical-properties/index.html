@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2682,10 +2712,14 @@ gaps:</p>
 <code>liquid_density</code>, <code>vapor_density</code>, <code>liquid_volumetric_flow</code>,
 <code>vapor_volumetric_flow</code>, <code>liquid_viscosity</code>, <code>vapor_viscosity</code>,
 <code>liquid_thermal_conductivity</code>, <code>vapor_thermal_conductivity</code>, and
-<code>surface_tension</code> each take a <code>Stream</code>. <code>column_diameter_for</code> chains them into
-a Souders-Brown column/drum diameter sized from actual stream densities, and
-because everything is JAX, the diameter is differentiable with respect to feed
-conditions through the flash <em>and</em> the property correlations.</p>
+<code>surface_tension</code> each take a <code>Stream</code>. <code>vapor_density</code> and
+<code>vapor_volumetric_flow</code> evaluate the vapor branch of a property package, set
+with <code>model=</code> (Peng-Robinson by default); the liquid and transport properties
+use the correlations above. <code>column_diameter_for</code> chains them into a
+Souders-Brown column/drum diameter sized from actual stream densities, and it
+also takes <code>model=</code> for its vapor density. Because everything is JAX, the
+diameter is differentiable with respect to feed conditions through the flash
+<em>and</em> the property correlations.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">column_diameter_for</span><span class="p">,</span> <span class="n">flash_drum</span><span class="p">,</span> <span class="n">liquid_density</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -2696,7 +2730,7 @@ conditions through the flash <em>and</em> the property correlations.</p>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">)</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">vap</span><span class="p">,</span> <span class="n">liq</span> <span class="o">=</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">rho_l</span> <span class="o">=</span> <span class="n">liquid_density</span><span class="p">(</span><span class="n">liq</span><span class="p">)</span>                 <span class="c1"># kg/m^3 at the drum state</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">d</span> <span class="o">=</span> <span class="n">column_diameter_for</span><span class="p">(</span><span class="n">vap</span><span class="p">,</span> <span class="n">liq</span><span class="p">)</span>           <span class="c1"># Souders-Brown diameter (m)</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">d</span> <span class="o">=</span> <span class="n">column_diameter_for</span><span class="p">(</span><span class="n">vap</span><span class="p">,</span> <span class="n">liq</span><span class="p">)</span>           <span class="c1"># Souders-Brown diameter (m), PR vapor density</span>
 </span></code></pre></div>
 <p>The copilot exposes the same capability as JSON tools: <code>physical_properties</code>
 (densities, viscosities, conductivities, surface tension, Hvap, liquid Cp for a

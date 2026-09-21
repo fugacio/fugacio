@@ -266,7 +266,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../phase-equilibrium/" class="md-tabs__link">
+        <a href="../../upgrading/" class="md-tabs__link">
           
   
   
@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -473,6 +475,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2473,21 +2503,23 @@ through the rest of the Fugacio stack (<code>fugacio.sim</code>, <code>fugacio.c
   Peneloux translation), and transport properties
   (<code>gas_viscosities</code>, <code>liquid_thermal_conductivities</code>,
   <code>surface_tensions</code>, <code>gas_diffusivity</code>, ...), pure and mixture;</li>
-<li><strong>phase equilibrium</strong>: equation-of-state (<code>flash_pt</code>,
-  <code>bubble_pressure_eos</code>, ...) <em>and</em> gamma-phi (<code>flash_pt_gamma</code>,
-  <code>bubble_pressure_gamma</code>, ...) routes, plus liquid-liquid
-  (<code>flash_lle</code>) and vapour-liquid-liquid (<code>flash_vlle</code>,
-  <code>heterogeneous_azeotrope</code>) equilibria and tangent-plane stability;</li>
+<li><strong>phase equilibrium</strong>: equation-of-state (<code>flash_pt_with_info</code>,
+  <code>bubble_pressure_eos_with_info</code>, ...) <em>and</em> gamma-phi
+  (<code>flash_pt_gamma_with_info</code>, <code>bubble_temperature_gamma_with_info</code>, ...)
+  routes, plus liquid-liquid (<code>flash_lle_with_info</code>) and
+  vapour-liquid-liquid (<code>flash_vlle_with_info</code>, <code>heterogeneous_azeotrope</code>)
+  equilibria and the shared tangent-plane stability search (<code>tpd_search</code>).
+  Every checked <code>_with_info</code> calculation returns a <code>SolveReport</code>; its
+  value-only twin returns NaN when that report fails;</li>
 <li><strong>PC-SAFT</strong>: <code>fugacio.thermo.saft</code>, a molecular-based (perturbed-chain
-  SAFT) equation of state with Wertheim association (<code>SAFTModel</code>,
-  <code>saft_parameters_for</code>, <code>flash_pt_saft</code>, ...), the third class of
+  SAFT) equation of state with Wertheim association
+  (<code>saft_parameters_for</code>, <code>flash_pt_saft_with_info</code>, ...), the third class of
   thermodynamic method alongside the cubic EOS and gamma-phi routes;</li>
-<li><strong>models</strong>: the unified <code>EOSModel</code> / <code>GammaPhiModel</code> / <code>SAFTModel</code> interface;</li>
 <li><strong>property packages</strong>: <code>fugacio.thermo.package</code>, the one object that owns
   phase equilibrium <em>and</em> energy (<code>ln_phi</code>, enthalpy, entropy, volume,
-  PT/PH/PS/TV flashes) for every method class (<code>CubicPackage</code>,
-  <code>GammaPhiPackage</code> with autodiff excess enthalpy, <code>SAFTPackage</code>,
-  <code>HelmholtzPackage</code>), so a whole flowsheet runs on any of them;</li>
+  stability, PT/PH/PS/TV flashes, saturation points) for every method class
+  (<code>CubicPackage</code>, <code>GammaPhiPackage</code> with autodiff excess enthalpy,
+  <code>SAFTPackage</code>, <code>HelmholtzPackage</code>), so a whole flowsheet runs on any of them;</li>
 <li><strong>regression</strong>: differentiable parameter estimation
   (<code>levenberg_marquardt</code>, <code>fit_nrtl_binary</code>, ...),
   UNIFAC-to-binary prediction (<code>predict_nrtl_from_unifac</code>), and the
@@ -2553,7 +2585,7 @@ variable <code>FUGACIO_X64</code> is set to <code>"0"</code>.</p>
 <tr>
 <td>Components &amp; data</td>
 <td><a href="data/">Components &amp; data</a></td>
-<td><code>Component</code>, <code>DATABASE</code>, <code>component_arrays</code>, <code>R</code>, <code>T_REF</code></td>
+<td><code>Component</code>, <code>DATABASE</code>, <code>component_arrays</code>, <code>R</code>, <code>T_REF</code>, <code>P_REF</code></td>
 </tr>
 <tr>
 <td>Equations of state</td>
@@ -2561,14 +2593,19 @@ variable <code>FUGACIO_X64</code> is set to <code>"0"</code>.</p>
 <td><code>PR</code>, <code>SRK</code>, <code>RK</code>, <code>VDW</code>, <code>ln_phi_mixture</code>, <code>molar_volume</code></td>
 </tr>
 <tr>
+<td>Physical acceptance</td>
+<td><a href="acceptance/">Physical acceptance &amp; provenance</a></td>
+<td><code>flash_pt_checked</code>, <code>PhysicalReport</code>, <code>PhysicalAcceptanceError</code>, <code>PhysicalAcceptanceWarning</code></td>
+</tr>
+<tr>
 <td>Numerical solvers</td>
 <td><a href="solvers/">Solvers and diagnostics</a></td>
-<td><code>SolveReport</code>, <code>ConvergenceError</code>, <code>newton_system_with_info</code>, <code>fixed_point_with_info</code></td>
+<td><code>SolveReport</code>, <code>SolveStatus</code>, <code>ConvergenceError</code>, <code>nan_unless_converged</code>, <code>newton_system_with_info</code>, <code>gate_derivative</code></td>
 </tr>
 <tr>
 <td>Phase equilibrium</td>
 <td><a href="equilibrium/">Phase equilibrium</a></td>
-<td><code>flash_pt</code>, <code>rachford_rice</code>, <code>bubble_pressure_eos</code>, <code>EOSModel</code>, <code>GammaPhiModel</code></td>
+<td><code>flash_pt</code>, <code>flash_pt_with_info</code>, <code>bubble_pressure_eos</code>, <code>SaturationResult</code>, <code>tpd_search</code>, <code>StabilityResult</code></td>
 </tr>
 <tr>
 <td>LLE &amp; VLLE</td>
@@ -2583,12 +2620,12 @@ variable <code>FUGACIO_X64</code> is set to <code>"0"</code>.</p>
 <tr>
 <td>Energy &amp; properties</td>
 <td><a href="energy/">Energy &amp; property models</a></td>
-<td><code>flash_ph</code>, <code>flash_ps</code>, <code>residual_properties</code>, <code>cp_ig</code>, <code>heat_of_vaporization</code></td>
+<td><code>residual_properties</code>, <code>cp_ig</code>, <code>EnergyFlashResult</code>, <code>heat_of_vaporization</code></td>
 </tr>
 <tr>
 <td>Property packages</td>
 <td><a href="packages/">Property packages</a></td>
-<td><code>PropertyPackage</code>, <code>CubicPackage</code>, <code>GammaPhiPackage</code>, <code>SAFTPackage</code>, <code>HelmholtzPackage</code>, <code>excess_enthalpy</code></td>
+<td><code>PropertyPackage</code>, <code>CubicPackage</code>, <code>GammaPhiPackage</code>, <code>SAFTPackage</code>, <code>HelmholtzPackage</code>, <code>excess_enthalpy</code>, <code>fugacity_enthalpy_residual</code></td>
 </tr>
 <tr>
 <td>Reference fluids</td>

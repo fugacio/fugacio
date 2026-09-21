@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -776,6 +806,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Run a saved case">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reuse-compiled-kernels-across-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reuse compiled kernels across commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -827,6 +874,17 @@
     <span class="md-ellipsis">
       
         Depropanizer and measured heater
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#joule-thomson-separator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Joule-Thomson separator
       
     </span>
   </a>
@@ -2521,6 +2579,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Run a saved case">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reuse-compiled-kernels-across-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reuse compiled kernels across commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2572,6 +2647,17 @@
     <span class="md-ellipsis">
       
         Depropanizer and measured heater
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#joule-thomson-separator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Joule-Thomson separator
       
     </span>
   </a>
@@ -2652,23 +2738,42 @@ compare, or replay results:</p>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>replay<span class="w"> </span>RUN_ID
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>compare<span class="w"> </span>BASELINE_ID<span class="w"> </span>CANDIDATE_ID
 </span></code></pre></div>
+<p><code>inspect</code> verifies an artifact's hash and prints it as JSON. With <code>--report</code>, it
+renders any artifact kind as Markdown: a run gets its full engineering report,
+and a study or comparison gets a summary of its recorded fields. Nothing is
+recomputed.</p>
 <p>The command exits with status 0 on success, 1 for an input or execution error,
 and 2 when a completed run or study fails its checks. A failed calculation is
 still saved. Input validation errors don't fabricate a run.</p>
+<p>The Markdown run report lists each check with the reasons a failed one gives,
+the metrics, and a stream table with molar flow, mass flow (kg/s), temperature,
+pressure, molar vapor fraction, one mole-fraction column per component in the
+case's order, and enthalpy flow, followed by each unit's heat and work.</p>
+<h3 id="reuse-compiled-kernels-across-commands">Reuse compiled kernels across commands<a class="headerlink" href="#reuse-compiled-kernels-across-commands" title="Permanent link">&para;</a></h3>
+<p>Each CLI command is a new process, so it compiles its kernels again. Pass
+<code>--jax-cache DIR</code> to <code>run</code>, <code>sweep</code>, <code>optimize</code>, <code>sensitivities</code>, <code>profile</code>, or
+<code>replay</code> to keep compiled programs in <code>DIR</code> and load them in later commands.
+Setting the <code>FUGACIO_JAX_CACHE</code> environment variable does the same for every
+command:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>heater.json<span class="w"> </span>--jax-cache<span class="w"> </span>.jax_cache
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FUGACIO_JAX_CACHE</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/.jax_cache&quot;</span>
+</span></code></pre></div>
+<p>In Python, call <code>fugacio.sim.enable_compilation_cache(directory)</code> before the
+first calculation. See the <a href="../performance/#compile-once-kernels">performance guide</a>.</p>
 <p>The Python equivalent is:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">CaseWorkspace</span><span class="p">,</span> <span class="n">ProcessCase</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">example_case</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">example_case</span><span class="p">(</span><span class="s2">&quot;heater&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;heater.json&quot;</span><span class="p">)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">case</span> <span class="o">=</span> <span class="n">ProcessCase</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;heater.json&quot;</span><span class="p">)</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">)</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">baseline</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">workspace</span> <span class="o">=</span> <span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">)</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">workspace</span><span class="o">.</span><span class="n">save_run</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">candidate</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">({</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">360</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">}},</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">workspace</span><span class="o">.</span><span class="n">save_run</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">candidate</span><span class="o">.</span><span class="n">markdown</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">CaseWorkspace</span><span class="p">,</span> <span class="n">ProcessCase</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">example_case</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">example_case</span><span class="p">(</span><span class="s2">&quot;heater&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;heater.json&quot;</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">case</span> <span class="o">=</span> <span class="n">ProcessCase</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;heater.json&quot;</span><span class="p">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">)</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">baseline</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">workspace</span> <span class="o">=</span> <span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">)</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">workspace</span><span class="o">.</span><span class="n">save_run</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">candidate</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">({</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">360</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">}},</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">workspace</span><span class="o">.</span><span class="n">save_run</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">candidate</span><span class="o">.</span><span class="n">markdown</span><span class="p">())</span>
 </span></code></pre></div>
 <p><code>run(check=False)</code>, the default, returns failures for inspection.
 <code>run(check=True)</code> and <code>run.check()</code> raise <code>CaseAcceptanceError</code>, which carries
@@ -2749,12 +2854,28 @@ for material branches. Feeds must connect to the process, every unit must have
 a path from a feed, and the case must have an external product. Recycles are
 allowed and partitioned by the existing flowsheet engine.</p>
 <h2 id="units-and-backends">Units and backends<a class="headerlink" href="#units-and-backends" title="Permanent link">&para;</a></h2>
-<p>The initial registry supports mixers, splitters, heaters/coolers, valves,
-pumps, compressors, turbines, PT flashes, ideal component separators,
-two-sided heat exchangers, rigorous MESH columns, and single-reaction
-stoichiometric reactors. Common-package equilibrium reactors, CSTRs, PFRs, and
-reactive flashes share named reaction sets; columns accept reacting phase volumes.
-See <a href="../reactive-workflows/">reactive workflows</a> for complete examples.</p>
+<p>The registry supports mixers, splitters, heaters/coolers, valves, pumps,
+compressors, turbines, flash drums, ideal component separators, two-sided heat
+exchangers, rigorous MESH columns, and single-reaction stoichiometric reactors.
+Common-package equilibrium reactors, CSTRs, PFRs, and reactive flashes share
+named reaction sets; columns accept reacting phase volumes. See
+<a href="../reactive-workflows/">reactive workflows</a> for complete examples. Run
+<code>fugacio registry</code> for every kind's settings.</p>
+<p>A <code>flash</code> unit requires its pressure <code>p</code> and exactly one of <code>t</code> or <code>duty</code>. With
+<code>t</code> it's an isothermal drum whose required heat is reported. With <code>duty</code> it's a
+drum with a specified heat input, and <code>{"value": 0, "unit": "W"}</code> is an
+adiabatic drum whose temperature follows from the energy balance, the right
+model for a letdown into a separator. A <code>heater</code> takes exactly one of <code>t_out</code>,
+<code>duty</code>, or <code>vapor_fraction</code>; a vapor fraction may be any value in <code>[0, 1]</code> for a
+pure fluid and 0 (bubble point) or 1 (dew point) for a mixture.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;separator&quot;</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flash&quot;</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;inlets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;letdown&quot;</span><span class="p">],</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">&quot;outlets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;gas&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;condensate&quot;</span><span class="p">],</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;p&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;parameter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;letdown_pressure&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;duty&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;W&quot;</span><span class="p">}}</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</span></code></pre></div>
 <p>Columns retain all product streams, side draws, condenser and reboiler duties,
 stage temperatures and pressures, phase compositions, K-values, and traffic.
 Column specifications use component names and explicit physical quantities.
@@ -2763,10 +2884,11 @@ order and a named key reactant; the case validator checks element conservation.
 Reaction energy includes standard formation enthalpies with the package's
 sensible and residual terms. The reference-fluid energy datum isn't supported
 for these reaction cases.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">SolverOptions</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">sequential</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span><span class="n">recycle_method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">))</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">simultaneous</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">&quot;eo&quot;</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">SolverOptions</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">sequential</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">)</span>                        <span class="c1"># Broyden recycles by default</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">wegstein</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span><span class="n">recycle_method</span><span class="o">=</span><span class="s2">&quot;wegstein&quot;</span><span class="p">))</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">simultaneous</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">&quot;eo&quot;</span><span class="p">))</span>
 </span></code></pre></div>
 <p>Both backends delegate unit physics to the same kernels. The case EO adapter
 solves simultaneous stream equations with nested implicit unit solves; it
@@ -2774,14 +2896,16 @@ doesn't expand a column into global MESH unknowns. Pure-fluid EO streams retain
 enthalpy coordinates so quality isn't lost on the saturation line. Failed
 solves retain their reports, and no backend silently substitutes another.
 Execution compiles each complete registered unit, including feed-property
-preparation and retained outputs, with dynamic operating values. Studies reuse
+preparation and retained outputs, with dynamic operating values. Compiled unit
+templates are cached for the whole process, so every runner with the same unit
+structure and fixed settings shares them. Studies reuse
 one local linearization per operating point, selecting forward or reverse
 directions from the input/output counts. They retain the individual unit kernels.
 Fixed case topology and dynamic recycle parameters let optimizer trials reuse
 the compiled maps. Saved
 profiles remain available without becoming study derivative outputs.
-Separate CLI invocations can reuse JAX's persistent compilation cache with
-<code>export JAX_COMPILATION_CACHE_DIR="$PWD/.jax_cache"</code> before running commands.
+Separate CLI invocations can reuse compiled programs with <code>--jax-cache DIR</code> or
+<code>FUGACIO_JAX_CACHE</code>, as described above.
 The <a href="../performance/">performance guide</a> covers structured column solves,
 flowsheet coloring, reusable derivatives, profiling artifacts, and isolated
 benchmarks. Timings depend on hardware, JAX version, and cache state.
@@ -2802,16 +2926,16 @@ cases. A new portable kind needs a validator, kernel adapter, retained result
 definition, and tests.</p>
 <h2 id="metrics-and-design-specifications">Metrics and design specifications<a class="headerlink" href="#metrics-and-design-specifications" title="Permanent link">&para;</a></h2>
 <p>A metric combines an expression with a display unit:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;reboiler_duty&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reboiler_duty&quot;</span><span class="p">},</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MW&quot;</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">&quot;purity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;stream&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mole_fraction&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;component&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;propane&quot;</span><span class="p">},</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;%&quot;</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;reboiler_duty&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reboiler_duty&quot;</span><span class="p">},</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MW&quot;</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">&quot;purity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;stream&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mole_fraction&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;component&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;propane&quot;</span><span class="p">},</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;%&quot;</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Expressions can reference parameters, streams, retained unit properties,
 column profiles, plant totals, or other metrics. Arithmetic operations are
@@ -2820,38 +2944,38 @@ column profiles, plant totals, or other metrics. Arithmetic operations are
 rejected. No Python evaluation is involved. An undefined quantity, such as the
 composition of an empty stream, is unavailable and fails a declared metric.</p>
 <p>An outer design specification frees one bounded parameter to meet one metric:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_duty&quot;</span><span class="p">,</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;parameter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;duty&quot;</span><span class="p">,</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kW&quot;</span><span class="p">},</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">&quot;tolerance&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.001</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;W&quot;</span><span class="p">}</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_duty&quot;</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">&quot;parameter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;duty&quot;</span><span class="p">,</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kW&quot;</span><span class="p">},</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">&quot;tolerance&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.001</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;W&quot;</span><span class="p">}</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Put this object in the case's <code>specifications</code> array. Coupled specifications
 are solved together within normalized parameter bounds. Acceptance checks the
 actual target error and the final bounds. Implicit derivatives follow the
 converged specification, not the manipulated parameter's initial guess.</p>
 <h2 id="sweeps-sensitivities-and-optimization">Sweeps, sensitivities, and optimization<a class="headerlink" href="#sweeps-sensitivities-and-optimization" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">optimize</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">,</span> <span class="n">sweep</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">grid</span> <span class="o">=</span> <span class="n">sweep</span><span class="p">(</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">runner</span><span class="p">,</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">}</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">340</span><span class="p">,</span> <span class="mi">350</span><span class="p">,</span> <span class="mi">360</span><span class="p">)]},</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span><span class="p">,</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">gradient</span> <span class="o">=</span> <span class="n">sensitivities</span><span class="p">(</span><span class="n">runner</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;duty&quot;</span><span class="p">],</span> <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span><span class="p">)</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">design</span> <span class="o">=</span> <span class="n">optimize</span><span class="p">(</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="n">runner</span><span class="p">,</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">],</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="s2">&quot;annual_cost&quot;</span><span class="p">,</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="n">constraints</span><span class="o">=</span><span class="p">[{</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>        <span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="s2">&quot;product_temperature&quot;</span><span class="p">,</span>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>        <span class="s2">&quot;lower&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">360</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">},</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        <span class="s2">&quot;tolerance&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;delta_K&quot;</span><span class="p">},</span>
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>    <span class="p">}],</span>
-</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span><span class="p">,</span>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">optimize</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">,</span> <span class="n">sweep</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">grid</span> <span class="o">=</span> <span class="n">sweep</span><span class="p">(</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">runner</span><span class="p">,</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">}</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">340</span><span class="p">,</span> <span class="mi">350</span><span class="p">,</span> <span class="mi">360</span><span class="p">)]},</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span><span class="p">,</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">)</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">gradient</span> <span class="o">=</span> <span class="n">sensitivities</span><span class="p">(</span><span class="n">runner</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;duty&quot;</span><span class="p">],</span> <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span><span class="p">)</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">design</span> <span class="o">=</span> <span class="n">optimize</span><span class="p">(</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">runner</span><span class="p">,</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">],</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="s2">&quot;annual_cost&quot;</span><span class="p">,</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="n">constraints</span><span class="o">=</span><span class="p">[{</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        <span class="s2">&quot;metric&quot;</span><span class="p">:</span> <span class="s2">&quot;product_temperature&quot;</span><span class="p">,</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>        <span class="s2">&quot;lower&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">360</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">},</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="s2">&quot;tolerance&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;delta_K&quot;</span><span class="p">},</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    <span class="p">}],</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">workspace</span><span class="p">,</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>Sweeps evaluate a bounded Cartesian grid in deterministic order. Failed points
 remain in the manifest with a failed run or an input error. Study manifests
@@ -2883,9 +3007,9 @@ Finite-difference points and final candidates start cold, and optimization
 acceptance requires the final objective and constraint metrics to agree with
 the warm-start trial within a scaled relative tolerance of 1e-6.</p>
 <p>The CLI takes study arguments in a JSON request file:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>sweep<span class="w"> </span>heater.json<span class="w"> </span>sweep-request.json
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>optimize<span class="w"> </span>heater.json<span class="w"> </span>optimization-request.json
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>sensitivities<span class="w"> </span>heater.json<span class="w"> </span>sensitivity-request.json
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>sweep<span class="w"> </span>heater.json<span class="w"> </span>sweep-request.json
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>optimize<span class="w"> </span>heater.json<span class="w"> </span>optimization-request.json
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>sensitivities<span class="w"> </span>heater.json<span class="w"> </span>sensitivity-request.json
 </span></code></pre></div>
 <p>For example, a sweep request is
 <code>{"grid": {"temperature": [{"value": 340, "unit": "K"}, {"value": 360, "unit": "K"}]}}</code>.
@@ -2893,10 +3017,10 @@ Optimization requests use <code>variables</code>, <code>objective</code>, option
 <code>constraints</code>. Sensitivity requests use <code>parameters</code> and <code>metrics</code>. Optional
 <code>overrides</code> set the base operating point for optimization and sensitivities.</p>
 <h2 id="depropanizer-and-measured-heater">Depropanizer and measured heater<a class="headerlink" href="#depropanizer-and-measured-heater" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>depropanizer<span class="w"> </span>depropanizer.json
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>depropanizer.json<span class="w"> </span>--recycle-method<span class="w"> </span>broyden<span class="w"> </span>--report<span class="w"> </span>depropanizer.md
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>measured-heater<span class="w"> </span>measured-heater.json
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>measured-heater.json<span class="w"> </span>--report<span class="w"> </span>measured-heater.md
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>depropanizer<span class="w"> </span>depropanizer.json
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>depropanizer.json<span class="w"> </span>--recycle-method<span class="w"> </span>broyden<span class="w"> </span>--report<span class="w"> </span>depropanizer.md
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>measured-heater<span class="w"> </span>measured-heater.json
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>measured-heater.json<span class="w"> </span>--report<span class="w"> </span>measured-heater.md
 </span></code></pre></div>
 <p>The depropanizer reproduces the existing 16-stage propane/butane/pentane plant
 case. It meets 95% propane purity and 98% recovery, transfers bottoms heat to
@@ -2912,6 +3036,18 @@ source hashes, then reevaluates the declared independent publication holdout.
 The stored fit coefficients don't supply a trusted qualification flag. The
 example stays within observed training bounds. The example evidence can be
 regenerated with <code>scripts/qualify.py</code>; its source IDs and hashes remain in JSON.</p>
+<h2 id="joule-thomson-separator">Joule-Thomson separator<a class="headerlink" href="#joule-thomson-separator" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>jt-separator<span class="w"> </span>jt-separator.json
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>jt-separator.json<span class="w"> </span>--jax-cache<span class="w"> </span>.jax_cache<span class="w"> </span>--report<span class="w"> </span>jt-separator.md
+</span></code></pre></div>
+<p>The <code>jt-separator</code> case expands 10 mol/s of a rich natural gas (methane,
+ethane, propane, and n-butane on Peng-Robinson) from 90 bar to 25 bar across an
+isenthalpic Joule-Thomson valve, then separates the chilled two-phase outlet in
+a flash drum at zero duty. The drum's temperature follows from the energy balance: about
+262.4 K, condensing about 0.573 mol/s, with about 52.6% of the n-butane
+recovered in the condensate. The letdown pressure is a bounded parameter
+between 15 and 60 bar, so sweeping it trades separator temperature against
+heavy-ends recovery. The feed composition is illustrative.</p>
 <h2 id="acceptance-and-reproducibility">Acceptance and reproducibility<a class="headerlink" href="#acceptance-and-reproducibility" title="Permanent link">&para;</a></h2>
 <p>Every run retains separate evidence:</p>
 <ol>
@@ -2947,15 +3083,15 @@ pressure, valves and turbines lower it, and liquid pumps require liquid feeds.
 Pressure-specified mixers, flashes, and columns require sufficient feed pressure.
 Reported metrics distinguish process expressions from literal input values.</p>
 <h2 id="accountable-copilot">Accountable copilot<a class="headerlink" href="#accountable-copilot" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.copilot</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_design_agent</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseWorkspace</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">run_design_agent</span><span class="p">(</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="s2">&quot;Build a heater case and minimize annual utility cost while delivering at least 360 K.&quot;</span><span class="p">,</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="n">provider</span><span class="p">,</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">),</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">)</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">answer</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.copilot</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_design_agent</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseWorkspace</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">run_design_agent</span><span class="p">(</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="s2">&quot;Build a heater case and minimize annual utility cost while delivering at least 360 K.&quot;</span><span class="p">,</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">provider</span><span class="p">,</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">),</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="p">)</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">answer</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>provider</code> implements the existing provider-neutral interface. The design loop
 can obtain examples, create or load cases, update a complete revision, set

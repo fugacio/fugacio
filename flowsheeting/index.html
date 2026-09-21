@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -839,6 +869,17 @@
     <span class="md-ellipsis">
       
         Tear methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports-unit-records-and-audits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reports, unit records, and audits
       
     </span>
   </a>
@@ -2519,6 +2560,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reports-unit-records-and-audits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reports, unit records, and audits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#two-sided-heat-exchanger" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2611,8 +2663,11 @@ every loop with a choice of accelerated fixed-point or quasi-Newton methods,
 and keeps the converged plant differentiable in its parameters.</p>
 <h2 id="declare-units-not-an-order">Declare units, not an order<a class="headerlink" href="#declare-units-not-an-order" title="Permanent link">&para;</a></h2>
 <p>Register feeds and units; each unit is a plain function of its input streams
-and the shared parameter pytree <code>theta</code>, returning one stream or a tuple of
-streams matched to <code>outputs</code>. The order you register units in doesn't matter.</p>
+and the shared parameter pytree <code>theta</code>. It returns one stream, a tuple of
+streams matched to <code>outputs</code>, or a unit result that exposes <code>outlets</code> (such as
+<code>HeaterResult</code> or <code>RigorousColumnResult</code>). The flowsheet keeps the heat, work,
+and report of every result it receives. The order you register units in
+doesn't matter.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flowsheet</span><span class="p">,</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">flash_drum</span><span class="p">,</span> <span class="n">heater</span><span class="p">,</span> <span class="n">mix</span><span class="p">,</span> <span class="n">splitter</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -2621,13 +2676,13 @@ streams matched to <code>outputs</code>. The order you register units in doesn't
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">Flowsheet</span><span class="p">()</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;mixer&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">mix</span><span class="p">([</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">],</span> <span class="n">t</span><span class="o">=</span><span class="mf">300.0</span><span class="p">),</span>            <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="s2">&quot;recycle&quot;</span><span class="p">),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;mixed&quot;</span><span class="p">,))</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;cooler&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">heater</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;T_flash&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">outlet</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;mixed&quot;</span><span class="p">,),</span>  <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,))</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;flash&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">[</span><span class="s2">&quot;T_flash&quot;</span><span class="p">],</span> <span class="mf">20e5</span><span class="p">),</span>   <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,),</span>   <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vapor&quot;</span><span class="p">,</span> <span class="s2">&quot;liquid&quot;</span><span class="p">))</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;mixer&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">mix</span><span class="p">([</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">],</span> <span class="n">t</span><span class="o">=</span><span class="mf">300.0</span><span class="p">),</span>          <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="s2">&quot;recycle&quot;</span><span class="p">),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;mixed&quot;</span><span class="p">,))</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;cooler&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">heater</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;T_flash&quot;</span><span class="p">]),</span>    <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;mixed&quot;</span><span class="p">,),</span>  <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,))</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;flash&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">[</span><span class="s2">&quot;T_flash&quot;</span><span class="p">],</span> <span class="mf">20e5</span><span class="p">),</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;cold&quot;</span><span class="p">,),</span>   <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vapor&quot;</span><span class="p">,</span> <span class="s2">&quot;liquid&quot;</span><span class="p">))</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;split&quot;</span><span class="p">,</span>  <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">:</span> <span class="n">splitter</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;purge&quot;</span><span class="p">],</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">th</span><span class="p">[</span><span class="s2">&quot;purge&quot;</span><span class="p">]])),</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;vapor&quot;</span><span class="p">,),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;purge&quot;</span><span class="p">,</span> <span class="s2">&quot;recycle&quot;</span><span class="p">))</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">streams</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;T_flash&quot;</span><span class="p">:</span> <span class="mf">250.0</span><span class="p">,</span> <span class="s2">&quot;purge&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">)</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">streams</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;T_flash&quot;</span><span class="p">:</span> <span class="mf">250.0</span><span class="p">,</span> <span class="s2">&quot;purge&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">})</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">streams</span><span class="p">[</span><span class="s2">&quot;recycle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">total</span>
 </span></code></pre></div>
 <p><code>partition()</code> exposes the calculation order the solver derived:</p>
@@ -2646,7 +2701,8 @@ as known. Acyclic blocks run once; cyclic blocks are converged.</p>
 <code>partition</code> (and supplemented if it leaves a cycle unbroken), and it's also the
 way to give a starting guess for a tear whose component list differs from the
 feeds', which the automatic seed (one pass of the loop with an empty recycle)
-can't infer.</p>
+can't infer. A recycle block with no upstream stream to seed it raises
+<code>ValueError</code> and asks for <code>Flowsheet.tear</code>.</p>
 <h2 id="tear-methods">Tear methods<a class="headerlink" href="#tear-methods" title="Permanent link">&para;</a></h2>
 <p><code>Flowsheet.solve</code> forwards its keyword arguments to <code>tear_solve</code>, which
 accepts three <code>method</code>s (see <code>fugacio.sim.TEAR_METHODS</code>):</p>
@@ -2660,14 +2716,14 @@ accepts three <code>method</code>s (see <code>fugacio.sim.TEAR_METHODS</code>):<
 </thead>
 <tbody>
 <tr>
-<td><code>"wegstein"</code> (default)</td>
-<td>bounded secant acceleration of direct substitution, per component</td>
-<td>loops that are already contracting; cheap per iteration</td>
+<td><code>"broyden"</code> (default)</td>
+<td>quasi-Newton with rank-one inverse-Jacobian updates and a residual-decreasing line search</td>
+<td>most loops, including strongly coupled or slowly converging ones (heat integration around a column)</td>
 </tr>
 <tr>
-<td><code>"broyden"</code></td>
-<td>quasi-Newton with a rank-one Jacobian update</td>
-<td>strongly coupled or slowly converging loops (heat integration around a column)</td>
+<td><code>"wegstein"</code></td>
+<td>bounded secant acceleration of direct substitution, per component</td>
+<td>loops that are already contracting; cheap per iteration</td>
 </tr>
 <tr>
 <td><code>"newton"</code></td>
@@ -2683,24 +2739,52 @@ function theorem at the fixed point: the adjoint solves one dense system against
 through the loop regardless of how many iterations the forward solve took. The
 three methods agree on the converged values and on the gradient to solver
 tolerance.</p>
+<h2 id="reports-unit-records-and-audits">Reports, unit records, and audits<a class="headerlink" href="#reports-unit-records-and-audits" title="Permanent link">&para;</a></h2>
+<p><code>solve</code> returns the named streams after checking every recycle, unit, and
+stream. <code>solve_with_info</code> keeps the evidence instead of raising:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_for</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">fs</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">(</span><span class="n">comps</span><span class="p">)</span>      <span class="c1"># audit every stream on this package</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve_with_info</span><span class="p">({</span><span class="s2">&quot;T_flash&quot;</span><span class="p">:</span> <span class="mf">250.0</span><span class="p">,</span> <span class="s2">&quot;purge&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">})</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">result</span><span class="o">.</span><span class="n">converged</span>                   <span class="c1"># every recycle, unit, and stream check passed</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">result</span><span class="o">.</span><span class="n">accepted</span>                    <span class="c1"># converged, and every audited stream accepted</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">result</span><span class="o">.</span><span class="n">units</span><span class="p">[</span><span class="s2">&quot;cooler&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">heat</span>        <span class="c1"># heat, work, and report a unit returned (W)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">result</span><span class="o">.</span><span class="n">audits</span><span class="p">[</span><span class="s2">&quot;vapor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>   <span class="c1"># physical acceptance of one stream</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">result</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>                     <span class="c1"># raise, naming the failed block or stream</span>
+</span></code></pre></div>
+<p><code>FlowsheetResult.reports</code> holds solve reports keyed <code>recycle:...</code>, <code>unit:...</code>,
+and <code>stream:...</code>. <code>units</code> holds a <code>UnitRecord(heat, work, report)</code> for every
+unit, taken from its returned result. With <code>Flowsheet(model=pkg)</code>, or
+<code>fs.model</code> set, every solved stream is audited for equilibrium, stability
+(including a second liquid), and parameter applicability after the recycles
+converge, outside the iterations. <code>solve()</code> raises <code>PhysicalAcceptanceError</code> for
+a stream that fails its audit; pass <code>audit=False</code> to <code>solve_with_info</code> to skip
+the audits. A failed unit raises <code>ConvergenceError</code> in an eager solve, and its
+message names the unit. Inside <code>jax.jit</code> nothing can raise: <code>solve()</code> returns
+NaN streams for a result that isn't accepted, and <code>solve_with_info</code> keeps the
+best iterates, so inspect <code>result.converged</code> and <code>result.accepted</code> there.</p>
+<p><code>fugacio.sim.acceptance.audit_flowsheet</code> adds explicit
+<code>BalanceBoundary</code> checks on top: each boundary names its input and output
+streams, and its heat and work are its explicit values plus those the result
+retained for the <code>units</code> it lists.</p>
 <h2 id="two-sided-heat-exchanger">Two-sided heat exchanger<a class="headerlink" href="#two-sided-heat-exchanger" title="Permanent link">&para;</a></h2>
 <p><code>fugacio.sim.heat_exchanger</code> couples a hot and a cold stream through a
 countercurrent (or parallel) exchanger with rigorous enthalpy curves on both
 sides. Each side may use its own property package, so steam or a refrigerant
 from a reference-fluid package can heat a hydrocarbon on a cubic EOS.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">heat_exchanger</span><span class="p">,</span> <span class="n">package_for</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">steam</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">]),</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">430.0</span><span class="p">,</span> <span class="mf">3e5</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">res</span> <span class="o">=</span> <span class="n">heat_exchanger</span><span class="p">(</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">steam</span><span class="p">,</span> <span class="n">process</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">t_cold_out</span><span class="o">=</span><span class="mf">380.0</span><span class="p">,</span>                    <span class="c1"># exactly one closing spec</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">zones</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>                             <span class="c1"># discretise the T-Q curves for LMTD</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">model_hot</span><span class="o">=</span><span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="s2">&quot;iapws&quot;</span><span class="p">),</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">res</span><span class="o">.</span><span class="n">duty</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">ua</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">lmtd</span>             <span class="c1"># W, W/K, K</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">res</span><span class="o">.</span><span class="n">hot_out</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cold_out</span>              <span class="c1"># both outlet streams (PH-flashed)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">res</span><span class="o">.</span><span class="n">approach_hot_end</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">approach_cold_end</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">min_approach</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">res</span><span class="o">.</span><span class="n">hot_curve</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cold_curve</span>          <span class="c1"># temperature at the zone boundaries</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">heat_exchanger</span><span class="p">,</span> <span class="n">package_for</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">steam</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">]),</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">430.0</span><span class="p">,</span> <span class="mf">3e5</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">res</span> <span class="o">=</span> <span class="n">heat_exchanger</span><span class="p">(</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">steam</span><span class="p">,</span> <span class="n">process</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">t_cold_out</span><span class="o">=</span><span class="mf">380.0</span><span class="p">,</span>                    <span class="c1"># exactly one closing spec</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">zones</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>                             <span class="c1"># discretise the T-Q curves for LMTD</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">model_hot</span><span class="o">=</span><span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="s2">&quot;iapws&quot;</span><span class="p">),</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">)</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">res</span><span class="o">.</span><span class="n">duty</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">ua</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">lmtd</span>             <span class="c1"># W, W/K, K</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">res</span><span class="o">.</span><span class="n">hot_out</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cold_out</span>              <span class="c1"># both outlet streams (PH-flashed)</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">res</span><span class="o">.</span><span class="n">approach_hot_end</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">approach_cold_end</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">min_approach</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">res</span><span class="o">.</span><span class="n">hot_curve</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cold_curve</span>          <span class="c1"># temperature at the zone boundaries</span>
 </span></code></pre></div>
 <p>The closing specification is any one of <code>duty</code>, <code>t_hot_out</code>, <code>t_cold_out</code>,
 <code>min_approach</code> (the exchanger sized to a pinch), or <code>ua</code> (a rating calculation:
@@ -2715,32 +2799,33 @@ spec, and the package parameters, including the duty with respect to <code>ua</c
 <p>The pieces compose. This is the depropanizer from the test suite: an
 economizer preheats the feed against the column bottoms, which closes a
 heat-integration loop <em>around</em> a rigorous column.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnFeed</span><span class="p">,</span> <span class="n">purity</span><span class="p">,</span> <span class="n">recovery</span><span class="p">,</span> <span class="n">rigorous_column</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">comps</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-butane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-pentane&quot;</span><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span><span class="n">comps</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.40</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">]),</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">16e5</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">specs</span> <span class="o">=</span> <span class="p">[</span><span class="n">recovery</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mf">0.98</span><span class="p">),</span> <span class="n">purity</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">)]</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">economiser</span><span class="p">(</span><span class="n">cold</span><span class="p">,</span> <span class="n">hot</span><span class="p">,</span> <span class="n">th</span><span class="p">):</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">hx</span> <span class="o">=</span> <span class="n">heat_exchanger</span><span class="p">(</span><span class="n">hot</span><span class="p">,</span> <span class="n">cold</span><span class="p">,</span> <span class="n">min_approach</span><span class="o">=</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">])</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="k">return</span> <span class="n">hx</span><span class="o">.</span><span class="n">cold_out</span><span class="p">,</span> <span class="n">hx</span><span class="o">.</span><span class="n">hot_out</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">column</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">):</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">res</span> <span class="o">=</span> <span class="n">rigorous_column</span><span class="p">([</span><span class="n">ColumnFeed</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">8</span><span class="p">)],</span> <span class="mi">16</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">16e5</span><span class="p">,</span> <span class="n">specs</span><span class="o">=</span><span class="n">specs</span><span class="p">)</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">distillate</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">bottoms</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">Flowsheet</span><span class="p">()</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;economiser&quot;</span><span class="p">,</span> <span class="n">economiser</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms&quot;</span><span class="p">),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;preheated&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms_cooled&quot;</span><span class="p">))</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;preheated&quot;</span><span class="p">,),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms&quot;</span><span class="p">))</span>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="n">s</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;dt&quot;</span><span class="p">:</span> <span class="mf">15.0</span><span class="p">},</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="n">s</span><span class="p">[</span><span class="s2">&quot;preheated&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">t</span>              <span class="c1"># heat recovered from the bottoms</span>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="n">s</span><span class="p">[</span><span class="s2">&quot;distillate&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>          <span class="c1"># 0.95, the purity spec</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnFeed</span><span class="p">,</span> <span class="n">purity</span><span class="p">,</span> <span class="n">recovery</span><span class="p">,</span> <span class="n">rigorous_column</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">comps</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-butane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-pentane&quot;</span><span class="p">)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span><span class="n">comps</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.40</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">]),</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">16e5</span><span class="p">)</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">specs</span> <span class="o">=</span> <span class="p">[</span><span class="n">recovery</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mf">0.98</span><span class="p">),</span> <span class="n">purity</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">)]</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">economiser</span><span class="p">(</span><span class="n">cold</span><span class="p">,</span> <span class="n">hot</span><span class="p">,</span> <span class="n">th</span><span class="p">):</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">hx</span> <span class="o">=</span> <span class="n">heat_exchanger</span><span class="p">(</span><span class="n">hot</span><span class="p">,</span> <span class="n">cold</span><span class="p">,</span> <span class="n">min_approach</span><span class="o">=</span><span class="n">th</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">])</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="k">return</span> <span class="n">hx</span><span class="o">.</span><span class="n">cold_out</span><span class="p">,</span> <span class="n">hx</span><span class="o">.</span><span class="n">hot_out</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">column</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">th</span><span class="p">):</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="c1"># The result&#39;s outlets are (distillate, bottoms); the flowsheet keeps its</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="c1"># condenser and reboiler duties as the unit&#39;s heat.</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="k">return</span> <span class="n">rigorous_column</span><span class="p">([</span><span class="n">ColumnFeed</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">8</span><span class="p">)],</span> <span class="mi">16</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">16e5</span><span class="p">,</span> <span class="n">specs</span><span class="o">=</span><span class="n">specs</span><span class="p">)</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">Flowsheet</span><span class="p">()</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">fs</span><span class="o">.</span><span class="n">feed</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="p">)</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;economiser&quot;</span><span class="p">,</span> <span class="n">economiser</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;feed&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms&quot;</span><span class="p">),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;preheated&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms_cooled&quot;</span><span class="p">))</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="n">fs</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;preheated&quot;</span><span class="p">,),</span> <span class="n">outputs</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;distillate&quot;</span><span class="p">,</span> <span class="s2">&quot;bottoms&quot;</span><span class="p">))</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="n">s</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve</span><span class="p">({</span><span class="s2">&quot;dt&quot;</span><span class="p">:</span> <span class="mf">15.0</span><span class="p">},</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="n">s</span><span class="p">[</span><span class="s2">&quot;preheated&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">t</span>              <span class="c1"># heat recovered from the bottoms</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="n">s</span><span class="p">[</span><span class="s2">&quot;distillate&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>          <span class="c1"># 0.95, the purity spec</span>
 </span></code></pre></div>
 <p>The <code>Flowsheet</code> finds the single cyclic block, tears <code>bottoms</code>, seeds it by one
 pass with an empty recycle (an empty hot side exchanges nothing), and converges
-the loop with Broyden. Because the column is itself an implicit solve, the loop
+the loop with the default Broyden method. Because the column is itself an implicit solve, the loop
 map is smooth in the tear and differentiable in <code>dt</code> and the spec values, so
 <code>jax.grad</code> of the reboiler duty with respect to the approach temperature passes
 through the exchanger, the column, and the closed loop together.</p>
@@ -2751,14 +2836,17 @@ flash, purge, automatically partitioned, followed by a stabilizer and a
 benzene/toluene column) and an ethanol/water train on NRTL whose bottoms heat
 is recovered into the feed.</p>
 <h3 id="compile-time">Compile time<a class="headerlink" href="#compile-time" title="Permanent link">&para;</a></h3>
-<p>Every column and exchanger is compiled once per <em>structure</em> (stage count,
-component list, spec kinds, package type) and then reused, so a unit evaluated
-repeatedly inside a recycle iteration or an optimization pays the compile once.
-The first call is where the time goes: a Peng-Robinson column or exchanger
-compiles in tens of seconds, while a gamma-phi package (whose every K-value and
-liquid enthalpy carries an EOS saturation-pressure solve per component) takes a
-few minutes. Run the quick suite with <code>just test-fast</code> to skip the <code>plant</code>
-case studies.</p>
+<p>Every unit, column, and exchanger is compiled once per <em>structure</em> (stage
+count, component list, specification kinds, package structure) and then
+reused, so a unit evaluated repeatedly inside a recycle iteration or an
+optimization pays the compilation once. The flowsheet also caches each recycle
+block's map, so solving again at a new <code>theta</code> reuses the compiled recycle
+iteration; registering a unit or a tear clears that cache. The first call is
+where the time goes, and a gamma-phi package (whose K-values and liquid
+enthalpies carry an EOS saturation-pressure solve per component) compiles
+noticeably more slowly than a cubic one. To keep compiled programs across
+processes, see <a href="../performance/#compile-once-kernels">compile-once kernels</a>.
+Run the quick suite with <code>just test-fast</code> to skip the <code>plant</code> case studies.</p>
 <h2 id="equation-oriented-alternative">Equation-oriented alternative<a class="headerlink" href="#equation-oriented-alternative" title="Permanent link">&para;</a></h2>
 <p>For flowsheets where every unit can be written as residual equations, the
 <a href="../equation-oriented/">equation-oriented engine</a> solves the plant as one Newton

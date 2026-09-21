@@ -12,13 +12,13 @@
         <meta name="author" content="Owen Carey">
       
       
-        <link rel="canonical" href="https://fugacio.com/reactions/">
+        <link rel="canonical" href="https://fugacio.com/upgrading/">
       
       
-        <link rel="prev" href="../physical-properties/">
+        <link rel="prev" href="..">
       
       
-        <link rel="next" href="../reactive-workflows/">
+        <link rel="next" href="../phase-equilibrium/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Reactions & reactors - Fugacio</title>
+        <title>Upgrading to 0.9 - Fugacio</title>
       
     
     
@@ -67,17 +67,17 @@
     
   
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Reactions & reactors - Fugacio" />
+<meta property="og:title" content="Upgrading to 0.9 - Fugacio" />
 <meta property="og:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
-<meta property="og:image" content="https://fugacio.com/assets/images/social/reactions.png" />
+<meta property="og:image" content="https://fugacio.com/assets/images/social/upgrading.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://fugacio.com/reactions/" />
+<meta property="og:url" content="https://fugacio.com/upgrading/" />
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:title" content="Reactions & reactors - Fugacio" />
+<meta property="twitter:title" content="Upgrading to 0.9 - Fugacio" />
 <meta property="twitter:description" content="Open, differentiable thermodynamics + process simulation, with an AI design copilot." />
-<meta property="twitter:image" content="https://fugacio.com/assets/images/social/reactions.png" />
+<meta property="twitter:image" content="https://fugacio.com/assets/images/social/upgrading.png" />
 </head>
   
   
@@ -97,7 +97,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#reactions-reactors" class="md-skip">
+        <a href="#upgrading-to-09" class="md-skip">
           Skip to content
         </a>
       
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reactions & reactors
+              Upgrading to 0.9
             
           </span>
         </div>
@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../upgrading/" class="md-tabs__link">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -483,10 +483,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../upgrading/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -502,6 +529,220 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#behavior-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behavior changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Behavior changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#failed-solves-return-nan-or-raise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failed solves return NaN or raise
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stability-comes-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stability comes first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recycles-default-to-broyden" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recycles default to Broyden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kernels-compile-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernels compile once
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fugaciothermo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fugacio.thermo
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="fugacio.thermo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#removed-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-functions-and-renamed-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed functions and renamed types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fugaciosim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fugacio.sim
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="fugacio.sim">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-property-argument" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One property argument
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unit-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reactors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reactors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flowsheets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flowsheets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process-cases-and-the-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process cases and the CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fugaciocopilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fugacio.copilot
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -651,37 +892,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reactions & reactors
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../reactions/" class="md-nav__link">
         
   
   
@@ -697,92 +911,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#stoichiometry-thermochemistry" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Stoichiometry &amp; thermochemistry
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chemical-reaction-equilibrium" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chemical-reaction equilibrium
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#kinetics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Kinetics
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reactors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Reactors
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reactive-separations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Reactive separations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2521,39 +2649,151 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#stoichiometry-thermochemistry" class="md-nav__link">
+  <a href="#behavior-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stoichiometry &amp; thermochemistry
+        Behavior changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Behavior changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#failed-solves-return-nan-or-raise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failed solves return NaN or raise
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#chemical-reaction-equilibrium" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#stability-comes-first" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Chemical-reaction equilibrium
+        Stability comes first
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#kinetics" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#recycles-default-to-broyden" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Kinetics
+        Recycles default to Broyden
       
     </span>
   </a>
   
 </li>
+        
+          <li class="md-nav__item">
+  <a href="#kernels-compile-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernels compile once
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
+  <a href="#fugaciothermo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fugacio.thermo
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="fugacio.thermo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#removed-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-functions-and-renamed-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed functions and renamed types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fugaciosim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fugacio.sim
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="fugacio.sim">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-property-argument" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One property argument
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unit-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#reactors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2563,12 +2803,28 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#reactive-separations" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#flowsheets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Reactive separations
+        Flowsheets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process-cases-and-the-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process cases and the CLI
       
     </span>
   </a>
@@ -2576,10 +2832,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#validation" class="md-nav__link">
+  <a href="#fugaciocopilot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Validation
+        fugacio.copilot
       
     </span>
   </a>
@@ -2603,7 +2859,7 @@
 
 
   
-    <a href="https://github.com/fugacio/fugacio/edit/main/docs/reactions.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/fugacio/fugacio/edit/main/docs/upgrading.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
     </a>
@@ -2612,209 +2868,461 @@
     
       
     
-    <a href="https://github.com/fugacio/fugacio/raw/main/docs/reactions.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/fugacio/fugacio/raw/main/docs/upgrading.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5"/></svg>
     </a>
   
 
 
-<h1 id="reactions-reactors">Reactions &amp; reactors<a class="headerlink" href="#reactions-reactors" title="Permanent link">&para;</a></h1>
-<p>Fugacio models chemical reactions end to end: standard-state thermochemistry and
-the equilibrium constant <code>K(T)</code>, chemical-equilibrium composition, reaction
-kinetics, reactor unit operations, and reactive separations. Like the rest
-of the stack everything is written in JAX, so conversions, yields, and duties are
-differentiable with respect to temperature, pressure, feed, <em>and</em> the underlying
-thermochemical / kinetic parameters.</p>
-<p>For reaction sets, reactive MESH columns, saved cases, and checked design
-studies, start with <a href="../reactive-workflows/">reactive process workflows</a>. This
-page covers the thermochemistry, the gas-phase equilibrium solver, rate laws,
-and the reactor unit operations.</p>
-<h2 id="stoichiometry-thermochemistry">Stoichiometry &amp; thermochemistry<a class="headerlink" href="#stoichiometry-thermochemistry" title="Permanent link">&para;</a></h2>
-<p>A <code>Reaction</code> is a stoichiometric vector over an ordered component list. Build one
-from an equation string or from reactant/product maps:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Reaction</span><span class="p">,</span> <span class="n">reaction_properties</span>
+<h1 id="upgrading-to-09">Upgrading to 0.9<a class="headerlink" href="#upgrading-to-09" title="Permanent link">&para;</a></h1>
+<p>Fugacio 0.9 rebuilds the engine around two rules:</p>
+<ul>
+<li><strong>No public call returns a silent wrong answer.</strong> A failed solve returns NaN,
+  raises, or carries a failed report. It never returns a plausible number.</li>
+<li><strong>No public call recompiles for a new operating point.</strong> A unit compiles
+  once per property-package structure and specification kind, then reuses that
+  executable.</li>
+</ul>
+<p>To get there, this release removes older interfaces instead of deprecating
+them. This page maps each removed or renamed interface to its replacement and
+lists the behavior changes that can affect working code. Fugacio is pre-1.0, so
+minor releases can break compatibility.</p>
+<h2 id="behavior-changes">Behavior changes<a class="headerlink" href="#behavior-changes" title="Permanent link">&para;</a></h2>
+<h3 id="failed-solves-return-nan-or-raise">Failed solves return NaN or raise<a class="headerlink" href="#failed-solves-return-nan-or-raise" title="Permanent link">&para;</a></h3>
+<p>Value-only equilibrium calls return NaN when their solve fails, including when
+the request lies outside the model's domain. This covers <code>flash_pt</code>,
+<code>psat_eos</code>, <code>bubble_pressure_eos</code>, <code>dew_pressure_eos</code>, the gamma-phi flash and
+saturation calls, <code>flash_lle</code>, <code>flash_vlle</code>, the PC-SAFT equilibrium calls,
+<code>saturation_pressures</code>, reaction <code>equilibrium</code>, and the equivalent
+property-package methods (<code>flash_pt</code>, <code>bubble_pressure</code>, <code>dew_temperature</code>,
+<code>flash_ph</code>, and so on).</p>
+<p>Each has a <code>*_with_info</code> twin that returns the best iterate and a
+<code>SolveReport</code>. Derivatives of that iterate are nonfinite unless it converged, so
+an optimizer can't consume a failed sensitivity. Two statuses are new:
+<code>SolveStatus.OUT_OF_DOMAIN</code> (7) marks a request outside the model's domain, such
+as a vapor pressure above the critical temperature, and <code>SolveStatus.TRIVIAL</code>
+(8) marks an iteration that collapsed onto identical phases.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">PR</span><span class="p">,</span> <span class="n">SolveStatus</span><span class="p">,</span> <span class="n">get</span><span class="p">,</span> <span class="n">psat_eos</span><span class="p">,</span> <span class="n">psat_eos_with_info</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">components</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;nitrogen&quot;</span><span class="p">,</span> <span class="s2">&quot;hydrogen&quot;</span><span class="p">,</span> <span class="s2">&quot;ammonia&quot;</span><span class="p">)</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">rxn</span> <span class="o">=</span> <span class="n">Reaction</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;nitrogen + 3 hydrogen = 2 ammonia&quot;</span><span class="p">,</span> <span class="n">components</span><span class="p">)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">props</span> <span class="o">=</span> <span class="n">reaction_properties</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="mf">298.15</span><span class="p">)</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">props</span><span class="o">.</span><span class="n">delta_h</span>   <span class="c1"># standard enthalpy of reaction DH_rxn(T)     (J/mol)</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">props</span><span class="o">.</span><span class="n">delta_g</span>   <span class="c1"># standard Gibbs energy of reaction DG_rxn(T) (J/mol)</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">props</span><span class="o">.</span><span class="n">k</span>         <span class="c1"># equilibrium constant K(T) = exp(-DG_rxn / R T)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">methane</span> <span class="o">=</span> <span class="n">get</span><span class="p">(</span><span class="s2">&quot;methane&quot;</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">psat_eos</span><span class="p">(</span><span class="n">PR</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="n">methane</span><span class="o">.</span><span class="n">tc</span><span class="p">,</span> <span class="n">methane</span><span class="o">.</span><span class="n">pc</span><span class="p">,</span> <span class="n">methane</span><span class="o">.</span><span class="n">omega</span><span class="p">)</span>       <span class="c1"># nan (supercritical)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">solved</span> <span class="o">=</span> <span class="n">psat_eos_with_info</span><span class="p">(</span><span class="n">PR</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="n">methane</span><span class="o">.</span><span class="n">tc</span><span class="p">,</span> <span class="n">methane</span><span class="o">.</span><span class="n">pc</span><span class="p">,</span> <span class="n">methane</span><span class="o">.</span><span class="n">omega</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">SolveStatus</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">solved</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">status</span><span class="p">))</span>                           <span class="c1"># SolveStatus.OUT_OF_DOMAIN</span>
 </span></code></pre></div>
-<p><code>DH_rxn</code>, <code>DS_rxn</code>, <code>DG_rxn</code>, and <code>K(T)</code> follow from each component's ideal-gas
-standard formation properties (<code>hform_ig</code>, <code>gform_ig</code>) corrected to temperature
-with Kirchhoff's law (integrating the ideal-gas <code>Cp</code> correlations). The standard
-state is the ideal gas at <code>P_REF</code> (1 bar), matching the tabulated formation data.
-The component-level entry points are <code>delta_h_rxn</code>, <code>delta_s_rxn</code>, <code>delta_g_rxn</code>,
-and <code>equilibrium_constant</code>.</p>
-<h2 id="chemical-reaction-equilibrium">Chemical-reaction equilibrium<a class="headerlink" href="#chemical-reaction-equilibrium" title="Permanent link">&para;</a></h2>
-<p><code>equilibrium</code> solves for the extents of reaction that make every reaction's
-activity quotient equal to its <code>K(T)</code>. A single reaction is solved by a checked
-bracketed root; several simultaneous reactions by a damped Newton system. Both
-differentiate the converged composition with respect to <code>T</code>, <code>P</code>, and the feed by
-the implicit function theorem. The result's <code>report</code> records convergence. A
-failed solve returns NaN fields, and a composition with a negative amount is
-reported as <code>INFEASIBLE</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Reaction</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo.reaction_equilibrium</span><span class="w"> </span><span class="kn">import</span> <span class="n">equilibrium</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">components</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;nitrogen&quot;</span><span class="p">,</span> <span class="s2">&quot;hydrogen&quot;</span><span class="p">,</span> <span class="s2">&quot;ammonia&quot;</span><span class="p">)</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">rxn</span> <span class="o">=</span> <span class="n">Reaction</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;nitrogen + 3 hydrogen = 2 ammonia&quot;</span><span class="p">,</span> <span class="n">components</span><span class="p">)</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">res</span> <span class="o">=</span> <span class="n">equilibrium</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">feed</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">100e5</span><span class="p">)</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">res</span><span class="o">.</span><span class="n">y</span>          <span class="c1"># equilibrium mole fractions</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">res</span><span class="o">.</span><span class="n">extent</span>     <span class="c1"># extent of each reaction</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">res</span><span class="o">.</span><span class="n">report</span>     <span class="c1"># solve report; the fields are NaN if it failed</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Le Chatelier, exactly: ammonia yield rises with pressure (Delta_n = -2).</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">equilibrium</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">feed</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">])(</span><span class="mf">100e5</span><span class="p">)</span>  <span class="c1"># &gt; 0</span>
-</span></code></pre></div>
-<p>For a real gas pass <code>basis="phi"</code> with <code>tc</code>, <code>pc</code>, <code>omega</code> (and optional <code>kij</code>) to
-use cubic-EOS fugacity coefficients in the activities instead of the ideal-gas
-<code>a_i = y_i P / P_ref</code>.</p>
-<h2 id="kinetics">Kinetics<a class="headerlink" href="#kinetics" title="Permanent link">&para;</a></h2>
-<p>Rate laws are differentiable pytrees, so their parameters are gradient leaves
-(handy for fitting): <code>PowerLaw</code> (Arrhenius pre-exponential, activation energy, and
-per-component orders), <code>MassActionReversible</code>, and <code>LHHW</code> (Langmuir-Hinshelwood).
-The temperature dependence is the <code>Arrhenius</code> form (<code>arrhenius</code>, <code>arrhenius_ref</code>).</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">PowerLaw</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># First-order in A: rate = A exp(-Ea/RT) * c_A</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">law</span> <span class="o">=</span> <span class="n">PowerLaw</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">1.0e7</span><span class="p">),</span> <span class="n">ea</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">75_000.0</span><span class="p">),</span> <span class="n">orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
-</span></code></pre></div>
-<h2 id="reactors">Reactors<a class="headerlink" href="#reactors" title="Permanent link">&para;</a></h2>
-<p>The <code>fugacio.sim</code> reactors turn reactions into unit operations on a
-differentiable <code>Stream</code>. Their energy balances use the property package's
-enthalpy plus the formation enthalpies, so the heat of reaction is carried
-automatically. <code>model=</code> selects the package; the default is Peng-Robinson over
-the feed's components. Each reactor takes one energy specification: <code>t_out</code> for
-an isothermal outlet (the result reports the <code>duty</code> that holds it) or <code>duty</code> for
-a specified heat input, where <code>duty=0.0</code> is adiabatic and the outlet
-temperature is solved.</p>
+<p>Unit operations follow one contract (see the <a href="../reliability/">reliability guide</a>):</p>
+<ul>
+<li>An eager call raises <code>ConvergenceError</code> for a failed solve and <code>ValueError</code>
+  for a violated operating limit, such as a valve that raises pressure,
+  splitter fractions that don't sum to one, or a pump with a vapor inlet.</li>
+<li>A traced call (inside <code>jax.jit</code>, a flowsheet recycle, or an optimizer)
+  returns NaN outlets with nonfinite derivatives.</li>
+</ul>
+<p>Reactors and columns raise the same way in eager code. A reactor solve that
+can't converge, such as an adiabatic CSTR on irreversible kinetics for an
+equilibrium-limited reaction, raises <code>ConvergenceError</code>; earlier releases could
+return negative flows.
+<code>fugacio.thermo.reaction_equilibrium.equilibrium</code> returns an
+<code>EquilibriumResult</code> with a <code>report</code>, NaN fields on failure, and negative
+equilibrium moles reported as <code>INFEASIBLE</code>.</p>
+<h3 id="stability-comes-first">Stability comes first<a class="headerlink" href="#stability-comes-first" title="Permanent link">&para;</a></h3>
+<p>Every property package has <code>stability(t, p, z)</code>, a tangent-plane search on
+both its liquid and vapor branches. The removed Michelsen routines searched
+fewer trial phases and could miss a second liquid. Consequences:</p>
+<ul>
+<li>An eager <code>flash_drum</code> warns with
+  <code>fugacio.thermo.acceptance.PhysicalAcceptanceWarning</code> when an outlet is
+  unstable, for example a vapor-liquid answer for a feed that splits into two
+  liquids. <code>fugacio.sim.acceptance.flash_drum_checked</code> audits the outlets
+  instead, and its <code>check()</code> raises <code>PhysicalAcceptanceError</code>.</li>
+<li><code>flash_lle</code> and <code>decanter</code> test stability before they split a liquid.</li>
+<li><code>Flowsheet(model=pkg)</code> audits every solved stream. <code>solve()</code> raises
+  <code>PhysicalAcceptanceError</code> for a stream that fails its audit, and
+  <code>solve_with_info()</code> returns the audits for inspection.</li>
+</ul>
+<h3 id="recycles-default-to-broyden">Recycles default to Broyden<a class="headerlink" href="#recycles-default-to-broyden" title="Permanent link">&para;</a></h3>
+<p><code>tear_solve</code>, <code>tear_solve_with_info</code>, <code>Flowsheet.solve</code>, and saved cases
+(<code>SolverOptions.recycle_method</code>) now default to <code>"broyden"</code>, matching the CLI's
+<code>--recycle-method</code>. Pass <code>method="wegstein"</code> (or
+<code>SolverOptions(recycle_method="wegstein")</code>) to select the previous default. A
+recycle block with no upstream stream to seed its tear raises <code>ValueError</code>;
+supply a guess with <code>Flowsheet.tear</code>.</p>
+<h3 id="kernels-compile-once">Kernels compile once<a class="headerlink" href="#kernels-compile-once" title="Permanent link">&para;</a></h3>
+<p>Units are compiled kernels with the property package and every operating value
+as dynamic arguments, so a new temperature, pressure, or package parameter
+reuses the executable. Property-package solve methods (<code>flash_pt</code>,
+<code>stability</code>, the bubble and dew calls, <code>mixture_enthalpy</code>, <code>flash_ph</code>, and so
+on) run through kernels cached per method, with the package as a dynamic
+argument. Flowsheets cache their recycle maps per partition, and saved-case
+unit templates are shared across runners in a process. To reuse compiled
+programs across processes, call
+<code>fugacio.sim.enable_compilation_cache(directory)</code> or pass <code>--jax-cache DIR</code> to
+the CLI. See the <a href="../performance/#compile-once-kernels">performance guide</a>.</p>
+<h2 id="fugaciothermo"><code>fugacio.thermo</code><a class="headerlink" href="#fugaciothermo" title="Permanent link">&para;</a></h2>
+<h3 id="removed-modules">Removed modules<a class="headerlink" href="#removed-modules" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Unit</th>
-<th>Model</th>
-<th>Result</th>
+<th>Removed</th>
+<th>Replacement</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>equilibrium_reactor</code></td>
-<td>Outlet at chemical equilibrium: <code>K(T)</code> from formation data, with activities from the package's fugacities</td>
-<td><code>ReactionResult</code></td>
+<td><code>fugacio.thermo.phase</code>: <code>EquilibriumModel</code>, <code>EOSModel</code>, <code>GammaPhiModel</code>, <code>eos_model</code>, <code>gamma_phi_model</code></td>
+<td><code>fugacio.thermo.package</code>: the <code>PropertyPackage</code> protocol, <code>cubic_package</code> (<code>CubicPackage</code>), and <code>gamma_phi_package</code> (<code>GammaPhiPackage</code>)</td>
 </tr>
 <tr>
-<td><code>stoichiometric_reactor</code></td>
-<td>Specified <code>extent</code> or fractional <code>conversion</code></td>
-<td><code>StoichiometricResult</code></td>
+<td><code>fugacio.thermo.saft.model</code>: <code>SAFTModel</code>, <code>saft_model</code></td>
+<td><code>saft_package</code> (<code>SAFTPackage</code>), or <code>fugacio.sim.package_for(components, "pcsaft")</code></td>
 </tr>
 <tr>
-<td><code>cstr</code></td>
-<td>Continuous stirred tank, kinetics balanced over a reacting <code>volume</code></td>
-<td><code>ReactionResult</code></td>
+<td><code>fugacio.thermo.properties</code>: <code>molar_enthalpy</code>, <code>molar_entropy</code>, <code>molar_gibbs</code>, <code>molar_cp</code></td>
+<td>Package methods <code>enthalpy</code>, <code>entropy</code>, <code>gibbs</code>, and <code>heat_capacity</code>, each with an explicit <code>phase=</code></td>
 </tr>
 <tr>
-<td><code>pfr</code></td>
-<td>Plug flow, RK4 along the volume with step-doubling error control</td>
-<td><code>ReactionResult</code></td>
+<td><code>fugacio.thermo.properties.stable_phase</code></td>
+<td><code>pkg.flash_pt(t, p, z).beta</code> (0 for liquid, 1 for vapor), or compare <code>pkg.gibbs</code> on both branches</td>
 </tr>
 <tr>
-<td><code>batch_reactor</code></td>
-<td>Closed, constant-volume ideal-gas batch over a reaction <code>time</code></td>
-<td><code>BatchResult</code></td>
+<td><code>fugacio.thermo.properties.speed_of_sound_ideal</code></td>
+<td>No replacement</td>
+</tr>
+<tr>
+<td><code>P_REF</code> and <code>T_REF</code> from <code>fugacio.thermo.properties</code></td>
+<td><code>fugacio.thermo.constants</code> (also exported from <code>fugacio.thermo</code>)</td>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">ReactionSet</span><span class="p">,</span> <span class="n">ReferenceRate</span><span class="p">,</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">conversion</span><span class="p">,</span> <span class="n">cstr</span><span class="p">,</span> <span class="n">equilibrium_reactor</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Reaction</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="p">(</span><span class="s2">&quot;nitrogen&quot;</span><span class="p">,</span> <span class="s2">&quot;hydrogen&quot;</span><span class="p">,</span> <span class="s2">&quot;ammonia&quot;</span><span class="p">),</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]),</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">flow</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="mf">700.0</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">100e5</span><span class="p">,</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">)</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">rxn</span> <span class="o">=</span> <span class="n">Reaction</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;nitrogen + 3 hydrogen = 2 ammonia&quot;</span><span class="p">,</span> <span class="n">feed</span><span class="o">.</span><span class="n">components</span><span class="p">)</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="c1"># Isothermal equilibrium reactor: outlet composition and the heat to hold 700 K.</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">eq</span> <span class="o">=</span> <span class="n">equilibrium_reactor</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="mf">700.0</span><span class="p">)</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">eq</span><span class="o">.</span><span class="n">outlet</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">eq</span><span class="o">.</span><span class="n">duty</span>             <span class="c1"># about [0.198, 0.595, 0.206] and -915 kW</span>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="c1"># Adiabatic (duty=0): the outlet temperature is solved with the equilibrium.</span>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="n">hot</span> <span class="o">=</span> <span class="n">equilibrium_reactor</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">duty</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="n">hot</span><span class="o">.</span><span class="n">outlet</span><span class="o">.</span><span class="n">t</span>                     <span class="c1"># about 820 K</span>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="c1"># A CSTR needs kinetics consistent with K(T). Detailed balance derives the</span>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="c1"># reverse rate from the equilibrium constant, on fugacity activities.</span>
-</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="n">law</span> <span class="o">=</span> <span class="n">ReferenceRate</span><span class="p">(</span>
-</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="n">k_forward</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">1e-7</span><span class="p">),</span> <span class="n">ea_forward</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">80_000.0</span><span class="p">),</span>
-</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>    <span class="n">forward_orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]),</span>
-</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>    <span class="n">k_reverse</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">0.0</span><span class="p">),</span> <span class="n">ea_reverse</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">0.0</span><span class="p">),</span>
-</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    <span class="n">reverse_orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]),</span>
-</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>    <span class="n">reference_temperature</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">700.0</span><span class="p">),</span> <span class="n">detailed_balance</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="p">)</span>
-</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="n">system</span> <span class="o">=</span> <span class="n">ReactionSet</span><span class="o">.</span><span class="n">from_reactions</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="p">[</span><span class="n">law</span><span class="p">],</span> <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;vapor&quot;</span><span class="p">,</span> <span class="n">rate_basis</span><span class="o">=</span><span class="s2">&quot;activity&quot;</span><span class="p">)</span>
-</span><span id="__span-3-32"><a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="n">out</span> <span class="o">=</span> <span class="n">cstr</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="n">t_out</span><span class="o">=</span><span class="mf">700.0</span><span class="p">)</span>    <span class="c1"># 10 m^3 of reacting vapor</span>
-</span><span id="__span-3-33"><a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="n">conversion</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">outlet</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>                <span class="c1"># about 0.215 fractional N2 conversion</span>
+<p>The package constructors take the ideal-gas heat-capacity coefficients that the
+old equilibrium models didn't need:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">component_arrays</span><span class="p">,</span> <span class="n">cubic_package</span><span class="p">,</span> <span class="n">get</span><span class="p">,</span> <span class="n">ideal_gas_coeffs</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-pentane&quot;</span><span class="p">]</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">arr</span> <span class="o">=</span> <span class="n">component_arrays</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">cp</span> <span class="o">=</span> <span class="n">ideal_gas_coeffs</span><span class="p">([</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">names</span><span class="p">])</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">])</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Before: eos_model(arr[&quot;tc&quot;], arr[&quot;pc&quot;], arr[&quot;omega&quot;]).flash_pt(320.0, 20e5, z)</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">pkg</span> <span class="o">=</span> <span class="n">cubic_package</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="s2">&quot;tc&quot;</span><span class="p">],</span> <span class="n">arr</span><span class="p">[</span><span class="s2">&quot;pc&quot;</span><span class="p">],</span> <span class="n">arr</span><span class="p">[</span><span class="s2">&quot;omega&quot;</span><span class="p">],</span> <span class="n">cp</span><span class="p">)</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">res</span> <span class="o">=</span> <span class="n">pkg</span><span class="o">.</span><span class="n">flash_pt</span><span class="p">(</span><span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Before: molar_enthalpy(320.0, 20e5, z, tc, pc, omega, cp, phase=&quot;vapor&quot;)</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">h</span> <span class="o">=</span> <span class="n">pkg</span><span class="o">.</span><span class="n">enthalpy</span><span class="p">(</span><span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;vapor&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The CSTR stays below the 700 K equilibrium conversion (about 0.34) because its
-volume limits the reaction. The kinetic coefficients here are illustrative.</p>
-<p>An eager reactor solve that fails raises <code>ConvergenceError</code>. A traced one can't
-raise; it records the failure in its <code>report</code> and has nonfinite derivatives
-(see the <a href="../reliability/#the-failure-contract">reliability guide</a>). An
-irreversible <code>PowerLaw</code> has no reverse term, so it can't respect <code>K(T)</code> for
-this equilibrium-limited reaction, and an adiabatic CSTR on one stalls. It
-raises <code>ConvergenceError</code> rather than returning negative flows:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">PowerLaw</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">irreversible</span> <span class="o">=</span> <span class="n">PowerLaw</span><span class="p">(</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">a</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">5.0e3</span><span class="p">),</span> <span class="n">ea</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">40_000.0</span><span class="p">),</span> <span class="n">orders</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">cstr</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="n">irreversible</span><span class="p">,</span> <span class="n">duty</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>   <span class="c1"># ConvergenceError: reactor failed: stalled ...</span>
+<h3 id="removed-functions-and-renamed-types">Removed functions and renamed types<a class="headerlink" href="#removed-functions-and-renamed-types" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Removed</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stability_analysis(eos, t, p, z, tc, pc, omega)</code> (Michelsen)</td>
+<td><code>pkg.stability(t, p, z)</code> on any package</td>
+</tr>
+<tr>
+<td><code>stability_saft</code></td>
+<td><code>saft_package(...).stability(t, p, z)</code></td>
+</tr>
+<tr>
+<td><code>stability_analysis_general(ln_coeff_fn, z, trials)</code></td>
+<td><code>fugacio.thermo.stability.tpd_search(branches, d, support, starts)</code></td>
+</tr>
+<tr>
+<td><code>TangentPlaneResult</code> (<code>stable</code>, <code>tpd</code>, <code>split</code>) and <code>equilibrium.StabilityResult</code> (<code>stable</code>, <code>tpd</code>)</td>
+<td><code>fugacio.thermo.stability.StabilityResult</code> (<code>stable</code>, <code>tpd</code>, <code>trial</code>, <code>branch</code>, <code>converged</code>)</td>
+</tr>
+<tr>
+<td><code>flash_ph</code>, <code>flash_ps</code>, <code>mixture_enthalpy</code>, <code>mixture_entropy</code> (cubic-only functions in <code>fugacio.thermo.energy</code>)</td>
+<td><code>pkg.flash_ph(p, h, z)</code>, <code>pkg.flash_ps(p, s, z)</code>, <code>pkg.mixture_enthalpy(t, p, z)</code>, <code>pkg.mixture_entropy(t, p, z)</code></td>
+</tr>
+<tr>
+<td><code>flash_ph_with_info(pkg, ...)</code>, <code>flash_ps_with_info(pkg, ...)</code>, <code>fugacio.thermo.package.flash_pt_with_info(pkg, ...)</code></td>
+<td><code>pkg.flash_ph_with_info(p, h, z)</code>, <code>pkg.flash_ps_with_info(p, s, z)</code>, <code>pkg.flash_pt_with_info(t, p, z)</code></td>
+</tr>
+<tr>
+<td><code>fugacio.thermo.acceptance.accepted_value(value, accepted)</code></td>
+<td><code>fugacio.thermo.implicit.gate_derivative(value, valid)</code>, or <code>gate_tree(tree, valid)</code> for a pytree</td>
+</tr>
+<tr>
+<td>PC-SAFT association scheme <code>"1A"</code></td>
+<td>None; an unsupported scheme raises <code>ValueError</code></td>
+</tr>
+</tbody>
+</table>
+<p>Bubble and dew calls return <code>SaturationResult(value, composition)</code>, a named
+tuple, so <code>p, y = pkg.bubble_pressure(t, x)</code> still unpacks. New in
+<code>fugacio.thermo.consistency</code>, <code>gibbs_helmholtz_residual</code> and
+<code>fugacity_enthalpy_residual</code> report how consistently a package's enthalpy
+matches its entropy and its fugacity coefficients; the default gamma-phi
+package deviates by about 1% in the second check unless it's built with
+<code>poynting=True</code> and <code>phi_saturation=True</code> (see
+<a href="../property-packages/#consistency-checks">property packages</a>).
+<code>bracketed_root</code> is a thin wrapper over the checked <code>bracketed_root_with_info</code>,
+which rejects a bracket without a sign change and a residual that stays large
+across a pole. The new <code>scanned_root_with_info</code> scans a bracket for the first
+finite sign change. <code>PhysicalReport.failures(policy)</code> lists failed criteria in
+plain language, and <code>PhysicalAcceptanceError</code> messages include them.</p>
+<h2 id="fugaciosim"><code>fugacio.sim</code><a class="headerlink" href="#fugaciosim" title="Permanent link">&para;</a></h2>
+<h3 id="one-property-argument">One property argument<a class="headerlink" href="#one-property-argument" title="Permanent link">&para;</a></h3>
+<p>Every simulation call takes one property argument, <code>model=</code>: a
+<code>PropertyPackage</code>, or <code>None</code> for the Peng-Robinson default over the stream's
+components. The <code>eos=</code> and <code>kij=</code> arguments are gone from the unit operations,
+the stream property helpers (<code>molar_enthalpy</code>, <code>vapor_density</code>,
+<code>vapor_volumetric_flow</code>, ...), <code>heat_exchanger</code>, <code>rigorous_column</code>, <code>absorber</code>,
+<code>stripper</code>, <code>equilibrium_reactor</code>, <code>EOFlowsheet</code>, and the EO blocks.
+<code>column_diameter_for</code> gained <code>model=</code>. <code>model</code> is keyword-only on every unit in
+<code>fugacio.sim.units</code>, and a <code>model</code> that isn't a package raises <code>TypeError</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">EOFlowsheet</span><span class="p">,</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">flash_drum</span><span class="p">,</span> <span class="n">package_for</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">(</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="p">(</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-pentane&quot;</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]),</span> <span class="mf">100.0</span><span class="p">,</span> <span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Before: flash_drum(feed, 320.0, 20e5, eos=SRK)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">srk</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">(</span><span class="n">feed</span><span class="o">.</span><span class="n">components</span><span class="p">,</span> <span class="s2">&quot;srk&quot;</span><span class="p">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">vapor</span><span class="p">,</span> <span class="n">liquid</span> <span class="o">=</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">srk</span><span class="p">)</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Before: EOFlowsheet(eos=PR)</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">()</span>                 <span class="c1"># Peng-Robinson default</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">EOFlowsheet</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">srk</span><span class="p">)</span>        <span class="c1"># any package</span>
 </span></code></pre></div>
-<p>With <code>check=False</code>, the result keeps the failed report and its best iterate for
-diagnosis, with nonfinite derivatives. See
-<a href="../reactive-workflows/#common-package-reactor-api">reactive process workflows</a>
-for the full <code>ReactionResult</code>, including balances and axial profiles.</p>
-<p><code>stoichiometric_reactor</code> applies a specified <code>extent</code> or key-reactant
-<code>conversion</code> exactly and raises <code>ValueError</code> for an extent that consumes more of
-a reactant than the feed holds. <code>batch_reactor</code> treats <code>feed.n</code> as initial moles
-in a rigid, closed vessel and returns <code>BatchResult(contents, heat, extent)</code>.
-With <code>adiabatic=True</code> it conserves internal energy, not enthalpy; otherwise it
-holds the temperature and returns the heat <code>Q = Delta U</code>. The final pressure of
-<code>contents</code> is the ideal-gas <code>N R T / V</code>.</p>
-<h2 id="reactive-separations">Reactive separations<a class="headerlink" href="#reactive-separations" title="Permanent link">&para;</a></h2>
-<p>When reaction and phase separation happen together, use the <code>fugacio.sim</code>
-reactive units. Both take a property package:</p>
-<ul>
-<li><code>reactive_flash</code>: simultaneous chemical <em>and</em> vapor-liquid equilibrium in a
-  single drum, returning vapor and liquid products, the vapor fraction <code>beta</code>,
-  the extents, and the duty. The reaction quotient uses the liquid fugacity
-  when a liquid is present, otherwise the vapor fugacity.</li>
-<li><code>reactive_column</code>: material- and energy-balanced MESH with volumetric kinetics.
-  It delegates to <code>rigorous_column(..., reactions=system, reaction_volumes=...)</code>,
-  retaining the structured column solver and differentiable reaction parameters.</li>
-</ul>
-<p>These make classic reaction-separation processes (for example, esterification
-with in-situ water removal) tractable while staying differentiable through the
-coupled solve.</p>
-<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
-<p>Reaction thermochemistry and equilibrium are cross-checked against
-<a href="https://github.com/Cantera/cantera">Cantera</a> in the opt-in oracle suite
-(<code>just oracles</code>). The oracle builds a Cantera ideal-gas phase from Fugacio's <em>own</em>
-formation and <code>Cp</code> data, so <code>DG_rxn</code>, <code>K(T)</code>, and the equilibrium composition agree
-to (near) machine precision and any discrepancy isolates the temperature
-integration or the equilibrium solver rather than a difference in reference data.</p>
+<table>
+<thead>
+<tr>
+<th>Removed</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>eos_model_for</code>, <code>nrtl_model_for</code>, <code>uniquac_model_for</code>, <code>unifac_model_for</code>, <code>saft_model_for</code></td>
+<td><code>package_for(components, method)</code> with <code>"pr"</code>, <code>"srk"</code>, <code>"nrtl"</code>, <code>"uniquac"</code>, <code>"unifac"</code>, <code>"dortmund"</code>, or <code>"pcsaft"</code></td>
+</tr>
+<tr>
+<td><code>unifac_model_for(components, dortmund=True)</code></td>
+<td><code>package_for(components, "dortmund")</code></td>
+</tr>
+<tr>
+<td><code>as_package(model, components)</code></td>
+<td>Build a package directly; <code>resolve_package</code> accepts only packages</td>
+</tr>
+<tr>
+<td><code>package_for(..., strict=False)</code></td>
+<td><code>package_for(..., parameter_policy="allow_ideal")</code></td>
+</tr>
+<tr>
+<td><code>flash_vle(feed, t, p, model)</code> with a positional model</td>
+<td><code>flash_drum(feed, t, p, model=package_for(components, "nrtl"))</code></td>
+</tr>
+<tr>
+<td><code>relative_volatility(eos, t, p, z, tc, pc, omega, ref=, kij=)</code></td>
+<td><code>relative_volatility(model, t, p, z, ref=)</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>package_for</code> defaults to <code>parameter_policy="strict"</code>, which raises <code>KeyError</code>
+for a missing NRTL or UNIQUAC pair. The removed <code>nrtl_model_for</code> and
+<code>uniquac_model_for</code> silently used zero interactions, so choose
+<code>"allow_ideal"</code> explicitly if you relied on that. An option that a method
+doesn't accept raises <code>TypeError</code>.</p>
+<h3 id="unit-results">Unit results<a class="headerlink" href="#unit-results" title="Permanent link">&para;</a></h3>
+<p><code>flash_drum</code> still returns <code>(vapor, liquid)</code>, and <code>valve</code> and <code>mix</code> return a
+<code>Stream</code>. The other units return a result with a <code>report</code>:
+<code>flash_drum_with_info</code> and <code>adiabatic_flash</code> return <code>FlashDrumResult(vapor,
+liquid, duty, report)</code>, <code>heater</code> returns <code>HeaterResult(outlet, duty, report)</code>,
+<code>pump</code> returns <code>PumpResult(outlet, work, report)</code>, and <code>compressor</code> and
+<code>turbine</code> return <code>WorkResult(outlet, work, ideal_work, report)</code>. Use
+<code>.outlet</code> where you need the stream.</p>
+<p>Every result a flowsheet unit may return exposes <code>outlets</code> and, where it has
+one, <code>heat</code>: <code>FlashDrumResult</code>, <code>HeaterResult</code>, <code>PumpResult</code>, <code>WorkResult</code>,
+<code>ReactionResult</code>, <code>ReactiveFlashResult</code>, <code>StoichiometricResult</code>,
+<code>RigorousColumnResult</code> (outlets <code>(distillate, bottoms, *side_draws)</code>, heat from
+the condenser, reboiler, and the new <code>stage_duties</code> field), and
+<code>HeatExchangerResult</code> (outlets only). A flowsheet unit function can return the
+result itself, and the flowsheet keeps its heat, work, and report in
+<code>FlowsheetResult.units</code>.</p>
+<p><code>heater</code> also accepts <code>vapor_fraction</code> (any quality for a pure fluid, 0 or 1 for
+a mixture). A pure fluid specified by <code>t_out</code> exactly at its saturation
+temperature raises <code>ValueError</code>, since its quality is undetermined; specify
+<code>vapor_fraction</code> or <code>duty</code> instead. <code>adiabatic_flash(feed, p, duty=0.0)</code> is a
+pressure-and-duty separator. <code>decanter(feed, model)</code> and <code>three_phase_flash(feed, t, p, model)</code>
+require a <code>GammaPhiPackage</code>. A feed that isn't three-phase raises with a hint
+naming <code>flash_drum</code> or <code>decanter</code>.</p>
+<h3 id="columns">Columns<a class="headerlink" href="#columns" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Removed</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>column.solve_column(feed, n_stages, feed_stage, reflux, distillate_rate)</code></td>
+<td><code>rigorous_column([ColumnFeed(feed, feed_stage + 1)], n_stages + 1, p=feed.p, specs=[reflux_ratio(reflux), distillate_rate(d)])</code></td>
+</tr>
+<tr>
+<td><code>ColumnResult</code></td>
+<td><code>RigorousColumnResult</code></td>
+</tr>
+<tr>
+<td><code>reactive_distillation(...)</code> and <code>ReactiveColumnResult</code></td>
+<td><code>rigorous_column(..., reactions=system, reaction_volumes=volumes)</code> or <code>reactive_column(feeds, n_stages, system, volumes, ...)</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>solve_column</code> placed its total condenser above stage 1, while
+<code>rigorous_column</code> counts the condenser as stage 1, so both the stage count and
+the feed stage grow by one. <code>rigorous_column</code> closes stage energy balances
+instead of assuming constant molar overflow, so its profile differs from the
+removed column's. <code>column.py</code> keeps only the shortcut (FUG) methods. See
+<a href="../reactive-workflows/">reactive process workflows</a> for reaction sets and
+reacting volumes.</p>
+<h3 id="reactors">Reactors<a class="headerlink" href="#reactors" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ReactorResult(outlet, duty, extent)</code></td>
+<td><code>ReactionResult</code> from <code>equilibrium_reactor</code>, <code>cstr</code>, and <code>pfr</code>; <code>StoichiometricResult</code> from <code>stoichiometric_reactor</code>; <code>BatchResult(contents, heat, extent)</code> from <code>batch_reactor</code></td>
+</tr>
+<tr>
+<td><code>adiabatic=True</code> on flow reactors</td>
+<td><code>duty=0.0</code>; any other <code>duty</code> is a specified heat input</td>
+</tr>
+<tr>
+<td><code>cstr(feed, reactions, rate_laws, volume)</code>, <code>pfr(...)</code></td>
+<td><code>cstr(feed, reactions, volume, rate_laws)</code>: the volume is now the third positional argument</td>
+</tr>
+<tr>
+<td><code>equilibrium_reactor(..., basis=, eos=, kij=)</code></td>
+<td><code>equilibrium_reactor(..., model=pkg)</code>; activities come from the package's fugacities</td>
+</tr>
+<tr>
+<td><code>stoichiometric_reactor(..., adiabatic=, t_lo=, t_hi=)</code></td>
+<td><code>stoichiometric_reactor(..., duty=0.0, model=pkg)</code>; the outlet temperature comes from a PH flash</td>
+</tr>
+</tbody>
+</table>
+<p>The flow reactors wrap the checked <code>reaction_reactor</code>, which solves a
+homogeneous phase on the property package (Peng-Robinson by default):
+equilibrium uses its fugacity coefficients, concentrations its phase molar
+volume, and energy its enthalpy plus ideal-gas formation enthalpies.
+<code>stoichiometric_reactor</code> raises <code>ValueError</code> for an extent that consumes more
+of a reactant than the feed holds. <code>batch_reactor(..., adiabatic=True)</code>
+remains, and returns <code>BatchResult(contents, heat, extent)</code> with the moles in
+<code>contents</code>: a closed, rigid vessel conserves internal energy rather than
+enthalpy, the batch model now does, and it reports the final ideal-gas
+pressure.</p>
+<h3 id="flowsheets">Flowsheets<a class="headerlink" href="#flowsheets" title="Permanent link">&para;</a></h3>
+<p><code>Flowsheet</code> gains a <code>model</code> field, and <code>Flowsheet.solve_with_info(theta, *,
+guess=None, audit=True, **tear_kwargs)</code> returns a
+<code>FlowsheetResult(streams, reports, units, audits)</code>. The new <code>units</code> holds a
+<code>UnitRecord(heat, work, report)</code> for each unit, <code>audits</code> holds each stream's
+<code>PhysicalReport</code> when the flowsheet has a <code>model</code>, and the new <code>accepted</code>
+combines <code>converged</code> with those audits. <code>check()</code> also raises
+<code>PhysicalAcceptanceError</code> for a failed audit.
+<code>fugacio.sim.cases.backends.CaseFlowsheet</code> is removed; saved cases use
+<code>Flowsheet</code>, which now caches compiled recycle maps itself.</p>
+<p><code>fugacio.sim.acceptance.BalanceBoundary</code> gains <code>units</code>: a boundary's heat and
+work are its explicit <code>heat</code> and <code>work</code> plus those the solved result retained
+for the named units. <code>audit_flowsheet</code> also accepts an equation-oriented
+<code>EOSolution</code>.</p>
+<h2 id="process-cases-and-the-cli">Process cases and the CLI<a class="headerlink" href="#process-cases-and-the-cli" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>flash</code> unit settings: <code>t</code> and <code>p</code></td>
+<td><code>p</code> plus exactly one of <code>t</code> (isothermal) or <code>duty</code> (a specified duty; zero is an adiabatic drum)</td>
+</tr>
+<tr>
+<td><code>heater</code> settings: one of <code>t_out</code> or <code>duty</code></td>
+<td>One of <code>t_out</code>, <code>duty</code>, or <code>vapor_fraction</code></td>
+</tr>
+<tr>
+<td><code>fugacio inspect ID --report</code> for runs only</td>
+<td>Renders any artifact: a run gets its full report, and a study or comparison gets a field summary</td>
+</tr>
+<tr>
+<td><code>export JAX_COMPILATION_CACHE_DIR=...</code></td>
+<td><code>--jax-cache DIR</code> on <code>run</code>, <code>sweep</code>, <code>optimize</code>, <code>sensitivities</code>, <code>profile</code>, and <code>replay</code>, or the <code>FUGACIO_JAX_CACHE</code> environment variable</td>
+</tr>
+<tr>
+<td><code>SolverOptions.recycle_method</code> default <code>"wegstein"</code></td>
+<td><code>"broyden"</code>, the CLI's existing default</td>
+</tr>
+</tbody>
+</table>
+<p>Saved JSON files now respect the process umask instead of always being private.
+The Markdown run report's stream table adds mass flow (kg/s), vapor fraction,
+and one mole-fraction column per component; failed checks name their reasons.
+The new <code>jt-separator</code> example demonstrates a Joule-Thomson valve followed by an
+adiabatic drum:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>jt-separator<span class="w"> </span>jt-separator.json
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>jt-separator.json<span class="w"> </span>--jax-cache<span class="w"> </span>.jax_cache<span class="w"> </span>--report<span class="w"> </span>jt-separator.md
+</span></code></pre></div>
+<h2 id="fugaciocopilot"><code>fugacio.copilot</code><a class="headerlink" href="#fugaciocopilot" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AnthropicProvider()</code> default model <code>claude-3-5-sonnet-latest</code></td>
+<td><code>claude-opus-5</code></td>
+</tr>
+<tr>
+<td><code>OpenAIProvider()</code> default model <code>gpt-4o-mini</code></td>
+<td><code>gpt-5-mini</code></td>
+</tr>
+<tr>
+<td><code>chat(..., temperature=0.0, max_tokens=1024)</code></td>
+<td><code>temperature=None</code> (not sent unless set) and <code>max_tokens=16000</code></td>
+</tr>
+<tr>
+<td><code>run_llm_agent(..., temperature=0.0, max_tokens=1024)</code> and <code>llm_planner(..., temperature=0.0, max_tokens=1024)</code></td>
+<td>No <code>temperature</code> argument; <code>max_tokens=16000</code></td>
+</tr>
+<tr>
+<td><code>run_design_agent(..., max_tokens=4096)</code></td>
+<td><code>max_tokens=16000</code></td>
+</tr>
+<tr>
+<td><code>AgentResult.stop_reason</code>: <code>"answer"</code> or <code>"budget"</code></td>
+<td>Adds <code>"refusal"</code> and <code>"max_tokens"</code>; neither reply becomes an answer</td>
+</tr>
+</tbody>
+</table>
+<p><code>ChatResponse</code> gains <code>stop_reason</code> and <code>provider_blocks</code>, and <code>Message</code> gains
+<code>is_error</code> and <code>provider_blocks</code>. The agent loops resend a <code>"pause_turn"</code>
+reply so the model can resume it. The Anthropic provider sends all tool results
+for one assistant turn in a single user message, flags failed calls with
+<code>is_error</code>, replays thinking blocks verbatim, and requests server-side refusal
+fallbacks by default; pass <code>fallbacks=None</code> on platforms without them. The
+OpenAI provider turns tool arguments that aren't a JSON object into a
+<code>ToolCall.invalid</code> call, which the loops answer with an error result. PC-SAFT
+and property tools raise on a failed or out-of-domain solve, so the model
+receives a structured error rather than an unconverged number.</p>
 
 
 

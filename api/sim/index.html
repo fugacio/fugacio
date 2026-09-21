@@ -266,7 +266,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../phase-equilibrium/" class="md-tabs__link">
+        <a href="../../upgrading/" class="md-tabs__link">
           
   
   
@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -473,6 +475,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2454,20 +2484,23 @@ heat-integration toolkits. Import the public surface from the package root:</p>
   <code>molar_enthalpy</code>, <code>molar_entropy</code>, <code>mass_flow</code>) that gives any
   stream a two-phase-aware enthalpy/entropy via <code>fugacio.thermo</code>;</li>
 <li>unit operations with rigorous material <em>and</em> energy balances
-  (<code>flash_drum</code>, <code>heater</code>, <code>valve</code>, <code>pump</code>,
+  (<code>flash_drum</code>, <code>adiabatic_flash</code>, <code>heater</code>, <code>valve</code>, <code>pump</code>,
   <code>compressor</code>, <code>turbine</code>, <code>mix</code>, <code>splitter</code>,
-  <code>component_separator</code>);</li>
-<li>a thermodynamic-model bridge (<code>eos_model_for</code>, <code>nrtl_model_for</code>,
-  <code>uniquac_model_for</code>, <code>unifac_model_for</code>, <code>saft_model_for</code>) that turns
-  component names into a ready EOS, gamma-phi, or PC-SAFT <code>EquilibriumModel</code>;</li>
-<li>non-ideal separation units (<code>flash_vle</code>, <code>decanter</code>,
+  <code>component_separator</code>), each a compile-once kernel that reports failures
+  (see <code>fugacio.sim.units</code> for the contract and <code>fugacio.sim.unit_limits</code> for
+  the operating limits);</li>
+<li><code>enable_compilation_cache</code>, an opt-in persistent compilation cache so a
+  new process reuses the compiled kernels of an earlier one;</li>
+<li><code>package_for</code>, which turns component names and a method name into a ready
+  cubic, gamma-phi, PC-SAFT, or reference-fluid <code>fugacio.thermo.PropertyPackage</code>;</li>
+<li>liquid-liquid and three-phase separators (<code>decanter</code>,
   <code>three_phase_flash</code>) and binary diagram / azeotrope / residue-curve helpers
   (<code>pxy_diagram</code>, <code>txy_diagram</code>, <code>azeotrope_pressure</code>,
   <code>azeotrope_temperature</code>, <code>residue_curve</code>, <code>residue_curve_map</code>);</li>
 <li>reactor unit operations (<code>equilibrium_reactor</code>,
   <code>stoichiometric_reactor</code>, <code>cstr</code>, <code>pfr</code>,
   <code>batch_reactor</code>) and reactive separations (<code>reactive_flash</code>,
-  <code>reactive_distillation</code>);</li>
+  <code>reactive_column</code>);</li>
 <li>a differentiable optimization toolkit (<code>minimize</code>, <code>argmin</code>,
   <code>least_squares</code>) that differentiates <em>through the optimum</em> by the
   implicit function theorem;</li>
@@ -2546,12 +2579,22 @@ heat-integration toolkits. Import the public surface from the package root:</p>
 <tr>
 <td>Unit operations</td>
 <td><a href="units/">Unit operations</a></td>
-<td><code>flash_drum</code>, <code>heater</code>, <code>pump</code>, <code>compressor</code>, <code>mix</code>, <code>splitter</code>, <code>flash_vle</code></td>
+<td><code>flash_drum</code>, <code>adiabatic_flash</code>, <code>heater</code>, <code>pump</code>, <code>compressor</code>, <code>mix</code>, <code>decanter</code>, <code>unit_limits</code>, <code>enable_compilation_cache</code></td>
 </tr>
 <tr>
 <td>Flowsheet &amp; recycle</td>
 <td><a href="flowsheet/">Flowsheet &amp; recycle</a></td>
-<td><code>Flowsheet</code>, <code>FlowsheetResult</code>, <code>tear_solve_with_info</code>, <code>continuation_solve</code></td>
+<td><code>Flowsheet</code>, <code>FlowsheetResult</code>, <code>UnitRecord</code>, <code>tear_solve_with_info</code>, <code>continuation_solve</code></td>
+</tr>
+<tr>
+<td>Process acceptance</td>
+<td><a href="acceptance/">Process acceptance</a></td>
+<td><code>audit_stream</code>, <code>flash_drum_checked</code>, <code>audit_flowsheet</code>, <code>BalanceBoundary</code></td>
+</tr>
+<tr>
+<td>Process cases &amp; studies</td>
+<td><a href="cases/">Process cases &amp; studies</a></td>
+<td><code>ProcessCase</code>, <code>CaseRunner</code>, <code>SolverOptions</code>, <code>sweep</code>, <code>optimize</code>, <code>sensitivities</code></td>
 </tr>
 <tr>
 <td>Two-sided heat exchanger</td>
@@ -2566,7 +2609,7 @@ heat-integration toolkits. Import the public surface from the package root:</p>
 <tr>
 <td>Thermodynamic models</td>
 <td><a href="models/">Thermodynamic models</a></td>
-<td><code>package_for</code>, <code>METHODS</code>, <code>eos_model_for</code>, <code>nrtl_model_for</code>, <code>unifac_model_for</code></td>
+<td><code>package_for</code>, <code>METHODS</code>, <code>helmholtz_package_for</code>, <code>UnifacModel</code></td>
 </tr>
 <tr>
 <td>Rigorous distillation</td>
@@ -2576,12 +2619,12 @@ heat-integration toolkits. Import the public surface from the package root:</p>
 <tr>
 <td>Distillation &amp; diagrams</td>
 <td><a href="columns/">Distillation &amp; diagrams</a></td>
-<td><code>shortcut_column</code>, <code>solve_column</code>, <code>pxy_diagram</code>, <code>residue_curve_map</code></td>
+<td><code>shortcut_column</code>, <code>relative_volatility</code>, <code>pxy_diagram</code>, <code>residue_curve_map</code></td>
 </tr>
 <tr>
 <td>Reactors</td>
 <td><a href="reactors/">Reactors &amp; reactive separations</a></td>
-<td><code>equilibrium_reactor</code>, <code>cstr</code>, <code>pfr</code>, <code>reactive_flash</code>, <code>reactive_distillation</code></td>
+<td><code>equilibrium_reactor</code>, <code>cstr</code>, <code>pfr</code>, <code>stoichiometric_reactor</code>, <code>reactive_flash</code>, <code>reactive_column</code></td>
 </tr>
 <tr>
 <td>Optimization &amp; design</td>

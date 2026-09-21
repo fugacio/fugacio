@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2691,11 +2721,12 @@ user-supplied, missing, and explicitly assumed-zero interactions. Cubic zero-kij
 mixing assumptions are visible too. Provenance describes the constructed
 package; if application code replaces parameter arrays, it must also update the
 evidence rather than retaining the original fit's attribution.</p>
-<p><code>package_for(..., "nrtl")</code> and UNIQUAC reject missing pairs by default. To choose
-zero interactions explicitly, pass <code>parameter_policy="allow_ideal"</code>. Existing
-explicit <code>strict=False</code> calls remain an opt-in. UNIQUAC still includes its
-combinatorial term when energetic interactions are zero. Predictive UNIFAC and
-Dortmund are explicit method choices, never silent fallbacks.</p>
+<p><code>package_for(..., "nrtl")</code> and UNIQUAC reject missing pairs by default
+(<code>parameter_policy="strict"</code>). To choose zero interactions explicitly, pass
+<code>parameter_policy="allow_ideal"</code>; the package evidence records the assumption.
+An option the method doesn't accept raises <code>TypeError</code>. UNIQUAC still includes
+its combinatorial term when energetic interactions are zero. Predictive UNIFAC
+and Dortmund are explicit method choices, never silent fallbacks.</p>
 <p>Measured fits carry observed temperature, pressure, and composition bounds.
 Checked calculations reject extrapolation by default. An explicit
 <code>AcceptancePolicy(allow_extrapolation=True)</code> permits it while retaining failed
@@ -2711,11 +2742,13 @@ provenance; binary fit evidence doesn't qualify these additional properties.</p>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">require_accepted</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">report</span><span class="p">)</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </span></code></pre></div>
-<p><code>flash_pt_with_info</code> retains the actual cubic, gamma-phi, or PC-SAFT iteration
-report. <code>flash_pt_checked</code> adds input validity, component balance, present-phase
-normalization, equifugacity, applicability, and a tangent-plane search in both
-liquid and vapor phases. Only present phases require normalization. Exactly
-absent components remain outside the stability-search support.</p>
+<p><code>pkg.flash_pt_with_info</code> retains the actual cubic, gamma-phi, or PC-SAFT
+iteration report. <code>flash_pt_checked</code> adds input validity, component balance,
+present-phase normalization, equifugacity, applicability, and a tangent-plane
+search in both liquid and vapor phases. Only present phases require
+normalization. Exactly absent components remain outside the stability-search
+support. <code>result.report.failures()</code> lists each failed criterion in plain
+language, and <code>PhysicalAcceptanceError</code> messages include the same reasons.</p>
 <p>The stability search starts from the feed, returned phases, and each component
 enrichment. Acceptance requires stationary trials and no negative observed
 tangent-plane distance. It isn't a proof of a global Gibbs minimum. A stalled
@@ -2726,12 +2759,19 @@ their primals for diagnosis and have nonfinite forward and reverse derivatives.<
 targets use <code>prop="entropy"</code>. The existing PH/PS report now includes
 equifugacity. Energy-balanced units independently verify their returned phase
 inventories, equilibrium residual, and parameter bounds before passing an
-outlet downstream. Full stability checks are available through <code>heater_checked</code>,
-<code>valve_checked</code>, and <code>audit_stream</code> after the numerical solve.</p>
+outlet downstream. An eager <code>flash_drum</code> also warns with
+<code>PhysicalAcceptanceWarning</code> when an outlet is unstable. Full stability checks
+are available through <code>flash_drum_checked</code>, <code>heater_checked</code>, <code>valve_checked</code>,
+and <code>audit_stream</code> after the numerical solve, and through
+<code>Flowsheet(model=pkg)</code>, which audits every solved stream.</p>
 <p><code>audit_balance</code> verifies component and enthalpy flow closure using explicit heat
 and shaft work, positive into the fluid. <code>audit_flowsheet</code> requires declared
 <code>BalanceBoundary</code> objects, since stream endpoints alone don't specify heat or
-work. Empty streams have no physical equilibrium composition and fail a full
+work. A boundary's heat and work are its explicit <code>heat</code> and <code>work</code> plus those
+the solved result retained for the units it names in <code>units</code>, so a
+<code>Flowsheet.solve_with_info</code> result supplies its own duties. <code>audit_flowsheet</code>
+also accepts an equation-oriented <code>EOSolution</code>, whose boundaries must state
+their heat and work explicitly. Empty streams have no physical equilibrium composition and fail a full
 stream audit. Reactive boundaries require explicit component generation and a
 formation-consistent enthalpy model.</p>
 <p>The copilot exposes <code>measured_corpus</code>, <code>inspect_thermodynamic_evidence</code>,

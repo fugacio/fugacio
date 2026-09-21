@@ -16,7 +16,7 @@
       
       
       
-        <link rel="next" href="phase-equilibrium/">
+        <link rel="next" href="upgrading/">
       
       
         
@@ -266,7 +266,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="phase-equilibrium/" class="md-tabs__link">
+        <a href="upgrading/" class="md-tabs__link">
           
   
   
@@ -483,6 +483,8 @@
       
         
       
+        
+      
     
     
     
@@ -529,6 +531,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2486,9 +2516,10 @@ full overview.</p>
   (vdW / RK / SRK / PR) with fugacity coefficients,
   <a href="reference-fluids/">reference multiparameter Helmholtz EOS</a> (IAPWS-95
   water/steam, Span–Wagner CO₂, 26 fluids, with steam-table state functions and
-  IAPWS transport), real-fluid energy properties
-  (residual/departure functions, enthalpy/entropy, isenthalpic &amp; isentropic
-  flashes), <a href="physical-properties/">liquid &amp; transport properties</a> (density,
+  IAPWS transport), <a href="property-packages/">property packages</a> that own phase
+  equilibrium <em>and</em> energy for every method class (residual functions,
+  enthalpy/entropy, isenthalpic &amp; isentropic flashes, stability),
+  <a href="physical-properties/">liquid &amp; transport properties</a> (density,
   viscosity, thermal conductivity, surface tension, diffusivity, both pure and
   mixture), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
   UNIQUAC), group contribution (UNIFAC + Dortmund, Joback), EOS <em>and</em> γ–φ
@@ -2499,12 +2530,13 @@ full overview.</p>
   thermochemistry, equilibrium, and kinetics</a>.</li>
 <li><strong><code>fugacio.sim</code></strong>, flowsheet / unit-operation engine (depends on <code>thermo</code>):
   a differentiable <code>Stream</code> pytree, energy-balanced unit operations (<code>flash_drum</code>,
-  <code>heater</code>, <code>valve</code>, <code>pump</code>, <code>compressor</code>, <code>turbine</code>, <code>mix</code>, <code>splitter</code>), a
+  <code>adiabatic_flash</code>, <code>heater</code>, <code>valve</code>, <code>pump</code>, <code>compressor</code>, <code>turbine</code>, <code>mix</code>,
+  <code>splitter</code>), each a compile-once kernel that reports or raises on failure, a
   recycle/tear solver with implicit-diff gradients (<code>tear_solve</code>, <code>Flowsheet</code>),
   distillation columns (shortcut FUG and a rigorous equilibrium-stage model),
   binary diagrams / azeotropes / residue-curve maps,
   <a href="reactions/">reactors</a> (equilibrium, stoichiometric, CSTR, PFR, batch),
-  reactive separations (reactive flash &amp; distillation),
+  reactive separations (reactive flash &amp; reactive MESH columns),
   <a href="reference-fluids/#steam-cooling-water-utilities-fugaciosim">steam &amp; cooling-water utilities</a>
   on IAPWS-95,
   <a href="optimization/">differentiable optimization, design specs &amp; process economics</a>
@@ -2542,13 +2574,18 @@ end-to-end differentiable, including through phase equilibrium.</p>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">vapor</span><span class="p">,</span> <span class="n">liquid</span> <span class="o">=</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="mf">320.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Exact sensitivity of vapour product flow to drum temperature:</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Exact sensitivity of vapor product flow to drum temperature:</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="k">lambda</span> <span class="n">T</span><span class="p">:</span> <span class="n">flash_drum</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">total</span><span class="p">)(</span><span class="mf">320.0</span><span class="p">)</span>
 </span></code></pre></div>
+<p>A failed solve never returns a plausible number: value-only calls return NaN,
+checked <code>*_with_info</code> calls return a report, and an eager unit raises (see
+<a href="reliability/">reliability</a>). Upgrading from 0.8? See
+<a href="upgrading/">upgrading to 0.9</a>.</p>
 <h2 id="correctness-as-an-executable-harness">Correctness as an executable harness<a class="headerlink" href="#correctness-as-an-executable-harness" title="Permanent link">&para;</a></h2>
 <p>Physical correctness is continuously machine-checked: first-principles
 consistency laws that need no external data (Gibbs-Duhem, equifugacity,
-fugacity-pressure identity, phase stability), automatic-differentiation gradients
+fugacity-pressure identity, the Gibbs-Helmholtz and fugacity-enthalpy
+consistency of property packages, phase stability), automatic-differentiation gradients
 checked against finite differences, and opt-in differential testing against open
 reference codes: <a href="https://github.com/CoolProp/CoolProp">CoolProp</a> and
 <a href="https://github.com/CalebBell/chemicals"><code>chemicals</code></a> for pure-fluid properties

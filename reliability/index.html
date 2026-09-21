@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -880,10 +910,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#the-failure-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The failure contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-a-solve-report" class="md-nav__link">
     <span class="md-ellipsis">
       
         Read a solve report
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-stability-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test stability first
       
     </span>
   </a>
@@ -2491,10 +2543,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#the-failure-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The failure contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-a-solve-report" class="md-nav__link">
     <span class="md-ellipsis">
       
         Read a solve report
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-stability-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test stability first
       
     </span>
   </a>
@@ -2594,39 +2668,166 @@
 Fugacio provides numerical reports for roots, recycles, rigorous columns,
 equation-oriented flowsheets, energy-balanced units, and optimization. Use these
 reports when accepting a design or presenting a result.</p>
+<h2 id="the-failure-contract">The failure contract<a class="headerlink" href="#the-failure-contract" title="Permanent link">&para;</a></h2>
+<p>No public call returns a plausible number from a failed solve. Every
+equilibrium calculation comes in two forms:</p>
+<ul>
+<li>A checked <code>*_with_info</code> form returns the best iterate and a <code>SolveReport</code>.
+  Its derivatives are nonfinite unless the report converged, so an optimizer
+  can't consume a failed sensitivity.</li>
+<li>A value-only form returns NaN whenever that report fails.</li>
+</ul>
+<p>This covers the cubic, gamma-phi, liquid-liquid, three-phase, and PC-SAFT
+flashes and saturation calls, reaction equilibrium, and every
+<a href="../property-packages/">property-package</a> method (<code>flash_pt</code>, <code>bubble_pressure</code>,
+<code>dew_temperature</code>, <code>flash_ph</code>, and so on).</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_for</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">pkg</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">((</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-butane&quot;</span><span class="p">))</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">])</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">solved</span> <span class="o">=</span> <span class="n">pkg</span><span class="o">.</span><span class="n">bubble_pressure_with_info</span><span class="p">(</span><span class="mf">330.0</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">solved</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()[</span><span class="s2">&quot;status&quot;</span><span class="p">]</span>     <span class="c1"># &quot;trivial&quot;: the iteration found y = x</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">pkg</span><span class="o">.</span><span class="n">bubble_pressure</span><span class="p">(</span><span class="mf">330.0</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>   <span class="c1"># nan</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Above the cricondenbar there&#39;s no bubble point, and no usable derivative.</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">pkg</span><span class="o">.</span><span class="n">bubble_temperature</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">)(</span><span class="mf">200e5</span><span class="p">)</span>   <span class="c1"># nan</span>
+</span></code></pre></div>
+<p><code>SolveStatus</code> names the outcome:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CONVERGED</code> (0)</td>
+<td>The independently checked residual passed its tolerance.</td>
+</tr>
+<tr>
+<td><code>MAX_ITERATIONS</code> (1)</td>
+<td>The iteration cap was reached first.</td>
+</tr>
+<tr>
+<td><code>NONFINITE</code> (2)</td>
+<td>A NaN or infinite value appeared.</td>
+</tr>
+<tr>
+<td><code>SINGULAR</code> (3)</td>
+<td>A linear system was singular.</td>
+</tr>
+<tr>
+<td><code>STALLED</code> (4)</td>
+<td>The residual stopped decreasing.</td>
+</tr>
+<tr>
+<td><code>INVALID_INPUT</code> (5)</td>
+<td>The specification is invalid or violates an operating limit.</td>
+</tr>
+<tr>
+<td><code>INFEASIBLE</code> (6)</td>
+<td>No physical solution satisfies the specification, such as one that needs negative amounts.</td>
+</tr>
+<tr>
+<td><code>OUT_OF_DOMAIN</code> (7)</td>
+<td>A well-posed request lies outside the model's domain, such as a vapor pressure above the critical temperature.</td>
+</tr>
+<tr>
+<td><code>TRIVIAL</code> (8)</td>
+<td>An equilibrium iteration collapsed onto identical phases where a distinct phase was required.</td>
+</tr>
+</tbody>
+</table>
+<p>Unit operations share one contract (see <code>fugacio.sim.units</code>). Every unit is a
+compiled kernel that returns its outlets with a report, and a failed kernel's
+outlets are NaN:</p>
+<ul>
+<li>An eager call raises <code>ConvergenceError</code> for a failed solve, or <code>ValueError</code>
+  for a violated operating limit from <code>fugacio.sim.unit_limits</code>: a valve,
+  mixer, drum, or turbine that would raise pressure, a pump or compressor that
+  would lower it, split fractions outside <code>[0, 1]</code> or not summing to one, or a
+  pump with a vapor inlet.</li>
+<li>A traced call (inside <code>jax.jit</code>, a flowsheet recycle, or an optimizer)
+  can't raise. It returns NaN outlets with nonfinite derivatives; the unit's
+  <code>report</code>, and each NaN outlet's <code>Stream.report</code>, record the failure.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">valve</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">feed</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_fractions</span><span class="p">((</span><span class="s2">&quot;methane&quot;</span><span class="p">,</span> <span class="s2">&quot;propane&quot;</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">]),</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">300.0</span><span class="p">,</span> <span class="mf">20e5</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">valve</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="mf">30e5</span><span class="p">)</span>                            <span class="c1"># ValueError: a valve can&#39;t raise pressure</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">valve</span><span class="p">(</span><span class="n">feed</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">t</span><span class="p">)(</span><span class="mf">30e5</span><span class="p">)</span>    <span class="c1"># nan: the traced limit fails the report</span>
+</span></code></pre></div>
+<p>The saved-case audit (<code>fugacio.sim.cases</code>) checks solved streams against the
+same <code>unit_limits</code> predicates, so a limit can't be enforced in one place and
+forgotten in another.</p>
+<p><code>rigorous_column</code>, <code>stoichiometric_reactor</code>, the flow reactors
+(<code>equilibrium_reactor</code>, <code>cstr</code>, and <code>pfr</code>), and <code>reactive_flash</code> follow the same
+contract; a failed reactor also keeps its report, balances, and profiles for
+diagnosis. Where a unit offers <code>check=False</code>, it returns its best iterate
+instead, with a failed <code>report</code> and nonfinite derivatives, so check
+<code>result.report</code> (or <code>result.converged</code>) before using it.</p>
 <h2 id="read-a-solve-report">Read a solve report<a class="headerlink" href="#read-a-solve-report" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">newton_system_with_info</span><span class="p">,</span> <span class="n">require_converged</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">newton_system_with_info</span><span class="p">(</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">target</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">]),</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">4.0</span><span class="p">]),</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">lower</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]),</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">require_converged</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">report</span><span class="p">,</span> <span class="s2">&quot;design equation&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;target relation&quot;</span><span class="p">,))</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">result</span><span class="o">.</span><span class="n">value</span>                       <span class="c1"># [2.0]</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">result</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>             <span class="c1"># Strict JSON on the host</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">newton_system_with_info</span><span class="p">,</span> <span class="n">require_converged</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">newton_system_with_info</span><span class="p">(</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">target</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">]),</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">4.0</span><span class="p">]),</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">lower</span><span class="o">=</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]),</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">require_converged</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">report</span><span class="p">,</span> <span class="s2">&quot;design equation&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;target relation&quot;</span><span class="p">,))</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">result</span><span class="o">.</span><span class="n">value</span>                       <span class="c1"># [2.0]</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">result</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>             <span class="c1"># Strict JSON on the host</span>
 </span></code></pre></div>
 <p>Reports contain a status, an iteration count, the maximum absolute scaled
 residual, the last scaled step, and the index of the largest residual. A small
-step alone doesn't establish convergence. Status codes distinguish convergence,
-iteration limits, nonfinite values, stalled iterations, invalid inputs, and
-infeasible specifications. <code>ConvergenceError</code> retains the report and calculation
-context. Units that independently verify an energy balance report zero numerical
-iterations for that verification; this isn't a count of their internal flash
-iterations.</p>
+step alone doesn't establish convergence. <code>ConvergenceError</code> retains the report
+and calculation context. Units that independently verify an energy balance
+report zero numerical iterations for that verification; this isn't a count of
+their internal flash iterations. <code>nan_unless_converged(value, report)</code> applies
+the value-only contract to your own calculations, and
+<code>fugacio.thermo.diagnostics.with_status</code> overrides a report's status where a
+condition fails.</p>
 <p><code>newton_system_with_info</code> accepts characteristic variable and equation scales and
 optional bounds. Its Newton search reduces the actual residual and keeps trial
 variables within the bounds. Bounds aid the search; they don't replace any
 original equation. The scalar <code>bracketed_root_with_info</code> checks both a valid
-bracket and the resulting residual, so a discontinuity can't pass merely because
-the bracket became narrow. Existing low-level value-only root functions retain
-their compatibility behavior. Use the reporting variants to accept their results.</p>
-<p>Results that carry a new <code>report</code> field should be accessed by attribute rather
-than positional tuple unpacking. <code>Stream</code> also has an additional array leaf for
-phase inventory. Checked flowsheet and column entry points now raise on concrete
-convergence failures by default.</p>
+bracket and the resulting residual: a bracket without a sign change is
+<code>INVALID_INPUT</code>, and a sign change across a pole, whose residual stays large as
+the bracket shrinks, fails. <code>scanned_root_with_info</code> first scans a wide bracket
+for the first finite sign change, so a residual that's undefined over part of
+the bracket still works. <code>bracketed_root</code> returns the same checked root without
+its report; its derivative is nonfinite when the check fails, so use the
+reporting variant to accept a value.</p>
+<p>Access results by attribute: most carry a <code>report</code> field alongside their
+values, and a unit result also exposes its outlets as <code>outlets</code>.</p>
+<h2 id="test-stability-first">Test stability first<a class="headerlink" href="#test-stability-first" title="Permanent link">&para;</a></h2>
+<p>A converged two-phase flash can still be wrong: it considers one liquid and one
+vapor, so a feed that splits into two liquids can return a converged
+vapor-liquid answer. Fugacio checks stability with one shared tangent-plane
+search, <code>fugacio.thermo.stability.tpd_search</code>, which starts from the feed, the
+Wilson-like estimates, and an enrichment toward every component, on both the
+liquid and the vapor branch:</p>
+<ul>
+<li><code>pkg.stability(t, p, z)</code> on every property package returns a
+  <code>StabilityResult(stable, tpd, trial, branch, converged)</code>.</li>
+<li><code>flash_lle</code> and <code>decanter</code> test stability before they split a liquid.</li>
+<li>An eager <code>flash_drum</code> warns with <code>PhysicalAcceptanceWarning</code> when an outlet
+  is unstable, and <code>fugacio.sim.acceptance.flash_drum_checked</code> audits both
+  outlets; its <code>check()</code> raises <code>PhysicalAcceptanceError</code>.</li>
+<li><code>flash_pt_checked</code>, <code>audit_stream</code>, and flowsheet audits reject a state with a
+  negative tangent-plane distance, and <code>PhysicalReport.failures()</code> explains
+  each rejection in plain language.</li>
+</ul>
+<p>A finite-start search can't prove a global minimum. A negative distance
+establishes instability; a verdict of stability also requires every trial to
+reach a stationary point (<code>converged</code>).</p>
 <h2 id="keep-a-streams-phase-state">Keep a stream's phase state<a class="headerlink" href="#keep-a-streams-phase-state" title="Permanent link">&para;</a></h2>
 <p>Temperature and pressure don't determine the quality of a pure saturated fluid.
 <code>Stream</code> therefore carries optional vapor component flows, <code>vapor_n</code>, in addition
@@ -2634,14 +2835,14 @@ to total component flows. Heater, valve, machine, flash, and rigorous-column
 outputs retain their resolved phase inventories. Splitters scale both inventories.
 Stream enthalpy, entropy, and volume use those inventories instead of repeating a
 PT flash that would discard saturation quality.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">package_for</span><span class="p">,</span> <span class="n">splitter</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">steam</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">([</span><span class="s2">&quot;water&quot;</span><span class="p">],</span> <span class="s2">&quot;iapws&quot;</span><span class="p">)</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">wet</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_ph</span><span class="p">(</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="p">(</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">1e5</span><span class="p">,</span> <span class="mf">25000.0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">steam</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">splitter</span><span class="p">(</span><span class="n">wet</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">]))</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">wet</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">package_for</span><span class="p">,</span> <span class="n">splitter</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">steam</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">([</span><span class="s2">&quot;water&quot;</span><span class="p">],</span> <span class="s2">&quot;iapws&quot;</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">wet</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">from_ph</span><span class="p">(</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="p">(</span><span class="s2">&quot;water&quot;</span><span class="p">,),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">1e5</span><span class="p">,</span> <span class="mf">25000.0</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">steam</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">)</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">splitter</span><span class="p">(</span><span class="n">wet</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">]))</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">wet</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
 </span></code></pre></div>
 <p><code>Stream.from_ps</code> accepts pressure and molar entropy. For known saturated endpoints,
 <code>Stream.from_fractions(..., phase="liquid")</code> or <code>phase="vapor"</code> selects the branch.
@@ -2657,17 +2858,33 @@ together inside the saturation region. The reference-fluid package uses its
 published PH and PS state functions. Equation-oriented pure-fluid streams use
 molar enthalpy as their thermal coordinate so that quality remains an unknown
 when saturation temperature is fixed.</p>
+<p>For the same reason, <code>heater(feed, t_out=...)</code> on a pure fluid raises
+<code>ValueError</code> when <code>t_out</code> is exactly its saturation temperature at the outlet
+pressure: the quality is undetermined. Specify <code>vapor_fraction</code> (0 for
+saturated liquid, 1 for saturated vapor, or any quality in between) or <code>duty</code>
+instead. <code>adiabatic_flash(feed, p, duty=...)</code> separates a letdown or a heated
+pure fluid on its saturation line, where a temperature can't fix the phase
+amounts.</p>
 <h2 id="accept-a-flowsheet-calculation">Accept a flowsheet calculation<a class="headerlink" href="#accept-a-flowsheet-calculation" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve_with_info</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">)</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">result</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">streams</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">streams</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">report</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">reports</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve_with_info</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">result</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">streams</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">streams</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">report</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">reports</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </span></code></pre></div>
-<p>Sequential flowsheet reports identify recycle blocks and invalid named streams.
+<p>Sequential flowsheet reports identify recycle blocks, units, and invalid named
+streams, and <code>result.units</code> keeps the heat, work, and report each unit returned.
 <code>fs.solve()</code> checks those reports by default. <code>solve_with_info</code> retains best
-iterates for diagnosis; a unit that can't close its own energy equation can still
-raise a <code>ConvergenceError</code> before a complete flowsheet result exists.</p>
+iterates for diagnosis; a unit that fails outside a recycle iteration can still
+raise a <code>ConvergenceError</code>, naming the unit, before a complete flowsheet result
+exists. Recycles converge with Broyden's method unless you pass another
+<code>method</code>.</p>
+<p>With a property package, <code>Flowsheet(model=pkg)</code> audits every solved stream for
+equilibrium, stability, and parameter applicability after convergence.
+<code>result.accepted</code> combines convergence with those audits, <code>result.audits</code> holds
+each stream's <code>PhysicalReport</code>, and <code>fs.solve()</code> raises
+<code>PhysicalAcceptanceError</code> for a stream that fails. The audits run once, outside
+the recycle iterations, so they don't slow the solve itself.</p>
 <p><code>EOFlowsheet.solve()</code> returns an <code>EOSolution</code> with a report and checks concrete
 failures by default. <code>check=False</code> exposes its best iterate. Errors identify the
 responsible block equation or design specification. EO flash blocks impose zero
@@ -2699,9 +2916,9 @@ by its <code>guess</code> argument. If a direct NRTL column solve fails, the sol
 start at ideal activity and restore the activity parameters in increments.
 <code>homotopy=False</code> disables this fallback. Each increment has its own Newton
 iteration limit; the final report verifies the requested model's equations.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">path</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve_path</span><span class="p">(</span><span class="n">start_parameters</span><span class="p">,</span> <span class="n">target_parameters</span><span class="p">)</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">path</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">endpoint</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">value</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">path</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">solve_path</span><span class="p">(</span><span class="n">start_parameters</span><span class="p">,</span> <span class="n">target_parameters</span><span class="p">)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">path</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">endpoint</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">value</span>
 </span></code></pre></div>
 <p>Both flowsheet engines support this host-side continuation method. Failed trials
 reduce the step and retain the previous accepted state; successful steps advance
@@ -2731,7 +2948,10 @@ supply a valid solution sensitivity.</p>
 <p>Host-side checked calculations raise on failure. Inside compiled calculations,
 checked flowsheet values and failed implicit sensitivities become nonfinite, and
 reporting APIs retain the failure status. Carry the report through JIT and inspect
-it before accepting results. Phase transitions, active-set changes, redundant
+it before accepting results. For an acceptance check of your own, made after a
+solve, <code>fugacio.thermo.implicit.gate_derivative(value, valid)</code> keeps the value
+but makes its derivative nonfinite unless <code>valid</code>; <code>gate_tree</code> applies it to
+every floating leaf of a pytree. Phase transitions, active-set changes, redundant
 constraints, and singular roots can make a derivative undefined even when the
 primal residual is small. A successful residual check doesn't prove smoothness
 or global optimality.</p>
@@ -2764,8 +2984,8 @@ check the converged process, including its external material and energy balances
 </tr>
 </tbody>
 </table>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>packages/fugacio-sim/tests/test_plants.py
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>packages/fugacio-sim/tests/test_utility_reliability.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>packages/fugacio-sim/tests/test_plants.py
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>packages/fugacio-sim/tests/test_utility_reliability.py
 </span></code></pre></div>
 <p>These cases carry the <code>plant</code> marker and run in CI. Their nested JAX solvers can
 take several minutes to compile on the first run. The HDA case uses a specified

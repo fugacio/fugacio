@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -908,6 +938,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#compile-once-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compile-once kernels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#numerical-choices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -976,6 +1017,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Measured behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-checked-solves-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What checked solves cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2508,6 +2566,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#compile-once-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compile-once kernels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#numerical-choices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2577,6 +2646,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Measured behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-checked-solves-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What checked solves cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2628,20 +2714,65 @@
 structured solvers solve the same residual equations as their dense references.
 A short runtime doesn't establish convergence, derivative accuracy, or measured
 qualification. Failed runs and resource limits remain visible in saved evidence.</p>
+<h2 id="compile-once-kernels">Compile-once kernels<a class="headerlink" href="#compile-once-kernels" title="Permanent link">&para;</a></h2>
+<p>JAX compiles a program the first time it sees a new structure, and that
+compilation, not the arithmetic, dominates the first call to a process
+calculation. Fugacio arranges its calculations so a structure compiles once:</p>
+<ul>
+<li>Every unit operation in <code>fugacio.sim.units</code> is one compiled kernel. The
+  property package and every operating value (temperatures, pressures, duties,
+  efficiencies, split fractions) are dynamic arguments, so a unit compiles once
+  per package structure and specification kind. A new operating point, or new
+  package parameters such as fitted NRTL coefficients, reuses the executable.
+  Changing the specification kind (a heater on <code>t_out</code> instead of <code>duty</code>) or the
+  package structure (another component count or method) compiles a new kernel.</li>
+<li>Property-package solve methods (<code>flash_pt</code>, <code>stability</code>, the bubble and dew
+  calls, <code>flash_ph</code>, <code>mixture_enthalpy</code>, and so on) run through kernels cached
+  per method and static options, with the package as a dynamic argument. A
+  package whose pytree holds a non-array leaf, such as an unregistered
+  activity-model object, runs eagerly instead.</li>
+<li><code>Flowsheet</code> caches each recycle block's map, so solving again at a new
+  <code>theta</code> reuses the compiled recycle iteration. Registering a unit or a tear
+  clears the cache.</li>
+<li>Saved-case unit templates are shared by every <code>CaseRunner</code> in a process,
+  keyed by the template's fixed settings, so another case with the same unit
+  structure reuses them.</li>
+</ul>
+<p>A new process compiles again. To keep compiled programs on disk and reuse them
+across processes (a CLI run, a sweep worker, a notebook restart), enable JAX's
+persistent compilation cache before the first calculation:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">enable_compilation_cache</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">enable_compilation_cache</span><span class="p">(</span><span class="s2">&quot;.jax_cache&quot;</span><span class="p">)</span>   <span class="c1"># created if missing; returns the resolved path</span>
+</span></code></pre></div>
+<p>By default it stores every program, however quickly it compiled, because
+process kernels are small individually but numerous; pass
+<code>min_compile_time_s</code> to store only slower ones. A later call also works: the
+cache is reinitialized so the next compilation uses it. The cache is keyed by
+the JAX version, the backend, and the exact program, so a stale entry is never
+reused for a different computation. It grows with every distinct program, so
+it's opt-in. The CLI enables it with <code>--jax-cache DIR</code> on <code>run</code>, <code>sweep</code>,
+<code>optimize</code>, <code>sensitivities</code>, <code>profile</code>, and <code>replay</code>, or with the
+<code>FUGACIO_JAX_CACHE</code> environment variable:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>run<span class="w"> </span>examples/process-cases/depropanizer.json<span class="w"> </span>--jax-cache<span class="w"> </span>.jax_cache
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FUGACIO_JAX_CACHE</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/.jax_cache&quot;</span><span class="w">      </span><span class="c1"># or set it once for every command</span>
+</span></code></pre></div>
+<p>A warm cache reduces compilation time, not the peak memory each compilation
+needs.</p>
 <h2 id="numerical-choices">Numerical choices<a class="headerlink" href="#numerical-choices" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">SolverOptions</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">example_case</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">example_case</span><span class="p">(</span><span class="s2">&quot;depropanizer&quot;</span><span class="p">),</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="n">recycle_method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n">column_solver</span><span class="o">=</span><span class="s2">&quot;block&quot;</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="n">eo_jacobian</span><span class="o">=</span><span class="s2">&quot;colored&quot;</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="p">),</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">structure</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">diagnose_structure</span><span class="p">()</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">run</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseRunner</span><span class="p">,</span> <span class="n">SolverOptions</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">example_case</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">example_case</span><span class="p">(</span><span class="s2">&quot;depropanizer&quot;</span><span class="p">),</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">recycle_method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">column_solver</span><span class="o">=</span><span class="s2">&quot;block&quot;</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">eo_jacobian</span><span class="o">=</span><span class="s2">&quot;colored&quot;</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="p">),</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">)</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">structure</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">diagnose_structure</span><span class="p">()</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">run</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>column_solver="block"</code> is the default for saved cases. The direct
 <code>rigorous_column</code> API calls this option <code>linear_solver</code>. Set either option to
@@ -2728,10 +2859,10 @@ Mixture outlets reuse the curve endpoints and resolve only their phase
 inventories. Pure-fluid outlets retain a PH solve because temperature alone
 doesn't determine saturation quality. This avoids repeating two complete
 mixture energy solves after the profiles have already converged.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>diagnose<span class="w"> </span>examples/process-cases/depropanizer.json
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>diagnose<span class="w"> </span>examples/process-cases/depropanizer.json
 </span></code></pre></div>
-<p>Case runners share compiled unit templates when their numerical structure and
-fixed settings match. Each instance binds its own parameter values; renaming
+<p>Case runners in one process share compiled unit templates when their numerical
+structure and fixed settings match. Each instance binds its own parameter values; renaming
 units, streams, or parameters doesn't require another executable. Scalar inputs
 keep their precision but use consistent JAX scalar types across cold starts,
 recycles, and derivative replays. Structural diagnostics report the instance
@@ -2743,19 +2874,19 @@ boundaries. <code>derivative_mode="auto"</code> chooses forward mode when there 
 inputs than outputs, and reverse mode otherwise. The choice minimizes direction
 count; it isn't a hardware-specific timing prediction. Explicit <code>"forward"</code> and
 <code>"reverse"</code> modes support comparisons and unusual models.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">sensitivities</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">heater_bank_case</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">bank</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">heater_bank_case</span><span class="p">(</span><span class="mi">24</span><span class="p">))</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">study</span> <span class="o">=</span> <span class="n">sensitivities</span><span class="p">(</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">bank</span><span class="p">,</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="nb">list</span><span class="p">(</span><span class="n">bank</span><span class="o">.</span><span class="n">parameters</span><span class="p">),</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="p">[</span><span class="s2">&quot;duty&quot;</span><span class="p">],</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">derivative_mode</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">derivative_batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="k">assert</span> <span class="n">study</span><span class="o">.</span><span class="n">accepted</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">assert</span> <span class="n">study</span><span class="o">.</span><span class="n">artifact</span><span class="p">[</span><span class="s2">&quot;derivatives&quot;</span><span class="p">][</span><span class="s2">&quot;directions&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">sensitivities</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases.examples</span><span class="w"> </span><span class="kn">import</span> <span class="n">heater_bank_case</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">bank</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">heater_bank_case</span><span class="p">(</span><span class="mi">24</span><span class="p">))</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">study</span> <span class="o">=</span> <span class="n">sensitivities</span><span class="p">(</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">bank</span><span class="p">,</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="nb">list</span><span class="p">(</span><span class="n">bank</span><span class="o">.</span><span class="n">parameters</span><span class="p">),</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="p">[</span><span class="s2">&quot;duty&quot;</span><span class="p">],</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">derivative_mode</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">derivative_batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">)</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">assert</span> <span class="n">study</span><span class="o">.</span><span class="n">accepted</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="k">assert</span> <span class="n">study</span><span class="o">.</span><span class="n">artifact</span><span class="p">[</span><span class="s2">&quot;derivatives&quot;</span><span class="p">][</span><span class="s2">&quot;directions&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
 </span></code></pre></div>
 <p>The default batch size of one limits tangent storage. Larger batches may trade
 memory for throughput. Each new operating point gets a new linearization;
@@ -2766,14 +2897,14 @@ optimization's final candidate still starts cold and receives its physical
 audit.</p>
 <p>For array-valued numerical kernels, <code>fugacio.thermo.sensitivity.linearize</code>
 exposes the reusable map directly:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo.sensitivity</span><span class="w"> </span><span class="kn">import</span> <span class="n">linearize</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">local</span> <span class="o">=</span> <span class="n">linearize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]))</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">value</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">value</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">direction</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">jvp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">adjoint</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">vjp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mf">1.0</span><span class="p">))</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">jacobian</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;reverse&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo.sensitivity</span><span class="w"> </span><span class="kn">import</span> <span class="n">linearize</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">local</span> <span class="o">=</span> <span class="n">linearize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]))</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">value</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">value</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">direction</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">jvp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">adjoint</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">vjp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mf">1.0</span><span class="p">))</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">jacobian</span> <span class="o">=</span> <span class="n">local</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;reverse&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The map belongs to that point and the model captured by the function. Release
 it when those inputs change to release its retained residuals. <code>has_aux=True</code>
@@ -2781,15 +2912,15 @@ keeps numerical reports separate from differentiated outputs.</p>
 <h2 id="recorded-performance-observations">Recorded performance observations<a class="headerlink" href="#recorded-performance-observations" title="Permanent link">&para;</a></h2>
 <p><code>profile</code> saves timings in a separate content-addressed artifact. Ordinary run
 identities don't acquire timestamps or timing fields.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseWorkspace</span><span class="p">,</span> <span class="n">profile</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">observed</span> <span class="o">=</span> <span class="n">profile</span><span class="p">(</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">runner</span><span class="p">,</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">parameters</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;approach&quot;</span><span class="p">],</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;annual_cost&quot;</span><span class="p">],</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">warm_repeats</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">),</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim.cases</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaseWorkspace</span><span class="p">,</span> <span class="n">profile</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">observed</span> <span class="o">=</span> <span class="n">profile</span><span class="p">(</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">runner</span><span class="p">,</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">parameters</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;approach&quot;</span><span class="p">],</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;annual_cost&quot;</span><span class="p">],</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">warm_repeats</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">workspace</span><span class="o">=</span><span class="n">CaseWorkspace</span><span class="p">(</span><span class="s2">&quot;.fugacio-cases&quot;</span><span class="p">),</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>The artifact records the first and repeated audited runs, first and repeated
 linearizations, Jacobian applications, environment, solver configuration, and
@@ -2880,6 +3011,27 @@ outputs inherit a 7 GB guarantee. The default-allocator cold run reached
 7.006 GB at its fifth optimizer point; warm-cache runs also exceeded 7 GB.
 Failed resource observations remain in the benchmark record. A warm persistent
 cache can reduce compilation time without reducing peak resident memory.</p>
+<h3 id="what-checked-solves-cost">What checked solves cost<a class="headerlink" href="#what-checked-solves-cost" title="Permanent link">&para;</a></h3>
+<p>Checked solves, retained reports, and per-unit kernels enlarge the compiled
+process graph, so the same studies need more compile memory and time than they
+did before the engine reported every failure. Measured on the same CI runner,
+same case, and same JAX 0.10.1: the depropanizer optimization's audited
+baseline run went from 2.533 GB and 88 seconds to 3.148 GB and 139 seconds, and
+its first plant linearization from 6.104 GB to more than 7 GB, which is why
+that job's limit is now 9 GB. The 12-stage ethanol/water train's audited run
+went from 5.984 GB and 379 seconds to 8.041 GB and 654 seconds, and its first
+linearization no longer fits a 16 GB runner at all (it passed 12 GB before
+completing), so a pull request skips that benchmark. Shrinking the column
+doesn't recover it: at eight stages the same train has to work harder for the
+same distillate rate, and its audited run peaked higher still, at 10.494 GB.
+The depropanizer optimization now completes in 639 seconds at 8.043 GB, within
+its 9 GB limit. A local comparison on one
+macOS host attributes the increase to the process graph rather than to the
+retained kernels: the same depropanizer solve moved from 3.794 GB and 122
+seconds to 4.758 GB and 158 seconds, while its per-unit kernels <em>reduced</em> peak
+memory (4.755 GB with them, 4.987 GB without), and the heat exchanger's
+compiled program is about three times smaller yet still costs 24% more memory
+to build.</p>
 <p>The Linux memory-budget workflow limits glibc's allocation arenas to reduce
 retained allocation memory. Set <code>MALLOC_ARENA_MAX=2</code> before starting Python to
 reproduce that runtime configuration. This changes allocation behavior, not
@@ -2912,30 +3064,32 @@ phase. On Linux, it also records available cgroup memory-event counters, which
 can identify an OOM kill before the worker's watchdog records its own peak.
 A successful benchmark requires accepted numerical/physical evidence
 and completion within the resource limits.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Linux/glibc setting used by the memory-budget workflow.</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MALLOC_ARENA_MAX</span><span class="o">=</span><span class="m">2</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>block<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-block
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>dense<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-dense
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span>--scenario<span class="w"> </span>depropanizer<span class="w"> </span>--study<span class="w"> </span>optimization<span class="w"> </span>--release-caches<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">7</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/depropanizer-optimization
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span>--scenario<span class="w"> </span>ethanol-train<span class="w"> </span>--stages<span class="w"> </span><span class="m">12</span><span class="w"> </span>--study<span class="w"> </span>sensitivities<span class="w"> </span>--release-caches<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">12</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/ethanol-train
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">  </span>--scenario<span class="w"> </span>heater-bank<span class="w"> </span>--variables<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/many-variable
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Linux/glibc setting used by the memory-budget workflow.</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MALLOC_ARENA_MAX</span><span class="o">=</span><span class="m">2</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>block<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-block
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>dense<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-dense
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span>--scenario<span class="w"> </span>depropanizer<span class="w"> </span>--study<span class="w"> </span>optimization<span class="w"> </span>--release-caches<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">9</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/depropanizer-optimization
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c1"># This train needs a host with more than 16 GB of RAM: CI runs it only on a</span>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1"># manual workflow dispatch (see the measurements below).</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">  </span>--scenario<span class="w"> </span>ethanol-train<span class="w"> </span>--stages<span class="w"> </span><span class="m">12</span><span class="w"> </span>--study<span class="w"> </span>sensitivities<span class="w"> </span>--release-caches<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">16</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/ethanol-train
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="w">  </span>--scenario<span class="w"> </span>heater-bank<span class="w"> </span>--variables<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-26"><a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/many-variable
 </span></code></pre></div>
 <p>Output directories must be empty. They retain the report, incremental progress,
 worker log, cache, and any audited case artifacts. To measure persistent-cache
@@ -2960,8 +3114,10 @@ linearization can compile individual units, so its time mustn't be labeled
 pure execution time.</p>
 <p>The process-performance CI workflow runs 32- and 64-stage columns, the saved
 depropanizer optimization, the NRTL train, and a 24-variable study in separate
-jobs. The depropanizer, columns, and heater bank have a 7 GB process limit;
-the NRTL sensitivity train has a separate 12 GB budget. All these Linux jobs
+jobs. The columns and heater bank have a 7 GB process limit and the
+depropanizer optimization a 9 GB limit. The NRTL sensitivity train exceeds a
+16 GB runner with the checked engine, so a pull request skips it with a notice
+and it runs on a manual workflow dispatch, on a host with more memory. All these Linux jobs
 set <code>MALLOC_ARENA_MAX=2</code> before process startup. The NRTL job needs enough
 additional RAM for the runner and operating system. GitHub documents 16 GB
 for public-repository Linux runners; private forks need to select a runner

@@ -268,7 +268,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../phase-equilibrium/" class="md-tabs__link">
+        <a href="../upgrading/" class="md-tabs__link">
           
   
   
@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -476,6 +478,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading to 0.9
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2597,8 +2627,8 @@ density range between a light gas and a dense liquid. Fugacio's third class of
 thermodynamic method, <strong>PC-SAFT</strong> (perturbed-chain statistical associating fluid
 theory, Gross and Sadowski 2001), is built for exactly that regime. It models a
 fluid as chains of spherical segments with dispersion attraction and optional
-short-range association, and it plugs into the rest of the stack through the same
-<code>EquilibriumModel</code> interface as everything else.</p>
+short-range association, and it plugs into the rest of the stack as a
+<a href="../property-packages/">property package</a>, <code>SAFTPackage</code>, like every other method.</p>
 <p>Like the <a href="../reference-fluids/">reference Helmholtz fluids</a>, PC-SAFT is <em>one scalar
 reduced residual Helmholtz energy</em> and every property is an autodiff derivative of
 it, so the whole model, including the Wertheim association site-fraction solve, is
@@ -2607,10 +2637,13 @@ differentiable in both the thermodynamic state and the molecular parameters.</p>
 <p>A non-associating species needs three parameters: the segment number <code>m</code>, the
 segment diameter <code>sigma</code>, and the dispersion energy <code>epsilon/k</code>. Associating
 species carry two more, the association energy <code>epsilon_AB/k</code> and volume
-<code>kappa_AB</code>, plus a Huang-Radosz site scheme. <code>saft_parameters_for</code> assembles a
-differentiable <code>SaftParameters</code> pytree straight from component names, drawing on
-the curated Gross and Sadowski parameter bank and filling binary corrections
-<code>k_ij</code> from the database where available.</p>
+<code>kappa_AB</code>, plus a Huang-Radosz site scheme: <code>2B</code>, <code>3B</code>, or <code>4C</code>. The Wertheim
+term bonds only acceptor-donor site pairs, so it can't represent a self-bonding
+<code>1A</code> scheme, and a component with an unsupported scheme raises <code>ValueError</code>.
+<code>saft_parameters_for</code> assembles a differentiable <code>SaftParameters</code> pytree
+straight from component names, drawing on the curated Gross and Sadowski
+parameter bank and filling binary corrections <code>k_ij</code> from the database where
+available.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">saft_parameters_for</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">params</span> <span class="o">=</span> <span class="n">saft_parameters_for</span><span class="p">([</span><span class="s2">&quot;ethanol&quot;</span><span class="p">,</span> <span class="s2">&quot;water&quot;</span><span class="p">])</span>  <span class="c1"># both associating (2B scheme)</span>
@@ -2642,26 +2675,36 @@ the requested phase branch, then differentiate the energy:</p>
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">res</span><span class="o">.</span><span class="n">enthalpy</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">entropy</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">cp</span>   <span class="c1"># departure functions (J/mol, J/mol/K)</span>
 </span></code></pre></div>
 <p>The <code>phase</code> argument selects the density branch: <code>"liquid"</code> and <code>"vapor"</code> seed a
-Newton solve from a dense packing or the ideal gas, while <code>"stable"</code> returns the
-root with the lower molar Gibbs energy when more than one branch exists.</p>
+Newton solve from a dense packing or the ideal gas, and fall back to the other
+branch's root where the requested one doesn't exist (a compressed liquid has no
+vapor root, for example). <code>"stable"</code> returns the root with the lower molar Gibbs
+energy when more than one branch exists.</p>
 <h2 id="phase-equilibrium">Phase equilibrium<a class="headerlink" href="#phase-equilibrium" title="Permanent link">&para;</a></h2>
-<p><code>SAFTModel</code> wraps a parameter set and the critical constants (used only to seed
-Wilson K-values) behind the unified model interface: <code>flash_pt</code>,
-<code>bubble_pressure</code> / <code>bubble_temperature</code>, <code>dew_pressure</code> / <code>dew_temperature</code>, and a
-tangent-plane <code>stability</code> test. The <code>fugacio.sim</code> helper <code>saft_model_for</code> builds
-one from component names.</p>
+<p><code>SAFTPackage</code> wraps a parameter set, the critical constants (used only to seed
+Wilson K-values), and the ideal-gas heat capacities behind the
+<a href="../property-packages/">property-package</a> interface: <code>flash_pt</code>,
+<code>bubble_pressure</code> / <code>bubble_temperature</code>, <code>dew_pressure</code> / <code>dew_temperature</code>, a
+tangent-plane <code>stability</code> test, and the energy methods. Each solve also has a
+checked <code>*_with_info</code> form. <code>fugacio.sim.package_for(components, "pcsaft")</code>
+builds one from component names; <code>fugacio.thermo.saft_package</code> builds one from
+a parameter set.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">saft_model_for</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.sim</span><span class="w"> </span><span class="kn">import</span> <span class="n">package_for</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">saft_model_for</span><span class="p">([</span><span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-butane&quot;</span><span class="p">])</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">package_for</span><span class="p">([</span><span class="s2">&quot;propane&quot;</span><span class="p">,</span> <span class="s2">&quot;n-butane&quot;</span><span class="p">],</span> <span class="s2">&quot;pcsaft&quot;</span><span class="p">)</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">res</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">flash_pt</span><span class="p">(</span><span class="mf">320.0</span><span class="p">,</span> <span class="mf">8e5</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]))</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">res</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">y</span>   <span class="c1"># vapour fraction and phase compositions</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">res</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">y</span>   <span class="c1"># vapor fraction and phase compositions</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">p_bub</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">bubble_pressure</span><span class="p">(</span><span class="mf">320.0</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">]))</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># beta, p_bub, y are differentiable w.r.t. T, P, z, *and* the PC-SAFT parameters.</span>
 </span></code></pre></div>
+<p>The value-only calls return NaN when their solve fails. A bubble or dew
+iteration that collapses onto one density root with identical phases is
+reported as <code>TRIVIAL</code> by the <code>*_with_info</code> form rather than returned as a
+saturation point.</p>
 <p>For a pure component, <code>psat_saft</code> solves the saturation pressure by equifugacity
-from an initial guess (a Wilson or Antoine value is fine):</p>
+from an initial guess (a Wilson or Antoine value is fine). It returns NaN when
+the solve fails, and <code>psat_saft_with_info</code> returns the value with its report:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="n">saft_parameters_for</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fugacio.thermo.saft</span><span class="w"> </span><span class="kn">import</span> <span class="n">psat_saft</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
@@ -2685,15 +2728,17 @@ correction <code>k_ij</code> to isothermal bubble pressures.</p>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">rho_liquid_exp</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">8_800.0</span><span class="p">,</span> <span class="mf">8_550.0</span><span class="p">,</span> <span class="mf">8_280.0</span><span class="p">,</span> <span class="mf">7_980.0</span><span class="p">])</span>       <span class="c1"># mol/m^3</span>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">fitted</span><span class="p">,</span> <span class="n">cost</span> <span class="o">=</span> <span class="n">fit_saft_pure</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">temperatures</span><span class="p">,</span> <span class="n">psat_exp</span><span class="p">,</span> <span class="n">rho_liquid_exp</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The same differentiability is what lets a <code>SAFTModel</code> sit inside a flowsheet and
-still expose gradients of a downstream objective with respect to the thermodynamic
-model's own parameters.</p>
+<p>The same differentiability is what lets a <code>SAFTPackage</code> sit inside a flowsheet
+and still expose gradients of a downstream objective with respect to the
+thermodynamic model's own parameters.</p>
 <h2 id="copilot-tools">Copilot tools<a class="headerlink" href="#copilot-tools" title="Permanent link">&para;</a></h2>
 <p>The design copilot exposes PC-SAFT through deterministic, JSON-in/JSON-out tools:
 <code>saft_flash</code>, <code>saft_density</code>, <code>saft_saturation_pressure</code>, <code>saft_bubble_pressure</code>,
 and <code>saft_residual_enthalpy</code>. They accept the same component names as the rest of
 the registry but route the calculation through the molecular EOS, the method of
-choice when the agent reasons about associating fluids.</p>
+choice when the agent reasons about associating fluids. A failed or
+out-of-domain solve returns a structured error to the agent rather than an
+unconverged number.</p>
 <h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
 <p>PC-SAFT is checked the same way as the rest of Fugacio. A first-principles
 consistency suite verifies exact thermodynamic identities through autodiff: the
