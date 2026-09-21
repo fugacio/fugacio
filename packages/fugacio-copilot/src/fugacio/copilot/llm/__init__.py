@@ -9,6 +9,8 @@ without the SDK.
 
 from fugacio.copilot.llm.anthropic import AnthropicProvider
 from fugacio.copilot.llm.base import (
+    ARGUMENTS_ERROR,
+    INVALID_ARGUMENTS,
     ChatResponse,
     LLMProvider,
     Message,
@@ -20,6 +22,8 @@ from fugacio.copilot.llm.mock import MockProvider
 from fugacio.copilot.llm.openai import OpenAIProvider
 
 __all__ = [
+    "ARGUMENTS_ERROR",
+    "INVALID_ARGUMENTS",
     "AnthropicProvider",
     "ChatResponse",
     "LLMProvider",

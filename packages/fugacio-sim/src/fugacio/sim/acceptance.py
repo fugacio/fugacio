@@ -7,6 +7,7 @@ process results carry equilibrium, material, energy, and applicability evidence.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Any, NamedTuple
 
@@ -19,14 +20,15 @@ from fugacio.sim.stream import Stream
 from fugacio.thermo.acceptance import (
     DEFAULT_POLICY,
     AcceptancePolicy,
+    PhysicalAcceptanceWarning,
     PhysicalReport,
-    accepted_value,
     assess_flash,
     flash_pt_checked,
     require_accepted,
 )
 from fugacio.thermo.diagnostics import SolveReport, require_converged, residual_report
 from fugacio.thermo.equilibrium import FlashResult
+from fugacio.thermo.implicit import gate_derivative
 from fugacio.thermo.package import PropertyPackage
 from fugacio.thermo.provenance import PackageEvidence
 
@@ -132,7 +134,7 @@ def _checked_unit(
     states = tuple(audit_stream(s, model, policy=policy) for s in (*inputs, *outputs))
     balance = audit_balance(inputs, outputs, model, heat=heat)
     accepted = balance.converged & jnp.all(jnp.array([r.accepted for r in states]))
-    guarded = jax.tree.map(lambda v: accepted_value(v, accepted), value)
+    guarded = jax.tree.map(lambda v: gate_derivative(v, accepted), value)
     return CheckedUnit(guarded, states, balance)
 
 
@@ -169,14 +171,43 @@ def valve_checked(
     return _checked_unit(result, (feed,), (result,), model, 0.0, policy)
 
 
+def flash_drum_checked(
+    feed: Stream,
+    t: Array | float,
+    p: Array | float,
+    *,
+    model: PropertyPackage,
+    policy: AcceptancePolicy = DEFAULT_POLICY,
+) -> CheckedUnit:
+    """Run a flash drum, then verify both outlet states and its balance.
+
+    Every outlet is audited for equilibrium, stability (including a second
+    liquid), and applicability. Call ``.check()`` on the result to raise a
+    `fugacio.thermo.acceptance.PhysicalAcceptanceError` naming the failed
+    criterion; the returned values have nonfinite derivatives when rejected.
+    """
+    from fugacio.sim.units import flash_drum_with_info
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PhysicalAcceptanceWarning)
+        result = flash_drum_with_info(feed, t, p, model=model)
+    return _checked_unit(result, (feed,), result.outlets, model, result.duty, policy)
+
+
 @dataclass(frozen=True)
 class BalanceBoundary:
-    """Named process boundary with explicit heat and shaft work into the fluid."""
+    """Named process boundary with its heat and shaft work into the fluid.
+
+    The boundary's heat and work are the explicit ``heat`` and ``work`` plus the
+    heat and work a solved `fugacio.sim.Flowsheet` retained for each unit named
+    in ``units``.
+    """
 
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]
     heat: float = 0.0
     work: float = 0.0
+    units: tuple[str, ...] = ()
 
 
 def audit_flowsheet(
@@ -188,28 +219,43 @@ def audit_flowsheet(
 ) -> dict[str, Any]:
     """Audit a solved flowsheet's streams and explicitly declared process boundaries.
 
-    Boundary heat/work must come from the solved unit specifications. A list of
-    endpoints alone cannot establish energy conservation. Numerical failures are
-    retained, and no missing boundary is advertised as checked.
+    ``result`` is a `fugacio.sim.flowsheet.FlowsheetResult` (from
+    ``Flowsheet.solve_with_info``) or an equation-oriented solution. Boundary
+    heat and work come from the solved units a boundary names (retained by the
+    flowsheet result) plus its explicit values: a list of endpoints alone can't
+    establish energy conservation. Numerical failures are retained, and no
+    missing boundary is advertised as checked.
+
+    Raises:
+        ValueError: With no boundaries, or for a boundary naming a unit whose
+            heat and work the result didn't retain.
     """
     if not boundaries:
         raise ValueError("flowsheet acceptance requires explicit balance boundaries")
+    records = getattr(result, "units", None) or {}
+    missing = sorted({u for b in boundaries.values() for u in b.units if u not in records})
+    if missing:
+        raise ValueError(
+            f"the result retains no heat or work for unit(s) {', '.join(missing)}; "
+            "solve with Flowsheet.solve_with_info"
+        )
     states = {name: audit_stream(s, model, policy=policy) for name, s in result.streams.items()}
     balances = {
         name: audit_balance(
             tuple(result.streams[k] for k in b.inputs),
             tuple(result.streams[k] for k in b.outputs),
             model,
-            heat=b.heat,
-            work=b.work,
+            heat=b.heat + sum(float(records[u].heat) for u in b.units),
+            work=b.work + sum(float(records[u].work) for u in b.units),
         )
         for name, b in boundaries.items()
     }
+    reports = getattr(result, "reports", None) or {"solve": result.report}
     return {
         "accepted": bool(result.converged)
         and all(bool(r.accepted) for r in states.values())
         and all(bool(r.converged) for r in balances.values()),
-        "numerical": {k: r.to_dict() for k, r in result.reports.items()},
+        "numerical": {k: r.to_dict() for k, r in reports.items()},
         "streams": {k: r.to_dict() for k, r in states.items()},
         "boundaries": {k: r.to_dict() for k, r in balances.items()},
         "parameter_evidence": getattr(model, "evidence", PackageEvidence()).to_dict(),

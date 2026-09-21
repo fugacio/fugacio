@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,11 +13,17 @@ from fugacio.sim.cases.examples import EXAMPLES, example_case
 from fugacio.sim.cases.jsonio import read_json, write_json
 from fugacio.sim.cases.profiling import profile
 from fugacio.sim.cases.registry import registry_schema
-from fugacio.sim.cases.results import CaseRun, compare_runs
+from fugacio.sim.cases.results import compare_runs, render_artifact
 from fugacio.sim.cases.runtime import CaseRunner, SolverOptions
 from fugacio.sim.cases.schema import ProcessCase
 from fugacio.sim.cases.studies import optimize, sensitivities, sweep
 from fugacio.sim.cases.workspace import CaseWorkspace
+from fugacio.sim.compilation import enable_compilation_cache
+
+_CACHE_HELP = (
+    "persist compiled kernels in DIR so later runs skip compilation "
+    "(default: the FUGACIO_JAX_CACHE environment variable, if set)"
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,13 +53,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         cmd.add_argument("--overrides", help="JSON parameter quantities (run only)")
         cmd.add_argument("--workspace", default=".fugacio-cases")
+        cmd.add_argument("--jax-cache", metavar="DIR", help=_CACHE_HELP)
         cmd.add_argument("--output", help="write the result artifact as JSON")
         if name == "run":
             cmd.add_argument("--report", help="write a Markdown engineering report")
     inspect = commands.add_parser("inspect", help="verify and inspect a run or study")
     inspect.add_argument("artifact_id")
     inspect.add_argument("--workspace", default=".fugacio-cases")
-    inspect.add_argument("--report", action="store_true")
+    inspect.add_argument(
+        "--report", action="store_true", help="print a Markdown report instead of JSON"
+    )
     compare = commands.add_parser("compare")
     compare.add_argument("baseline_id")
     compare.add_argument("candidate_id")
@@ -60,8 +70,12 @@ def main(argv: list[str] | None = None) -> int:
     replay = commands.add_parser("replay")
     replay.add_argument("run_id")
     replay.add_argument("--workspace", default=".fugacio-cases")
+    replay.add_argument("--jax-cache", metavar="DIR", help=_CACHE_HELP)
     args = parser.parse_args(argv)
     try:
+        cache = getattr(args, "jax_cache", None) or os.environ.get("FUGACIO_JAX_CACHE")
+        if cache and hasattr(args, "jax_cache"):
+            enable_compilation_cache(cache)
         result: Any
         if args.command == "example":
             case = example_case(args.name)
@@ -78,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "inspect":
             result = CaseWorkspace(args.workspace).load_artifact(args.artifact_id)
             if args.report:
-                print(CaseRun.from_dict(result).markdown())
+                print(render_artifact(result), end="")
                 return 0
         elif args.command == "compare":
             workspace = CaseWorkspace(args.workspace)

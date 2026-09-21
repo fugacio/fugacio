@@ -20,14 +20,15 @@ The reference is grouped by topic so each page stays scannable:
 
 | Area | Page | Key symbols |
 | --- | --- | --- |
-| Components & data | [Components & data](data.md) | `Component`, `DATABASE`, `component_arrays`, `R`, `T_REF` |
+| Components & data | [Components & data](data.md) | `Component`, `DATABASE`, `component_arrays`, `R`, `T_REF`, `P_REF` |
 | Equations of state | [Equations of state](eos.md) | `PR`, `SRK`, `RK`, `VDW`, `ln_phi_mixture`, `molar_volume` |
-| Numerical solvers | [Solvers and diagnostics](solvers.md) | `SolveReport`, `ConvergenceError`, `newton_system_with_info`, `fixed_point_with_info` |
-| Phase equilibrium | [Phase equilibrium](equilibrium.md) | `flash_pt`, `rachford_rice`, `bubble_pressure_eos`, `EOSModel`, `GammaPhiModel` |
+| Physical acceptance | [Physical acceptance & provenance](acceptance.md) | `flash_pt_checked`, `PhysicalReport`, `PhysicalAcceptanceError`, `PhysicalAcceptanceWarning` |
+| Numerical solvers | [Solvers and diagnostics](solvers.md) | `SolveReport`, `SolveStatus`, `ConvergenceError`, `nan_unless_converged`, `newton_system_with_info`, `gate_derivative` |
+| Phase equilibrium | [Phase equilibrium](equilibrium.md) | `flash_pt`, `flash_pt_with_info`, `bubble_pressure_eos`, `SaturationResult`, `tpd_search`, `StabilityResult` |
 | LLE & VLLE | [Liquid-liquid & VLLE](lle.md) | `flash_lle`, `flash_vlle`, `heterogeneous_azeotrope` |
 | Activity models | [Activity & group contribution](activity.md) | `NRTL`, `UNIQUAC`, `Wilson`, `Margules`, `unifac_activity`, `joback_estimate` |
-| Energy & properties | [Energy & property models](energy.md) | `flash_ph`, `flash_ps`, `residual_properties`, `cp_ig`, `heat_of_vaporization` |
-| Property packages | [Property packages](packages.md) | `PropertyPackage`, `CubicPackage`, `GammaPhiPackage`, `SAFTPackage`, `HelmholtzPackage`, `excess_enthalpy` |
+| Energy & properties | [Energy & property models](energy.md) | `residual_properties`, `cp_ig`, `EnergyFlashResult`, `heat_of_vaporization` |
+| Property packages | [Property packages](packages.md) | `PropertyPackage`, `CubicPackage`, `GammaPhiPackage`, `SAFTPackage`, `HelmholtzPackage`, `excess_enthalpy`, `fugacity_enthalpy_residual` |
 | Reference fluids | [Reference fluids (Helmholtz)](helmholtz.md) | `reference_fluid`, `saturation_state`, `state_ph`, `water_viscosity` |
 | Transport & volumetric | [Transport & volumetric](transport.md) | `gas_viscosities`, `liquid_density`, `surface_tensions`, `gas_diffusivity` |
 | Reactions & kinetics | [Reactions & kinetics](reactions.md) | `Reaction`, `equilibrium_constant`, `Arrhenius`, `PowerLaw`, `LHHW` |

@@ -95,14 +95,15 @@ def unifac_ln_gamma(
     # Combinatorial part (UNIQUAC size/shape term).
     r_i = nu @ r
     q_i = nu @ q
-    phi = r_i * x / jnp.sum(r_i * x)
-    theta_c = q_i * x / jnp.sum(q_i * x)
     ell = (_Z / 2.0) * (r_i - q_i) - (r_i - 1.0)
+    # Exact ratios (no division by x_i), finite at infinite dilution.
+    phi_over_x = r_i / jnp.sum(r_i * x)
+    theta_over_phi = (q_i / jnp.sum(q_i * x)) / phi_over_x
     ln_gamma_c = (
-        jnp.log(phi / x)
-        + (_Z / 2.0) * q_i * jnp.log(theta_c / phi)
+        jnp.log(phi_over_x)
+        + (_Z / 2.0) * q_i * jnp.log(theta_over_phi)
         + ell
-        - (phi / x) * jnp.sum(x * ell)
+        - phi_over_x * jnp.sum(x * ell)
     )
 
     # Residual part via group residual activity coefficients.

@@ -42,9 +42,12 @@ implementations of the same published equations agreeing to solver precision.
 ## Differentiable saturation by Maxwell construction
 
 Coexistence is solved as equal pressure and equal Gibbs energy in
-`(ln δ', ln δ'')` with a damped Newton, seeded by the published ancillary
-equations and wrapped in an implicit-function-theorem `custom_vjp`. The solved
-saturation line is therefore *exactly differentiable*:
+`(ln δ', ln δ'')` with a checked Newton iteration, seeded by the published
+ancillary equations and differentiated by the implicit function theorem.
+`saturation_pressure_with_info`, `saturation_temperature_with_info`, and
+`saturation_densities_with_info` return the solve report with the value; a
+failed solve has nonfinite derivatives. The solved saturation line is therefore
+*exactly differentiable*:
 
 ```python
 import jax

@@ -57,12 +57,12 @@ from jax import Array
 from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.reaction_units import reaction_parameter_validity
 from fugacio.sim.stream import Stream
-from fugacio.thermo import PR, CubicEOS, PropertyPackage
-from fugacio.thermo.acceptance import accepted_value
+from fugacio.thermo import PropertyPackage
 from fugacio.thermo.activity.models import NRTL
 from fugacio.thermo.diagnostics import SolveReport, SolveResult, SolveStatus, require_converged
 from fugacio.thermo.implicit import (
     fixed_point_with_info,
+    gate_derivative,
     implicit_solution,
     newton_system_with_info,
 )
@@ -242,6 +242,7 @@ class RigorousColumnResult(NamedTuple):
         reaction_rates: Per-stage intensive reaction rates (mol/(m^3 s)).
         reaction_heat: Formation-energy source (W); already included in stage balances.
         reaction_volumes: Reacting-phase volume on each stage (m^3).
+        stage_duties: Intermediate heat duty on each stage (W), zero where none.
     """
 
     distillate: Stream
@@ -268,6 +269,17 @@ class RigorousColumnResult(NamedTuple):
     reaction_rates: Array
     reaction_heat: Array
     reaction_volumes: Array
+    stage_duties: Array
+
+    @property
+    def outlets(self) -> tuple[Stream, ...]:
+        """``(distillate, bottoms, *side_draws)``, as a flowsheet output tuple."""
+        return (self.distillate, self.bottoms, *self.side_draws)
+
+    @property
+    def heat(self) -> Array:
+        """Total external heat into the column (W): condenser, reboiler, and stage duties."""
+        return self.condenser_duty + self.reboiler_duty + jnp.sum(self.stage_duties)
 
     def warm_start(self) -> dict[str, Array]:
         """Full stage state for ``rigorous_column(..., guess=result.warm_start())``."""
@@ -980,8 +992,6 @@ def rigorous_column(
     reactions: ReactionSet | None = None,
     reaction_volumes: ArrayLike = 0.0,
     model: Model = None,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
     guess: dict[str, Any] | None = None,
     sweeps: int = 4,
     tol: float = 1e-9,
@@ -1020,8 +1030,6 @@ def rigorous_column(
             reaction in a total condenser is rejected.
         model: Property package (see `fugacio.sim.models.package_for`); defaults
             to Peng-Robinson.
-        eos: Cubic EOS for the default package.
-        kij: Binary interaction matrix for the default package.
         guess: Optional seeding hints: ``"reflux_ratio"``, ``"distillate_rate"``
             (used for the internal-traffic seed) and ``"t"`` (a stage temperature
             profile). Specs of those kinds are used automatically.
@@ -1071,7 +1079,7 @@ def rigorous_column(
     if reflux_temperature is not None and condenser != "total":
         raise ValueError("reflux_temperature applies to a total condenser only")
 
-    pkg = resolve_package(components, model, eos=eos, kij=kij)
+    pkg = resolve_package(components, model)
     if reactions is not None:
         if reactions.components != components or not reactions.rate_laws:
             raise ValueError("column reactions need matching components and kinetic laws")
@@ -1193,7 +1201,7 @@ def rigorous_column(
     solve_report = solve_report._replace(
         status=jnp.where(valid, solve_report.status, SolveStatus.INVALID_INPUT)
     )
-    u_star = accepted_value(u_star, solve_report.converged)
+    u_star = gate_derivative(u_star, solve_report.converged)
     if check:
         labels = tuple(
             [f"stage {stage + 1}: material {comp}" for stage in range(n) for comp in components]
@@ -1271,6 +1279,7 @@ def rigorous_column(
         reaction_rates=rates,
         reaction_heat=reaction_heat,
         reaction_volumes=volumes,
+        stage_duties=q,
     )
 
 
@@ -1284,8 +1293,6 @@ def absorber(
     p_bottom: ArrayLike | None = None,
     efficiency: ArrayLike = 1.0,
     model: Model = None,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
     **kwargs: Any,
 ) -> RigorousColumnResult:
     """Countercurrent absorber: lean solvent to the top stage, rich gas to the bottom.
@@ -1304,8 +1311,6 @@ def absorber(
         reboiler=None,
         efficiency=efficiency,
         model=model,
-        eos=eos,
-        kij=kij,
         **kwargs,
     )
 
@@ -1320,8 +1325,6 @@ def stripper(
     p_bottom: ArrayLike | None = None,
     efficiency: ArrayLike = 1.0,
     model: Model = None,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
     **kwargs: Any,
 ) -> RigorousColumnResult:
     """Countercurrent stripper: rich liquid to the top stage, stripping gas to the bottom.
@@ -1340,8 +1343,6 @@ def stripper(
         reboiler=None,
         efficiency=efficiency,
         model=model,
-        eos=eos,
-        kij=kij,
         **kwargs,
     )
 

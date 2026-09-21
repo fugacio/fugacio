@@ -1,16 +1,19 @@
-"""PC-SAFT phase equilibrium: flash, bubble/dew points, saturation, stability.
+"""PC-SAFT phase equilibrium: flash, bubble/dew points, and saturation.
 
 These routines mirror the cubic-EOS equilibrium layer
 (`fugacio.thermo.equilibrium`) one-for-one, swapping the cubic fugacity
-coefficient for the PC-SAFT one (`fugacio.thermo.saft.properties`). The
-vapour-liquid iterations reuse `fugacio.thermo.implicit.fixed_point`, so the
-converged phase split is differentiable, by the implicit function theorem, with
-respect to temperature, pressure, composition, *and* the PC-SAFT parameters,
-which is what lets `fugacio.thermo.saft.regression` fit a binary ``k_ij`` to VLE
-data by gradient descent.
+coefficient for the PC-SAFT one (`fugacio.thermo.saft.properties`). Each has a
+checked ``_with_info`` form returning a `fugacio.thermo.diagnostics.SolveReport`
+and a value-only form that returns NaN when the report fails. Converged results
+are differentiable, by the implicit function theorem, with respect to
+temperature, pressure, composition, *and* the PC-SAFT parameters, which is
+what lets `fugacio.thermo.saft.regression` fit a binary ``k_ij`` to VLE data by
+gradient descent.
 
 Wilson K-values seed the flashes, so the routines accept the critical constants
-``(tc, pc, omega)`` for the seed only; the equilibrium itself is entirely PC-SAFT.
+``(tc, pc, omega)`` for the seed only; the equilibrium itself is entirely
+PC-SAFT. Phase stability is tested by every property package's ``stability``
+method (`fugacio.thermo.stability`).
 """
 
 from __future__ import annotations
@@ -22,15 +25,25 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.thermo.constants import R
+from fugacio.thermo.diagnostics import (
+    SolveResult,
+    SolveStatus,
+    nan_unless_converged,
+    with_status,
+)
 from fugacio.thermo.equilibrium import (
     FlashResult,
     FlashSolveResult,
-    StabilityResult,
+    SaturationResult,
+    SaturationSolveResult,
     classify_trivial,
+    input_report,
+    phase_compositions,
     rachford_rice,
     wilson_k,
+    wilson_psat,
 )
-from fugacio.thermo.implicit import fixed_point, fixed_point_with_info
+from fugacio.thermo.implicit import fixed_point_with_info, gate_tree, newton_root_with_info
 from fugacio.thermo.saft.parameters import SaftParameters
 from fugacio.thermo.saft.properties import ln_fugacity_coefficients, molar_density
 
@@ -49,8 +62,9 @@ def flash_pt_saft(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashResult:
-    """Isothermal flash value; use flash_pt_saft_with_info for numerical status."""
-    return flash_pt_saft_with_info(params, t, p, z, tc, pc, omega, tol=tol, max_iter=max_iter).value
+    """Isothermal flash value; NaN when `flash_pt_saft_with_info` reports failure."""
+    solved = flash_pt_saft_with_info(params, t, p, z, tc, pc, omega, tol=tol, max_iter=max_iter)
+    return nan_unless_converged(solved.value, solved.report)
 
 
 def flash_pt_saft_with_info(
@@ -65,7 +79,7 @@ def flash_pt_saft_with_info(
     tol: float = 1e-12,
     max_iter: int = 300,
 ) -> FlashSolveResult:
-    """Isothermal-isobaric two-phase flash on PC-SAFT by accelerated substitution.
+    """Isothermal-isobaric vapour-liquid flash on PC-SAFT by successive substitution.
 
     Solves the equal-fugacity conditions ``phi_i^L x_i = phi_i^V y_i`` with the
     Rachford-Rice material balance, seeded from Wilson K-values. The converged
@@ -96,19 +110,27 @@ def flash_pt_saft_with_info(
         return ln_phi_l - ln_phi_v
 
     solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
-    ln_k_star = solved.value
-    k = jnp.exp(ln_k_star)
+    k = jnp.exp(solved.value)
     beta = rachford_rice(z, k)
     t_arr, p_arr = theta[1], theta[2]
     z_single = p_arr / (molar_density(params, t_arr, p_arr, z, phase="vapor") * R * t_arr)
     beta = classify_trivial(z, k, beta, k0, z_single)
-    denom = 1.0 + beta * (k - 1.0)
-    x = z / denom
-    y = k * x
-    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), solved.report)
+    x, y = phase_compositions(z, k, beta)
+    report = with_status(solved.report, ~input_report(t, p, z), SolveStatus.INVALID_INPUT)
+    return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), report)
 
 
-def bubble_pressure_saft(
+def _trivial_saturation(
+    params: SaftParameters, t: ArrayLike, p: Array, liquid: Array, vapor: Array
+) -> Array:
+    """Whether a converged saturation point collapsed onto one density root."""
+    rho_l = molar_density(params, t, p, liquid, phase="liquid")
+    rho_v = molar_density(params, t, p, vapor, phase="vapor")
+    same_density = jnp.abs(rho_l - rho_v) <= 1e-6 * jnp.maximum(jnp.abs(rho_l), 1e-12)
+    return jax.lax.stop_gradient(same_density & (jnp.max(jnp.abs(vapor - liquid)) <= 1e-6))
+
+
+def bubble_pressure_saft_with_info(
     params: SaftParameters,
     t: ArrayLike,
     x: Array,
@@ -118,15 +140,15 @@ def bubble_pressure_saft(
     *,
     tol: float = 1e-12,
     max_iter: int = 300,
-) -> tuple[Array, Array]:
-    """Bubble-point pressure and incipient vapour ``(P, y)`` at fixed ``T``, ``x``.
+) -> SaturationSolveResult:
+    """Bubble-point pressure and incipient vapour at fixed ``T``, ``x``.
 
-    Solved as a coupled fixed point in ``(ln P, y)`` so the result is
-    differentiable in temperature, composition, and the PC-SAFT parameters.
+    Solved as a coupled fixed point in ``(ln P, y)``. A collapse onto one
+    density root with ``y = x`` is reported as ``TRIVIAL``.
     """
     x = jnp.asarray(x, dtype=float)
     k0 = wilson_k(t, jnp.sum(x * pc), tc, pc, omega)
-    p0 = jnp.sum(x * pc * jnp.exp(5.373 * (1.0 + omega) * (1.0 - tc / jnp.asarray(t, float))))
+    p0 = jnp.sum(x * wilson_psat(t, tc, pc, omega))
     y0 = x * k0 / jnp.sum(x * k0)
     state0 = jnp.concatenate([jnp.log(p0)[None], y0])
     theta = (params, jnp.asarray(t, dtype=float), x)
@@ -142,11 +164,32 @@ def bubble_pressure_saft(
         s = jnp.sum(y_unnorm)
         return jnp.concatenate([(state[0] + jnp.log(s))[None], y_unnorm / s])
 
-    state = fixed_point(g, state0, theta, tol, max_iter)
-    return jnp.exp(state[0]), state[1:]
+    solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+    p, y = jnp.exp(solved.value[0]), solved.value[1:]
+    report = with_status(
+        solved.report, _trivial_saturation(params, t, p, x, y), SolveStatus.TRIVIAL
+    )
+    report = with_status(report, ~input_report(t, 1.0, x), SolveStatus.INVALID_INPUT)
+    return SaturationSolveResult(gate_tree(SaturationResult(p, y), report.converged), report)
 
 
-def dew_pressure_saft(
+def bubble_pressure_saft(
+    params: SaftParameters,
+    t: ArrayLike,
+    x: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    *,
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> SaturationResult:
+    """Bubble pressure and incipient vapour ``(P, y)``; NaN on failure."""
+    solved = bubble_pressure_saft_with_info(params, t, x, tc, pc, omega, tol=tol, max_iter=max_iter)
+    return nan_unless_converged(solved.value, solved.report)
+
+
+def dew_pressure_saft_with_info(
     params: SaftParameters,
     t: ArrayLike,
     y: Array,
@@ -156,16 +199,14 @@ def dew_pressure_saft(
     *,
     tol: float = 1e-12,
     max_iter: int = 300,
-) -> tuple[Array, Array]:
-    """Dew-point pressure and incipient liquid ``(P, x)`` at fixed ``T``, ``y``.
+) -> SaturationSolveResult:
+    """Dew-point pressure and incipient liquid at fixed ``T``, ``y``.
 
-    Differentiable in temperature, composition, and the PC-SAFT parameters.
+    Coupled fixed point in ``(ln P, x)``; a trivial collapse is ``TRIVIAL``.
     """
     y = jnp.asarray(y, dtype=float)
     k0 = wilson_k(t, jnp.sum(y * pc), tc, pc, omega)
-    p0 = 1.0 / jnp.sum(
-        y / (pc * jnp.exp(5.373 * (1.0 + omega) * (1.0 - tc / jnp.asarray(t, float))))
-    )
+    p0 = 1.0 / jnp.sum(y / wilson_psat(t, tc, pc, omega))
     x0 = (y / k0) / jnp.sum(y / k0)
     state0 = jnp.concatenate([jnp.log(p0)[None], x0])
     theta = (params, jnp.asarray(t, dtype=float), y)
@@ -181,8 +222,29 @@ def dew_pressure_saft(
         s = jnp.sum(x_unnorm)
         return jnp.concatenate([(state[0] - jnp.log(s))[None], x_unnorm / s])
 
-    state = fixed_point(g, state0, theta, tol, max_iter)
-    return jnp.exp(state[0]), state[1:]
+    solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+    p, x = jnp.exp(solved.value[0]), solved.value[1:]
+    report = with_status(
+        solved.report, _trivial_saturation(params, t, p, x, y), SolveStatus.TRIVIAL
+    )
+    report = with_status(report, ~input_report(t, 1.0, y), SolveStatus.INVALID_INPUT)
+    return SaturationSolveResult(gate_tree(SaturationResult(p, x), report.converged), report)
+
+
+def dew_pressure_saft(
+    params: SaftParameters,
+    t: ArrayLike,
+    y: Array,
+    tc: Array,
+    pc: Array,
+    omega: Array,
+    *,
+    tol: float = 1e-12,
+    max_iter: int = 300,
+) -> SaturationResult:
+    """Dew pressure and incipient liquid ``(P, x)``; NaN on failure."""
+    solved = dew_pressure_saft_with_info(params, t, y, tc, pc, omega, tol=tol, max_iter=max_iter)
+    return nan_unless_converged(solved.value, solved.report)
 
 
 def _psat_residual(params: SaftParameters, t: Array, p: Array) -> Array:
@@ -190,6 +252,49 @@ def _psat_residual(params: SaftParameters, t: Array, p: Array) -> Array:
     ln_phi_l = ln_fugacity_coefficients(params, t, p, x, phase="liquid")[0]
     ln_phi_v = ln_fugacity_coefficients(params, t, p, x, phase="vapor")[0]
     return ln_phi_l - ln_phi_v
+
+
+def psat_saft_with_info(
+    params: SaftParameters,
+    t: ArrayLike,
+    p_guess: ArrayLike,
+    *,
+    tol: float = 1e-11,
+    max_iter: int = 100,
+) -> SolveResult:
+    """Pure-component saturation pressure (Pa) by equifugacity, from a guess ``p_guess``.
+
+    Solves ``ln phi^L(T, P) = ln phi^V(T, P)`` for ``P`` with a checked Newton
+    iteration in ``ln P``. ``params`` must hold a *single* component. A pressure
+    where the liquid and vapour density branches coincide satisfies the
+    residual trivially and is reported as ``TRIVIAL``, not as a saturation
+    point. Converged values are differentiable in ``T`` and the PC-SAFT
+    parameters through the Clapeyron-like implicit derivative.
+
+    Args:
+        params: Single-component PC-SAFT parameter set.
+        t: Temperature (K).
+        p_guess: Initial pressure estimate (Pa); a Wilson/Antoine value is fine.
+        tol: Residual tolerance on ``ln phi^L - ln phi^V``.
+        max_iter: Newton iteration cap.
+
+    Returns:
+        The saturation pressure and its report.
+    """
+    t = jnp.asarray(t, dtype=float)
+
+    def residual(ln_p: Array, theta: tuple[SaftParameters, Array]) -> Array:
+        params_, t_ = theta
+        return _psat_residual(params_, t_, jnp.exp(ln_p))
+
+    solved = newton_root_with_info(
+        residual, (params, t), jnp.log(jnp.asarray(p_guess, dtype=float)), tol, max_iter
+    )
+    p = jnp.exp(solved.value)
+    one = jnp.ones(1)
+    trivial = _trivial_saturation(params, t, p, one, one)
+    report = with_status(solved.report, trivial, SolveStatus.TRIVIAL)
+    return SolveResult(gate_tree(p, report.converged), report)
 
 
 def psat_saft(
@@ -200,85 +305,18 @@ def psat_saft(
     tol: float = 1e-11,
     max_iter: int = 100,
 ) -> Array:
-    """Pure-component saturation pressure (Pa) by equifugacity, from a guess ``p_guess``.
-
-    Solves ``ln phi^L(T, P) = ln phi^V(T, P)`` for ``P`` with a Newton iteration in
-    ``ln P`` (keeping the pressure positive). ``params`` must hold a *single*
-    component. Differentiable in ``T`` and the PC-SAFT parameters through the
-    Clapeyron-like implicit derivative.
-
-    Args:
-        params: Single-component PC-SAFT parameter set.
-        t: Temperature (K).
-        p_guess: Initial pressure estimate (Pa); a Wilson/Antoine value is fine.
-        tol: Residual tolerance on ``ln phi^L - ln phi^V``.
-        max_iter: Newton iteration cap.
-
-    Returns:
-        The saturation pressure (Pa).
-    """
-    from fugacio.thermo.implicit import newton_root
-
-    t = jnp.asarray(t, dtype=float)
-
-    def residual(ln_p: Array, theta: tuple[SaftParameters, Array]) -> Array:
-        params_, t_ = theta
-        return _psat_residual(params_, t_, jnp.exp(ln_p))
-
-    ln_p = newton_root(
-        residual, (params, t), jnp.log(jnp.asarray(p_guess, dtype=float)), tol, max_iter, 0.7
-    )
-    return jnp.exp(ln_p)
-
-
-def stability_saft(
-    params: SaftParameters,
-    t: ArrayLike,
-    p: ArrayLike,
-    z: Array,
-    tc: Array,
-    pc: Array,
-    omega: Array,
-    *,
-    iters: int = 40,
-) -> StabilityResult:
-    """Michelsen tangent-plane stability test for feed ``z`` at ``(T, P)`` on PC-SAFT.
-
-    Runs vapour-like and liquid-like trial-phase searches; a modified
-    tangent-plane distance below zero for either means the feed splits.
-    """
-    z = jnp.asarray(z, dtype=float)
-    ln_phi_zl = ln_fugacity_coefficients(params, t, p, z, phase="liquid")
-    ln_phi_zv = ln_fugacity_coefficients(params, t, p, z, phase="vapor")
-    g_l = jnp.sum(z * (jnp.log(z) + ln_phi_zl))
-    g_v = jnp.sum(z * (jnp.log(z) + ln_phi_zv))
-    d = jnp.log(z) + jnp.where(g_l < g_v, ln_phi_zl, ln_phi_zv)
-    k_wilson = wilson_k(t, p, tc, pc, omega)
-
-    def run_trial(w0: Array, phase: str) -> Array:
-        def body(_: Array, w: Array) -> Array:
-            wn = w / jnp.sum(w)
-            ln_phi_w = ln_fugacity_coefficients(params, t, p, wn, phase=phase)
-            return jnp.exp(d - ln_phi_w)
-
-        w = jax.lax.fori_loop(0, iters, body, w0)
-        wn = w / jnp.sum(w)
-        ln_phi_w = ln_fugacity_coefficients(params, t, p, wn, phase=phase)
-        return 1.0 + jnp.sum(w * (jnp.log(w) + ln_phi_w - d - 1.0))
-
-    # A trial phase whose density branch does not exist on this isotherm (e.g.
-    # the vapour-like trial deep in the compressed liquid) yields a non-finite
-    # tangent-plane distance; it offers no evidence of a split, so score it +inf.
-    tm_vapor = jnp.nan_to_num(run_trial(z * k_wilson, "vapor"), nan=jnp.inf, posinf=jnp.inf)
-    tm_liquid = jnp.nan_to_num(run_trial(z / k_wilson, "liquid"), nan=jnp.inf, posinf=jnp.inf)
-    tpd = jnp.minimum(tm_vapor, tm_liquid)
-    return StabilityResult(stable=tpd >= -1e-8, tpd=tpd)
+    """Saturation pressure (Pa); NaN when `psat_saft_with_info` reports failure."""
+    solved = psat_saft_with_info(params, t, p_guess, tol=tol, max_iter=max_iter)
+    return nan_unless_converged(solved.value, solved.report)
 
 
 __all__ = [
     "bubble_pressure_saft",
+    "bubble_pressure_saft_with_info",
     "dew_pressure_saft",
+    "dew_pressure_saft_with_info",
     "flash_pt_saft",
+    "flash_pt_saft_with_info",
     "psat_saft",
-    "stability_saft",
+    "psat_saft_with_info",
 ]

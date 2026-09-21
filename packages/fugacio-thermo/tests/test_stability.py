@@ -14,7 +14,7 @@ def test_strong_positive_deviation_is_unstable() -> None:
     assert not bool(res.stable)
     assert float(res.tpd) < 0.0
     # The detected split is a genuinely different composition than the feed.
-    assert abs(float(res.split[0]) - 0.5) > 0.1
+    assert abs(float(res.trial[0]) - 0.5) > 0.1
 
 
 def test_mild_deviation_is_stable() -> None:

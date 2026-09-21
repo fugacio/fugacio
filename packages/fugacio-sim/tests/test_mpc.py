@@ -251,6 +251,37 @@ def test_mpc_respects_input_box_and_rate() -> None:
     assert max(rates) <= 0.5 + 1e-3  # rate respected
 
 
+def test_mpc_enforces_a_rate_limit_on_some_inputs_only() -> None:
+    # One input is rate limited and the other isn't. The limit still holds (it
+    # used to be dropped for every input unless all were finite).
+    a = jnp.array([[0.9, 0.0], [0.0, 0.8]])
+    b = jnp.eye(2) * 0.5
+    c = jnp.eye(2)
+    mpc = linear_mpc(
+        StateSpace(a=a, b=b, c=c, d=jnp.zeros((2, 2))),
+        q=10.0,
+        r=0.1,
+        horizon=15,
+        control_horizon=6,
+        u_min=-5.0,
+        u_max=5.0,
+        du_max=jnp.array([0.2, jnp.inf]),
+    )
+    step = jax.jit(mpc.step)
+    state = mpc.init_state(jnp.zeros(2))
+    x = jnp.zeros(2)
+    previous = jnp.zeros(2)
+    moves = []
+    for _ in range(6):
+        u, state = step(state, c @ x, jnp.array([5.0, 5.0]))
+        x = a @ x + b @ u
+        moves.append(jnp.abs(u - previous))
+        previous = u
+    moves = jnp.stack(moves)
+    assert float(jnp.max(moves[:, 0])) <= 0.2 + 1e-3
+    assert float(jnp.max(moves[:, 1])) > 0.2  # the unlimited input moves freely
+
+
 # --------------------------------------------------------------------------- #
 # State estimation
 # --------------------------------------------------------------------------- #
@@ -410,6 +441,26 @@ def test_nmpc_stabilizes_pendulum_with_rate_limit() -> None:
         u, warm = step(x, u, warm, theta)
         x = trans(x, u, None)
     assert abs(_scalar(x[0])) < 0.05  # driven upright/down to rest
+
+
+def test_nonlinear_mpc_reports_the_solvers_own_diagnostics() -> None:
+    def transition(x, u, theta):
+        return 0.9 * x + 0.1 * u
+
+    def stage(x, u, theta):
+        return jnp.sum((x - 1.0) ** 2) + 0.01 * jnp.sum(u**2)
+
+    mpc = nonlinear_mpc(transition, stage_cost=stage, horizon=8, n_input=1, max_iter=100)
+    solved = mpc.solve(jnp.zeros(1))
+    assert bool(solved.result.converged)
+    assert int(solved.result.n_iter) < 100
+    assert bool(jnp.isfinite(solved.result.grad_norm))
+    # A solve that can't converge in its iteration budget says so eagerly.
+    from fugacio.thermo.diagnostics import ConvergenceError
+
+    starved = nonlinear_mpc(transition, stage_cost=stage, horizon=8, n_input=1, max_iter=1)
+    with pytest.raises(ConvergenceError):
+        starved.solve(jnp.zeros(1))
 
 
 # --------------------------------------------------------------------------- #

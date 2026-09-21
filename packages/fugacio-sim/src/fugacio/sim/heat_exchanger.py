@@ -39,7 +39,7 @@ from fugacio.sim.economics import lmtd
 from fugacio.sim.properties import Model, molar_enthalpy, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.sim.units import flash_drum
-from fugacio.thermo import PR, CubicEOS, PropertyPackage
+from fugacio.thermo import PropertyPackage
 from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
 from fugacio.thermo.implicit import bracketed_root
 
@@ -80,6 +80,11 @@ class HeatExchangerResult(NamedTuple):
     def converged(self) -> Array:
         """Whether energy, feasibility, and the requested specification all close."""
         return self.report.converged
+
+    @property
+    def outlets(self) -> tuple[Stream, Stream]:
+        """``(hot_out, cold_out)``, so a flowsheet retains this exchanger's report."""
+        return self.hot_out, self.cold_out
 
     def check(self) -> None:
         """Raise if a capped duty or failed flash misses the specification."""
@@ -331,8 +336,6 @@ def heat_exchanger(
     model: Model = None,
     model_hot: Model = None,
     model_cold: Model = None,
-    eos: CubicEOS = PR,
-    kij: Array | None = None,
     t_init: float = 300.0,
     tol: float = 1e-9,
 ) -> HeatExchangerResult:
@@ -365,8 +368,6 @@ def heat_exchanger(
             `fugacio.sim.models.package_for`); defaults to Peng-Robinson.
         model_hot: Hot-side package overriding ``model``.
         model_cold: Cold-side package overriding ``model``.
-        eos: Cubic EOS for the default package.
-        kij: Binary interaction matrix for the default package.
         t_init: Seed for the isenthalpic outlet solves.
         tol: Tolerance of the duty root solve (relative to the duty cap).
 
@@ -402,12 +403,8 @@ def heat_exchanger(
     if area is not None and u is None:
         raise ValueError("an area specification needs the coefficient u as well")
 
-    pkg_h = resolve_package(
-        hot.components, model_hot if model_hot is not None else model, eos=eos, kij=kij
-    )
-    pkg_c = resolve_package(
-        cold.components, model_cold if model_cold is not None else model, eos=eos, kij=kij
-    )
+    pkg_h = resolve_package(hot.components, model_hot if model_hot is not None else model)
+    pkg_c = resolve_package(cold.components, model_cold if model_cold is not None else model)
     if duty is not None:
         spec, value = "duty", duty
     elif t_hot_out is not None:

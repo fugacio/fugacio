@@ -1,7 +1,8 @@
 """Copilot tools for the PC-SAFT molecular-based equation of state.
 
-These expose `fugacio.thermo.saft` (through the `fugacio.sim.saft_model_for`
-bridge) to the LLM design agent as deterministic, JSON-in/JSON-out calculations:
+These expose `fugacio.thermo.saft` (through ``package_for(..., "pcsaft")``) to the
+LLM design agent as deterministic, JSON-in/JSON-out calculations. Failed or
+out-of-domain solves raise, so the agent never receives an unconverged number:
 
 * ``saft_flash``: an isothermal-isobaric vapour-liquid flash on PC-SAFT;
 * ``saft_density``: molar/mass density and compressibility factor on a phase
@@ -21,9 +22,14 @@ from typing import Any
 
 import jax.numpy as jnp
 
-from fugacio.sim import saft_model_for
-from fugacio.thermo import component_arrays, saft_parameters_for, saft_residual_properties
-from fugacio.thermo.saft import compressibility_factor, molar_density, psat_saft
+from fugacio.sim import package_for
+from fugacio.thermo import (
+    component_arrays,
+    require_converged,
+    saft_parameters_for,
+    saft_residual_properties,
+)
+from fugacio.thermo.saft import compressibility_factor, molar_density, psat_saft_with_info
 
 JsonDict = dict[str, Any]
 
@@ -44,8 +50,12 @@ def _saft_flash(
     pressure: float,
 ) -> JsonDict:
     """Isothermal-isobaric two-phase flash on PC-SAFT."""
-    model = saft_model_for(components)
-    result = model.flash_pt(float(temperature), float(pressure), jnp.asarray(z, dtype=float))
+    model = package_for(components, "pcsaft")
+    solved = model.flash_pt_with_info(
+        float(temperature), float(pressure), jnp.asarray(z, dtype=float)
+    )
+    require_converged(solved.report, "PC-SAFT flash")
+    result = solved.value
     return {
         "components": list(components),
         "temperature_k": float(temperature),
@@ -92,14 +102,17 @@ def _saft_saturation_pressure(
     params = saft_parameters_for([component])
     t = float(temperature)
     guess = _wilson_pressure(component, t) if pressure_guess is None else float(pressure_guess)
-    psat = float(psat_saft(params, t, guess))
-    return {"component": component, "temperature_k": t, "psat_pa": psat}
+    solved = psat_saft_with_info(params, t, guess)
+    require_converged(solved.report, f"PC-SAFT saturation pressure of {component}")
+    return {"component": component, "temperature_k": t, "psat_pa": float(solved.value)}
 
 
 def _saft_bubble_pressure(components: list[str], x: list[float], temperature: float) -> JsonDict:
     """Bubble pressure (Pa) and incipient vapour of a mixture from PC-SAFT."""
-    model = saft_model_for(components)
-    p, y = model.bubble_pressure(float(temperature), jnp.asarray(x, dtype=float))
+    model = package_for(components, "pcsaft")
+    solved = model.bubble_pressure_with_info(float(temperature), jnp.asarray(x, dtype=float))
+    require_converged(solved.report, "PC-SAFT bubble pressure")
+    p, y = solved.value
     return {
         "components": list(components),
         "temperature_k": float(temperature),

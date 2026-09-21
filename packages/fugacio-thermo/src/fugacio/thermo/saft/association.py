@@ -73,8 +73,12 @@ def association_strength(params: SaftParameters, rho: ArrayLike, t: ArrayLike, x
     eps_ab = params.epsilon_ab
     eps_ij = 0.5 * (eps_ab[:, None] + eps_ab[None, :])
     kappa = params.kappa_ab
+    # sqrt has an infinite derivative at zero, and a non-associating component
+    # has kappa = 0; the double where keeps nested implicit derivatives finite.
+    product = kappa[:, None] * kappa[None, :]
+    associating = product > 0.0
     kappa_ij = (
-        jnp.sqrt(kappa[:, None] * kappa[None, :])
+        jnp.where(associating, jnp.sqrt(jnp.where(associating, product, 1.0)), 0.0)
         * (jnp.sqrt(sigma[:, None] * sigma[None, :]) / sigma_ij) ** 3
     )
     return g_ij * sigma_ij**3 * kappa_ij * (jnp.exp(eps_ij / t) - 1.0)
@@ -95,24 +99,44 @@ def _site_map(state: Array, theta: tuple[SaftParameters, Array, Array, Array]) -
     return jnp.concatenate([xa_new, xb_new])
 
 
+#: Residual ``max |X - G(X)|`` accepted as a converged site solve.
+_SITE_TOLERANCE = 1e-12
+
+
 @jax.custom_jvp
 def _solve_sites(theta: tuple[SaftParameters, Array, Array, Array]) -> Array:
-    """Solve the bonded-site fixed point ``X = G(X, theta)`` by successive substitution."""
+    """Solve the bonded-site fixed point ``X = G(X, theta)``.
+
+    A few successive-substitution sweeps from ``X = 1`` enter the basin, then a
+    damped Newton iteration on ``X - G(X)`` (steps limited to keep every bonded
+    fraction in ``(0, 1]``) converges quadratically even for strongly
+    associating liquids, where substitution alone contracts slowly. A solve
+    that misses the tolerance returns NaN, so a failed association term can't
+    pass for a converged property.
+    """
     params = theta[0]
     n = params.m.shape[0]
-    x0 = jnp.ones(2 * n)
+
+    def residual(x: Array) -> Array:
+        return x - _site_map(x, theta)
+
+    x = jax.lax.fori_loop(0, 6, lambda _, xx: _site_map(xx, theta), jnp.ones(2 * n))
 
     def cond(carry: tuple[Array, Array, Array]) -> Array:
-        prev, cur, i = carry
-        return (jnp.max(jnp.abs(cur - prev)) > 1e-13) & (i < 200)
+        _, r, i = carry
+        return (jnp.max(jnp.abs(r)) > _SITE_TOLERANCE) & jnp.all(jnp.isfinite(r)) & (i < 50)
 
     def body(carry: tuple[Array, Array, Array]) -> tuple[Array, Array, Array]:
-        _, cur, i = carry
-        return cur, _site_map(cur, theta), i + 1
+        x, r, i = carry
+        jac = jnp.eye(2 * n) - jax.jacobian(lambda xx: _site_map(xx, theta))(x)
+        dx = jnp.linalg.solve(jac, -r)
+        limit = jnp.where(dx < 0.0, -0.9 * x / jnp.where(dx < 0.0, dx, -1.0), jnp.inf)
+        step = jnp.minimum(1.0, jnp.min(limit))
+        x_new = jnp.clip(x + step * dx, 1e-300, 1.0)
+        return x_new, residual(x_new), i + 1
 
-    x1 = _site_map(x0, theta)
-    _, x_star, _ = jax.lax.while_loop(cond, body, (x0, x1, jnp.asarray(1)))
-    return x_star
+    x_star, r, _ = jax.lax.while_loop(cond, body, (x, residual(x), jnp.asarray(0)))
+    return jnp.where(jnp.max(jnp.abs(r)) <= _SITE_TOLERANCE, x_star, jnp.nan)
 
 
 @_solve_sites.defjvp

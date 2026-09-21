@@ -2,13 +2,9 @@
 
 A process simulator needs two things from its thermodynamics: "what splits?"
 (fugacities, K-values, flashes) and "how much energy?" (enthalpy, entropy,
-volume). The equilibrium models in `fugacio.thermo.phase` answer the first
-question for the cubic, gamma-phi, and PC-SAFT routes, but the energy side of the
-engine was, until now, wired to the cubic equation of state alone: a heater, a
-mixer, an isentropic compressor, or a column energy balance could only be
-evaluated on Peng-Robinson or SRK. A `PropertyPackage` closes that gap. It is the
-single interface every energy-balanced unit operation consumes, and it is
-implemented for all four method classes Fugacio carries:
+volume). A `PropertyPackage` answers both through one interface that every
+energy-balanced unit operation, the rigorous column, and the equation-oriented
+engine consume. It is implemented for all four method classes Fugacio carries:
 
 * `CubicPackage`: phi-phi on a cubic EOS (PR, SRK, RK, vdW), the default;
 * `GammaPhiPackage`: an activity-coefficient liquid (NRTL, UNIQUAC, Wilson,
@@ -22,63 +18,84 @@ implemented for all four method classes Fugacio carries:
   ...) wrapped as a one-component package, so steam and refrigerant loops can be
   simulated with reference-grade properties inside the same flowsheet engine.
 
-Every package exposes the same calls: single-phase ``ln_phi`` / ``enthalpy`` /
-``entropy`` / ``volume`` at ``(T, P, x)``, the isothermal ``flash_pt`` and the four
-saturation calculations, and (implemented once, generically, on top of those) the
-two-phase-aware ``mixture_enthalpy`` / ``mixture_entropy`` / ``mixture_volume``
-and the energy-specified ``flash_ph`` / ``flash_ps`` / ``flash_tv``. Packages are
-registered JAX pytrees whose model parameters are differentiable leaves, so a
-flowsheet built on any of them is differentiable with respect to the
-thermodynamic parameters as well as the operating conditions.
+**One contract for every package.** Each iterative calculation has a checked
+``*_with_info`` method returning the best state and a
+`fugacio.thermo.diagnostics.SolveReport`: ``flash_pt_with_info``,
+``bubble_pressure_with_info``, ``dew_pressure_with_info``,
+``bubble_temperature_with_info``, ``dew_temperature_with_info``,
+``flash_ph_with_info``, and ``flash_ps_with_info``. The matching value-only
+method returns NaN whenever that report fails, so a failed or out-of-domain
+solve never returns a finite number. ``stability`` runs the shared tangent-plane
+search (`fugacio.thermo.stability`) on the package's own fugacity branches.
 
-Every package also satisfies the `fugacio.thermo.phase.EquilibriumModel`
-protocol, so it can be passed anywhere an equilibrium model is accepted.
+A new thermodynamic method plugs into the whole engine by subclassing
+`_PackageBase` and implementing the single-phase primitives (``ln_phi``,
+``enthalpy``, ``entropy``, ``volume``); every other method, including a generic
+flash, saturation solves, stability, and energy flashes, is derived from them
+and may be overridden with a faster specialized solver. Packages are registered
+JAX pytrees whose model parameters are differentiable leaves, so a flowsheet
+built on any of them is differentiable with respect to the thermodynamic
+parameters as well as the operating conditions.
 
 Enthalpy and entropy are relative to the ideal-gas reference at ``T_REF`` /
-``P_REF`` (the reference state of `fugacio.thermo.properties`), except for
-`HelmholtzPackage`, whose reference is the one built into the published
-formulation. Only differences are physical, and any consistent reference cancels
-in a balance, so do not mix packages with different references across one energy
-balance.
+``P_REF``, except for `HelmholtzPackage`, whose reference is the one built into
+the published formulation. Only differences are physical, and any consistent
+reference cancels in a balance, so do not mix packages with different
+references across one energy balance.
 """
 
 from __future__ import annotations
 
+import functools
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple, Protocol, runtime_checkable
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax import Array, lax
 
 from fugacio.thermo.activity.models import ActivityModel
 from fugacio.thermo.constants import R
 from fugacio.thermo.departure import residual_properties
-from fugacio.thermo.diagnostics import SolveReport, residual_report
+from fugacio.thermo.diagnostics import (
+    SolveReport,
+    SolveStatus,
+    nan_unless_converged,
+    residual_report,
+    with_status,
+)
 from fugacio.thermo.energy import EnergyFlashResult, _implicit_temperature
 from fugacio.thermo.eos import PR, CubicEOS, ln_phi_mixture, molar_volume
 from fugacio.thermo.equilibrium import (
     FlashResult,
-    StabilityResult,
-    bubble_pressure_eos,
-    dew_pressure_eos,
-    flash_pt,
-    stability_analysis,
+    FlashSolveResult,
+    SaturationResult,
+    SaturationSolveResult,
+    bubble_pressure_eos_with_info,
+    dew_pressure_eos_with_info,
+    flash_pt_with_info,
+    input_report,
+    phase_compositions,
+    rachford_rice,
     wilson_k,
 )
 from fugacio.thermo.gammaphi import (
-    bubble_pressure_gamma,
-    bubble_temperature_gamma,
-    dew_pressure_gamma,
-    dew_temperature_gamma,
-    flash_pt_gamma,
+    bubble_pressure_gamma_with_info,
+    bubble_temperature_gamma_with_info,
+    default_temperature_bracket,
+    dew_pressure_gamma_with_info,
+    dew_temperature_gamma_with_info,
+    flash_pt_gamma_with_info,
+    reference_domain,
 )
 from fugacio.thermo.helmholtz.fluids import HelmholtzFluid
 from fugacio.thermo.helmholtz.props import ln_fugacity_coefficient as _hf_ln_phi
 from fugacio.thermo.helmholtz.saturation import (
     T_SAT_MAX_FRACTION,
-    saturation_pressure,
-    saturation_temperature,
+    saturation_pressure_with_info,
+    saturation_temperature_with_info,
 )
 from fugacio.thermo.helmholtz.states import state_ph, state_ps, state_tp
 from fugacio.thermo.ideal import (
@@ -87,30 +104,105 @@ from fugacio.thermo.ideal import (
     entropy_ig,
     entropy_ig_mixture,
 )
-from fugacio.thermo.implicit import bracketed_root, newton_system_with_info
+from fugacio.thermo.implicit import (
+    bracketed_root_with_info,
+    fixed_point_with_info,
+    gate_tree,
+    newton_system_with_info,
+    scanned_root_with_info,
+)
 from fugacio.thermo.provenance import PackageEvidence
 from fugacio.thermo.reference import (
     liquid_reference_fugacity,
     pure_liquid_volumes,
-    saturation_pressures,
+    saturation_pressures_with_info,
 )
 from fugacio.thermo.saft.equilibrium import (
-    bubble_pressure_saft,
-    dew_pressure_saft,
-    flash_pt_saft,
-    stability_saft,
+    bubble_pressure_saft_with_info,
+    dew_pressure_saft_with_info,
+    flash_pt_saft_with_info,
 )
 from fugacio.thermo.saft.parameters import SaftParameters
 from fugacio.thermo.saft.properties import ln_fugacity_coefficients as _saft_ln_phi
 from fugacio.thermo.saft.properties import molar_density as _saft_density
 from fugacio.thermo.saft.properties import residual_properties as _saft_residual
+from fugacio.thermo.stability import (
+    StabilityResult,
+    enrichment_starts,
+    feed_potentials,
+    tpd_search,
+)
 
 ArrayLike = Array | float
 CpCoeffs = tuple[Array, Array, Array, Array, Array]
+LnPhiFn = Callable[[Array], Array]
 
 #: Vapour fractions closer than this to 0 or 1 are treated as single-phase when a
 #: bulk property is differentiated (so the absent phase is never differentiated).
 _SINGLE_PHASE_EPS = 1.0e-9
+
+#: Solve methods that run through a compiled kernel (see `_compiled`). The
+#: value-only wrappers (``flash_pt``, ``bubble_pressure``, ...) aren't listed:
+#: they call these kernels and mask a failure, and compiling them separately
+#: would compile each nested solve a second time.
+_COMPILED_METHODS = (
+    "flash_pt_with_info",
+    "stability",
+    "bubble_pressure_with_info",
+    "dew_pressure_with_info",
+    "bubble_temperature_with_info",
+    "dew_temperature_with_info",
+    "mixture_enthalpy",
+    "mixture_entropy",
+    "mixture_volume",
+    "flash_ph_with_info",
+    "flash_ps_with_info",
+    "flash_tv",
+)
+
+_KERNELS: dict[tuple[Any, ...], Any] = {}
+
+
+def _strip_weak_type(value: Any) -> Any:
+    return jnp.asarray(value, dtype=jnp.asarray(value).dtype)
+
+
+def _compiled(method: Callable[..., Any]) -> Callable[..., Any]:
+    """Evaluate a package method through a compiled kernel cached per method and options.
+
+    The package and the state arguments are dynamic, so every package with the
+    same structure (class, component count, static settings) shares one
+    compilation, and a new state or new parameter values reuse it. Array
+    keyword options stay dynamic; other options (tolerances, iteration caps)
+    are part of the cache key. A package that isn't a registered pytree runs
+    eagerly, as does a call with an unhashable option.
+    """
+
+    @functools.wraps(method)
+    def call(self: Any, *args: Any, **kwargs: Any) -> Any:
+        if not _is_pytree(self):
+            return method(self, *args, **kwargs)
+        dynamic = {
+            k: v for k, v in kwargs.items() if isinstance(v, Array | np.ndarray | jax.core.Tracer)
+        }
+        static = tuple(sorted((k, v) for k, v in kwargs.items() if k not in dynamic))
+        key = (method, static)
+        try:
+            kernel = _KERNELS.get(key)
+        except TypeError:
+            return method(self, *args, **kwargs)
+        if kernel is None:
+            fixed = dict(static)
+
+            def run(pkg: Any, positional: tuple[Any, ...], named: dict[str, Any]) -> Any:
+                return method(pkg, *positional, **named, **fixed)
+
+            kernel = _KERNELS.setdefault(key, jax.jit(run))
+        positional = tuple(jnp.asarray(a, dtype=float) for a in args)
+        pkg, named = jax.tree_util.tree_map(_strip_weak_type, (self, dynamic))
+        return kernel(pkg, positional, named)
+
+    return call
 
 
 class EnergySolveResult(NamedTuple):
@@ -127,11 +219,26 @@ class PropertyPackage(Protocol):
     Implementations bundle their component constants and model parameters, so
     callers pass only the state ``(T, P, composition)``. ``phase`` is
     ``"liquid"`` or ``"vapor"`` and selects the phase branch to evaluate.
+    Subclassing `_PackageBase` supplies every derived method.
     """
+
+    @property
+    def component_names(self) -> tuple[str, ...]:
+        """Canonical component names, in the package's composition order."""
+        ...
+
+    @property
+    def evidence(self) -> PackageEvidence:
+        """Parameter provenance and the observed ranges behind the package."""
+        ...
 
     @property
     def n_components(self) -> int:
         """Number of components the package describes."""
+        ...
+
+    def signature(self) -> tuple[Any, ...]:
+        """Hashable description of the package *structure* (not its values)."""
         ...
 
     def ln_phi(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
@@ -150,24 +257,12 @@ class PropertyPackage(Protocol):
         """Single-phase molar volume (m^3/mol)."""
         ...
 
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
-        """Isothermal-isobaric two-phase flash."""
+    def ln_phi_function(self, t: ArrayLike, p: ArrayLike, *, phase: str) -> LnPhiFn:
+        """A composition-only ``ln phi`` at fixed ``(T, P)`` for repeated trial evaluations."""
         ...
 
-    def bubble_pressure(self, t: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Bubble pressure and incipient vapour ``(P, y)`` at fixed ``T``, ``x``."""
-        ...
-
-    def dew_pressure(self, t: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Dew pressure and incipient liquid ``(P, x)`` at fixed ``T``, ``y``."""
-        ...
-
-    def bubble_temperature(self, p: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Bubble temperature and incipient vapour ``(T, y)`` at fixed ``P``, ``x``."""
-        ...
-
-    def dew_temperature(self, p: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Dew temperature and incipient liquid ``(T, x)`` at fixed ``P``, ``y``."""
+    def in_domain(self, t: ArrayLike, p: ArrayLike, z: Array) -> Array:
+        """Whether the model is defined for the components present at ``(T, P)``."""
         ...
 
     def k_values(self, t: ArrayLike, p: ArrayLike, x: Array, y: Array) -> Array:
@@ -175,7 +270,79 @@ class PropertyPackage(Protocol):
         ...
 
     def k_seed(self, t: ArrayLike, p: ArrayLike, x: Array) -> Array:
-        """Composition-light K-value estimate used to initialise staged solvers."""
+        """Composition-light K-value estimate used to initialise solvers."""
+        ...
+
+    def flash_pt_with_info(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashSolveResult:
+        """Isothermal-isobaric vapour-liquid flash and its report."""
+        ...
+
+    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
+        """Isothermal-isobaric flash; NaN on failure."""
+        ...
+
+    def stability(self, t: ArrayLike, p: ArrayLike, z: Array) -> StabilityResult:
+        """Tangent-plane stability of feed ``z`` at ``(T, P)``."""
+        ...
+
+    def bubble_pressure_with_info(self, t: ArrayLike, x: Array) -> SaturationSolveResult:
+        """Bubble pressure and incipient vapour at fixed ``T``, ``x``, with a report."""
+        ...
+
+    def bubble_pressure(self, t: ArrayLike, x: Array) -> SaturationResult:
+        """Bubble pressure and incipient vapour ``(P, y)``; NaN on failure."""
+        ...
+
+    def dew_pressure_with_info(self, t: ArrayLike, y: Array) -> SaturationSolveResult:
+        """Dew pressure and incipient liquid at fixed ``T``, ``y``, with a report."""
+        ...
+
+    def dew_pressure(self, t: ArrayLike, y: Array) -> SaturationResult:
+        """Dew pressure and incipient liquid ``(P, x)``; NaN on failure."""
+        ...
+
+    def bubble_temperature_with_info(
+        self,
+        p: ArrayLike,
+        x: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Bubble temperature and incipient vapour at fixed ``P``, ``x``, with a report."""
+        ...
+
+    def bubble_temperature(
+        self,
+        p: ArrayLike,
+        x: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationResult:
+        """Bubble temperature and incipient vapour ``(T, y)``; NaN on failure."""
+        ...
+
+    def dew_temperature_with_info(
+        self,
+        p: ArrayLike,
+        y: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Dew temperature and incipient liquid at fixed ``P``, ``y``, with a report."""
+        ...
+
+    def dew_temperature(
+        self,
+        p: ArrayLike,
+        y: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationResult:
+        """Dew temperature and incipient liquid ``(T, x)``; NaN on failure."""
         ...
 
     def mixture_enthalpy(self, t: ArrayLike, p: ArrayLike, z: Array) -> Array:
@@ -190,38 +357,42 @@ class PropertyPackage(Protocol):
         """Two-phase-aware molar volume of a feed ``z`` at ``(T, P)`` (m^3/mol)."""
         ...
 
-    def flash_ph(
+    def flash_ph_with_info(
         self,
         p: ArrayLike,
         h: ArrayLike,
         z: Array,
         *,
-        t_init: ArrayLike = 300.0,
-        t_min: float = 50.0,
-        t_max: float = 1500.0,
-        tol: float = 1e-8,
-        max_iter: int = 100,
-    ) -> EnergyFlashResult:
-        """Isenthalpic flash: the temperature (and split) at which ``H = h``."""
+        t_init: ArrayLike = ...,
+        t_min: float = ...,
+        t_max: float = ...,
+        tol: float = ...,
+        max_iter: int = ...,
+    ) -> EnergySolveResult:
+        """Isenthalpic flash with an independent energy and equilibrium report."""
         ...
 
-    def flash_ps(
+    def flash_ph(self, p: ArrayLike, h: ArrayLike, z: Array, **options: Any) -> EnergyFlashResult:
+        """Isenthalpic flash; NaN on failure."""
+        ...
+
+    def flash_ps_with_info(
         self,
         p: ArrayLike,
         s: ArrayLike,
         z: Array,
         *,
-        t_init: ArrayLike = 300.0,
-        t_min: float = 50.0,
-        t_max: float = 1500.0,
-        tol: float = 1e-8,
-        max_iter: int = 100,
-    ) -> EnergyFlashResult:
-        """Isentropic flash: the temperature (and split) at which ``S = s``."""
+        t_init: ArrayLike = ...,
+        t_min: float = ...,
+        t_max: float = ...,
+        tol: float = ...,
+        max_iter: int = ...,
+    ) -> EnergySolveResult:
+        """Isentropic flash with an independent entropy and equilibrium report."""
         ...
 
-    def signature(self) -> tuple[Any, ...]:
-        """Hashable description of the package *structure* (not its values)."""
+    def flash_ps(self, p: ArrayLike, s: ArrayLike, z: Array, **options: Any) -> EnergyFlashResult:
+        """Isentropic flash; NaN on failure."""
         ...
 
 
@@ -242,15 +413,53 @@ def _phase_classification(pkg: Any, t: ArrayLike, p: ArrayLike, z: Array) -> Fla
     return lax.stop_gradient(package.flash_pt(temperature, pressure, composition))
 
 
+def _is_pytree(pkg: Any) -> bool:
+    """Whether a package is a registered pytree of array leaves.
+
+    Such a package can cross a compilation boundary and its parameters are
+    differentiable. A package holding an opaque leaf (an unregistered activity
+    model, say) is evaluated eagerly instead.
+    """
+    leaves = jax.tree_util.tree_leaves(pkg)
+    if len(leaves) == 1 and leaves[0] is pkg:
+        return False
+    return all(
+        isinstance(leaf, Array | np.ndarray | np.generic | float | int | jax.core.Tracer)
+        for leaf in leaves
+    )
+
+
+def _distinct_phases(pkg: Any, t: ArrayLike, p: Array, liquid: Array, vapor: Array) -> Array:
+    """Whether a converged saturation point has two genuinely different phases."""
+    v_l = pkg.volume(t, p, liquid, phase="liquid")
+    v_v = pkg.volume(t, p, vapor, phase="vapor")
+    same_density = jnp.abs(v_v - v_l) <= 1e-6 * jnp.maximum(jnp.abs(v_v), 1e-30)
+    same_composition = jnp.max(jnp.abs(vapor - liquid)) <= 1e-6
+    return lax.stop_gradient(~(same_density & same_composition))
+
+
 class _PackageBase:
     """Generic machinery shared by every concrete package.
 
-    Subclasses provide the five single-phase primitives (``ln_phi``,
-    ``enthalpy``, ``entropy``, ``volume``, ``flash_pt``) and the two
-    fixed-temperature saturation solves; everything else here is derived from
-    them, so a new thermodynamic method plugs into the whole flowsheet engine by
-    implementing that small core.
+    Subclasses provide the four single-phase primitives (``ln_phi``,
+    ``enthalpy``, ``entropy``, ``volume``) and ``n_components``. Everything
+    else is derived here from those primitives: a successive-substitution PT
+    flash, phi-phi saturation pressures, saturation temperatures on a scanned
+    bracket, tangent-plane stability, two-phase-aware bulk properties, and
+    energy-specified flashes. Concrete packages override the calculations for
+    which they have faster specialized solvers.
     """
+
+    component_names: tuple[str, ...] = ()
+    evidence: PackageEvidence = PackageEvidence()
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Compile the solve methods a subclass defines (see `_compiled`)."""
+        super().__init_subclass__(**kwargs)
+        for name in _COMPILED_METHODS:
+            method = cls.__dict__.get(name)
+            if method is not None:
+                setattr(cls, name, _compiled(method))
 
     # -- primitives every subclass must supply ----------------------------- #
     def ln_phi(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
@@ -269,18 +478,6 @@ class _PackageBase:
         """Single-phase molar volume (m^3/mol)."""
         raise NotImplementedError
 
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
-        """Isothermal-isobaric two-phase flash."""
-        raise NotImplementedError
-
-    def bubble_pressure(self, t: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Bubble pressure and incipient vapour at fixed ``T``, ``x``."""
-        raise NotImplementedError
-
-    def dew_pressure(self, t: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Dew pressure and incipient liquid at fixed ``T``, ``y``."""
-        raise NotImplementedError
-
     @property
     def n_components(self) -> int:
         """Number of components."""
@@ -288,9 +485,22 @@ class _PackageBase:
 
     def signature(self) -> tuple[Any, ...]:
         """Hashable structural description (class name plus static metadata)."""
-        return (type(self).__name__, self.n_components)
+        return (type(self).__name__, self.n_components, self.component_names)
 
-    # -- derived: K-values, Gibbs energy, heat capacity -------------------- #
+    # -- hooks with generic defaults ---------------------------------------- #
+    def ln_phi_function(self, t: ArrayLike, p: ArrayLike, *, phase: str) -> LnPhiFn:
+        """``ln phi`` as a function of composition alone, at fixed ``(T, P)``.
+
+        Stability searches evaluate hundreds of trial compositions; a package
+        with composition-independent parts (a gamma-phi liquid reference) caches
+        them here.
+        """
+        return lambda w: self.ln_phi(t, p, w, phase=phase)
+
+    def in_domain(self, t: ArrayLike, p: ArrayLike, z: Array) -> Array:
+        """Whether the model is defined for the components present at ``(T, P)``."""
+        return jnp.asarray(True)
+
     def k_values(self, t: ArrayLike, p: ArrayLike, x: Array, y: Array) -> Array:
         """Equilibrium ratios ``K_i = phi_i^L(x) / phi_i^V(y)`` at ``(T, P)``."""
         ln_l = self.ln_phi(t, p, x, phase="liquid")
@@ -298,14 +508,24 @@ class _PackageBase:
         return jnp.exp(ln_l - ln_v)
 
     def k_seed(self, t: ArrayLike, p: ArrayLike, x: Array) -> Array:
-        """Wilson-correlation K-values, the standard seed for staged separations.
+        """Composition-light K-values for initializing flashes and staged solvers.
 
-        A phi-phi model evaluated with ``x == y`` returns ``K = 1`` wherever the
-        equation of state has a single density root, which is useless for
-        initialising a column; the Wilson estimate uses only the critical
-        constants and acentric factors and is always well defined.
+        Packages with critical constants use the Wilson correlation (a phi-phi
+        model evaluated with ``x == y`` returns ``K = 1`` wherever the equation of
+        state has a single density root, which is useless for initialization).
+        Others use the fugacity-coefficient ratio of the two branches at ``x``.
         """
-        return wilson_k(t, p, self.tc, self.pc, self.omega)  # type: ignore[attr-defined]
+        tc, pc, omega = (getattr(self, name, None) for name in ("tc", "pc", "omega"))
+        if tc is not None and pc is not None and omega is not None:
+            return wilson_k(t, p, tc, pc, omega)
+        return self.k_values(t, p, x, x)
+
+    def saturation_bracket(self, composition: Array) -> tuple[Array, Array]:
+        """Default temperature bracket for saturation solves at ``composition``."""
+        tc = getattr(self, "tc", None)
+        if tc is not None:
+            return default_temperature_bracket(tc, composition)
+        return jnp.asarray(150.0), jnp.asarray(700.0)
 
     def gibbs(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
         """Single-phase molar Gibbs energy ``G = H - T S`` (J/mol)."""
@@ -318,51 +538,225 @@ class _PackageBase:
             jnp.asarray(t, dtype=float)
         )
 
-    # -- derived: saturation temperatures by inversion --------------------- #
-    def bubble_temperature(
-        self, p: ArrayLike, x: Array, *, t_min: float = 150.0, t_max: float = 700.0
-    ) -> tuple[Array, Array]:
-        """Bubble temperature and incipient vapour at fixed ``P``, ``x``.
+    # -- PT flash ------------------------------------------------------------ #
+    def flash_pt_with_info(
+        self, t: ArrayLike, p: ArrayLike, z: Array, *, tol: float = 1e-12, max_iter: int = 300
+    ) -> FlashSolveResult:
+        """Isothermal-isobaric vapour-liquid flash by successive substitution on ``ln_phi``.
 
-        Found by inverting `bubble_pressure` (saturation pressure rises
-        monotonically with temperature) with the bracketed, implicitly
-        differentiated root finder.
+        Seeded from `k_seed`. A single-phase feed collapses onto the trivial
+        solution ``K = 1``; its phase is the branch with the lower Gibbs energy.
         """
+        z = jnp.asarray(z, dtype=float)
+        t_arr, p_arr = jnp.asarray(t, dtype=float), jnp.asarray(p, dtype=float)
+        k0 = jnp.clip(lax.stop_gradient(self.k_seed(t_arr, p_arr, z)), 1e-10, 1e10)
+        differentiable = _is_pytree(self)
 
-        def residual(t: Array, params: tuple[Array, Array]) -> Array:
-            p_, x_ = params
-            return jnp.log(self.bubble_pressure(t, x_)[0]) - jnp.log(p_)
+        def g(ln_k: Array, theta: Any) -> Array:
+            pkg, t_, p_, z_ = theta if differentiable else (self, *theta)
+            k = jnp.exp(ln_k)
+            x, y = phase_compositions(z_, k, rachford_rice(z_, k))
+            y = y / jnp.sum(y)
+            x = x / jnp.sum(x)
+            return pkg.ln_phi(t_, p_, x, phase="liquid") - pkg.ln_phi(t_, p_, y, phase="vapor")
 
-        t_star = bracketed_root(
-            residual,
-            (jnp.asarray(p, dtype=float), jnp.asarray(x)),
-            jnp.asarray(t_min),
-            jnp.asarray(t_max),
-            1e-9,
-            200,
+        theta = (self, t_arr, p_arr, z) if differentiable else (t_arr, p_arr, z)
+        solved = fixed_point_with_info(g, jnp.log(k0), theta, tol, max_iter)
+        k = jnp.exp(solved.value)
+        beta = rachford_rice(z, k)
+        support = z > 0
+        trivial = jnp.max(jnp.where(support, jnp.abs(solved.value), 0.0)) < 1e-6
+        ln_z = jnp.log(jnp.where(support, z, 1.0))
+        g_l = jnp.sum(jnp.where(support, z * (ln_z + self.ln_phi(t, p, z, phase="liquid")), 0.0))
+        g_v = jnp.sum(jnp.where(support, z * (ln_z + self.ln_phi(t, p, z, phase="vapor")), 0.0))
+        beta = jnp.where(trivial, jnp.where(lax.stop_gradient(g_l <= g_v), 0.0, 1.0), beta)
+        x, y = phase_compositions(z, k, beta)
+        report = with_status(solved.report, ~input_report(t, p, z), SolveStatus.INVALID_INPUT)
+        report = with_status(report, ~self.in_domain(t, p, z), SolveStatus.OUT_OF_DOMAIN)
+        return FlashSolveResult(FlashResult(beta=beta, x=x, y=y, k=k), report)
+
+    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
+        """Isothermal-isobaric flash; NaN when `flash_pt_with_info` reports failure."""
+        solved = self.flash_pt_with_info(t, p, z)
+        return nan_unless_converged(solved.value, solved.report)
+
+    # -- phase stability ----------------------------------------------------- #
+    def stability(
+        self,
+        t: ArrayLike,
+        p: ArrayLike,
+        z: Array,
+        *,
+        iterations: int = 160,
+        tol: float = 1e-7,
+    ) -> StabilityResult:
+        """Tangent-plane stability of feed ``z`` at ``(T, P)`` on both phase branches.
+
+        The feed is referred to its lower-Gibbs single phase. Trial phases start
+        from the feed, the Wilson-like vapour and liquid estimates, and every
+        pure-component enrichment, on both the liquid and the vapour branch, so a
+        liquid-liquid split is found as reliably as a vapour-liquid one. See
+        `fugacio.thermo.stability.tpd_search`.
+        """
+        z = jnp.asarray(z, dtype=float)
+        support = z > 0
+        branches = (
+            self.ln_phi_function(t, p, phase="liquid"),
+            self.ln_phi_function(t, p, phase="vapor"),
         )
-        _, y = self.bubble_pressure(t_star, x)
-        return t_star, y
+        d = feed_potentials(branches, z, support)
+        k = jnp.clip(lax.stop_gradient(self.k_seed(t, p, z)), 1e-10, 1e10)
+        starts = jnp.concatenate((enrichment_starts(z), (z * k)[None, :], (z / k)[None, :]))
+        return tpd_search(branches, d, support, starts, iterations=iterations, tol=tol)
+
+    # -- saturation pressures (generic phi-phi) ------------------------------ #
+    def _saturation_pressure(
+        self, t: ArrayLike, fixed: Array, *, bubble: bool, tol: float = 1e-12, max_iter: int = 300
+    ) -> SaturationSolveResult:
+        fixed = jnp.asarray(fixed, dtype=float)
+        t_arr = jnp.asarray(t, dtype=float)
+        p_ref = jnp.asarray(1e5)
+        k = jnp.clip(lax.stop_gradient(self.k_seed(t_arr, p_ref, fixed)), 1e-10, 1e10)
+        p0 = p_ref * (jnp.sum(fixed * k) if bubble else 1.0 / jnp.sum(fixed / k))
+        other0 = fixed * k if bubble else fixed / k
+        state0 = jnp.concatenate([jnp.log(p0)[None], other0 / jnp.sum(other0)])
+        differentiable = _is_pytree(self)
+
+        def g(state: Array, theta: Any) -> Array:
+            pkg, t_, fixed_ = theta if differentiable else (self, *theta)
+            pressure = jnp.exp(state[0])
+            other = state[1:]
+            liquid, vapor = (fixed_, other) if bubble else (other, fixed_)
+            ratio = jnp.exp(
+                pkg.ln_phi(t_, pressure, liquid, phase="liquid")
+                - pkg.ln_phi(t_, pressure, vapor, phase="vapor")
+            )
+            unnormalized = fixed_ * ratio if bubble else fixed_ / ratio
+            s = jnp.sum(unnormalized)
+            shift = jnp.log(s) if bubble else -jnp.log(s)
+            return jnp.concatenate([(state[0] + shift)[None], unnormalized / s])
+
+        theta = (self, t_arr, fixed) if differentiable else (t_arr, fixed)
+        solved = fixed_point_with_info(g, state0, theta, tol, max_iter)
+        pressure, other = jnp.exp(solved.value[0]), solved.value[1:]
+        liquid, vapor = (fixed, other) if bubble else (other, fixed)
+        report = with_status(
+            solved.report,
+            ~_distinct_phases(self, t_arr, pressure, liquid, vapor),
+            SolveStatus.TRIVIAL,
+        )
+        report = with_status(report, ~input_report(t, 1.0, fixed), SolveStatus.INVALID_INPUT)
+        report = with_status(report, ~self.in_domain(t, pressure, fixed), SolveStatus.OUT_OF_DOMAIN)
+        value = SaturationResult(pressure, other)
+        return SaturationSolveResult(gate_tree(value, report.converged), report)
+
+    def bubble_pressure_with_info(self, t: ArrayLike, x: Array) -> SaturationSolveResult:
+        """Bubble pressure and incipient vapour at fixed ``T``, ``x``, with a report.
+
+        A coupled fixed point in ``(ln P, y)`` on the package's fugacity
+        coefficients; a collapse onto one phase is ``TRIVIAL``.
+        """
+        return self._saturation_pressure(t, x, bubble=True)
+
+    def bubble_pressure(self, t: ArrayLike, x: Array) -> SaturationResult:
+        """Bubble pressure and incipient vapour ``(P, y)``; NaN on failure."""
+        solved = self.bubble_pressure_with_info(t, x)
+        return nan_unless_converged(solved.value, solved.report)
+
+    def dew_pressure_with_info(self, t: ArrayLike, y: Array) -> SaturationSolveResult:
+        """Dew pressure and incipient liquid at fixed ``T``, ``y``, with a report."""
+        return self._saturation_pressure(t, y, bubble=False)
+
+    def dew_pressure(self, t: ArrayLike, y: Array) -> SaturationResult:
+        """Dew pressure and incipient liquid ``(P, x)``; NaN on failure."""
+        solved = self.dew_pressure_with_info(t, y)
+        return nan_unless_converged(solved.value, solved.report)
+
+    # -- saturation temperatures (pressure inversion on a scanned bracket) --- #
+    def _saturation_temperature(
+        self,
+        p: ArrayLike,
+        fixed: Array,
+        t_min: ArrayLike | None,
+        t_max: ArrayLike | None,
+        *,
+        bubble: bool,
+    ) -> SaturationSolveResult:
+        fixed = jnp.asarray(fixed, dtype=float)
+        lo, hi = self.saturation_bracket(fixed)
+        lo = lo if t_min is None else jnp.asarray(t_min, dtype=float)
+        hi = hi if t_max is None else jnp.asarray(t_max, dtype=float)
+        differentiable = _is_pytree(self)
+
+        def residual(t: Array, params: Any) -> Array:
+            pkg, p_, fixed_ = params if differentiable else (self, *params)
+            point = pkg.bubble_pressure(t, fixed_) if bubble else pkg.dew_pressure(t, fixed_)
+            # NaN wherever no saturation point exists; the bracket scan skips it.
+            return jnp.log(point.value) - jnp.log(p_)
+
+        p_arr = jnp.asarray(p, dtype=float)
+        params = (self, p_arr, fixed) if differentiable else (p_arr, fixed)
+        solved = scanned_root_with_info(residual, params, lo, hi, 1e-9, 200)
+        at_root = (
+            self.bubble_pressure_with_info(solved.value, fixed)
+            if bubble
+            else self.dew_pressure_with_info(solved.value, fixed)
+        )
+        report = with_status(solved.report, ~at_root.report.converged, at_root.report.status)
+        value = SaturationResult(solved.value, at_root.value.composition)
+        return SaturationSolveResult(gate_tree(value, report.converged), report)
+
+    def bubble_temperature_with_info(
+        self,
+        p: ArrayLike,
+        x: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Bubble temperature and incipient vapour at fixed ``P``, ``x``, with a report.
+
+        Inverts `bubble_pressure` on ``[t_min, t_max]`` (by default
+        `saturation_bracket`), scanning for the first finite sign change, so a
+        bracket that only partly admits a bubble point still works and one that
+        admits none is reported rather than returning an endpoint.
+        """
+        return self._saturation_temperature(p, x, t_min, t_max, bubble=True)
+
+    def bubble_temperature(
+        self,
+        p: ArrayLike,
+        x: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationResult:
+        """Bubble temperature and incipient vapour ``(T, y)``; NaN on failure."""
+        solved = self.bubble_temperature_with_info(p, x, t_min=t_min, t_max=t_max)
+        return nan_unless_converged(solved.value, solved.report)
+
+    def dew_temperature_with_info(
+        self,
+        p: ArrayLike,
+        y: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Dew temperature and incipient liquid at fixed ``P``, ``y``, with a report."""
+        return self._saturation_temperature(p, y, t_min, t_max, bubble=False)
 
     def dew_temperature(
-        self, p: ArrayLike, y: Array, *, t_min: float = 150.0, t_max: float = 700.0
-    ) -> tuple[Array, Array]:
-        """Dew temperature and incipient liquid at fixed ``P``, ``y``."""
-
-        def residual(t: Array, params: tuple[Array, Array]) -> Array:
-            p_, y_ = params
-            return jnp.log(self.dew_pressure(t, y_)[0]) - jnp.log(p_)
-
-        t_star = bracketed_root(
-            residual,
-            (jnp.asarray(p, dtype=float), jnp.asarray(y)),
-            jnp.asarray(t_min),
-            jnp.asarray(t_max),
-            1e-9,
-            200,
-        )
-        _, x = self.dew_pressure(t_star, y)
-        return t_star, x
+        self,
+        p: ArrayLike,
+        y: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationResult:
+        """Dew temperature and incipient liquid ``(T, x)``; NaN on failure."""
+        solved = self.dew_temperature_with_info(p, y, t_min=t_min, t_max=t_max)
+        return nan_unless_converged(solved.value, solved.report)
 
     # -- derived: two-phase-aware bulk properties -------------------------- #
     def _blend(self, t: ArrayLike, p: ArrayLike, z: Array, prop: str) -> Array:
@@ -371,7 +765,8 @@ class _PackageBase:
         The blend is evaluated with a `jax.lax.switch` on the phase regime so a
         single-phase feed differentiates *only* the phase that exists. Naively
         multiplying an absent phase by zero would still propagate the ``NaN``
-        gradient of a cubic root that does not exist in that region.
+        gradient of a cubic root that does not exist in that region. A failed
+        flash (NaN phase fraction) gives a NaN property.
         """
         beta = _phase_classification(self, t, p, z).beta
         fn = getattr(self, prop)
@@ -520,7 +915,7 @@ class _PackageBase:
 
         return lax.cond(lax.stop_gradient(inside), saturated, pt, None)
 
-    def flash_ph(
+    def flash_ph_with_info(
         self,
         p: ArrayLike,
         h: ArrayLike,
@@ -531,18 +926,24 @@ class _PackageBase:
         t_max: float = 1500.0,
         tol: float = 1e-8,
         max_iter: int = 100,
-    ) -> EnergyFlashResult:
+    ) -> EnergySolveResult:
         """Isenthalpic flash: find ``T`` so the feed enthalpy equals ``h``.
 
         The temperature is a safeguarded Newton/bisection root of the monotone
         enthalpy residual on ``[t_min, t_max]`` and is differentiated by the
         implicit function theorem with respect to ``p``, ``h``, ``z`` and the
-        package's own parameters. Returns the temperature together with the
-        equilibrium split there.
+        package's own parameters. The report independently verifies energy,
+        material, and equilibrium closure of the returned state.
         """
-        return self._energy_flash(p, h, z, "enthalpy", t_init, t_min, t_max, tol, max_iter)
+        result = self._energy_flash(p, h, z, "enthalpy", t_init, t_min, t_max, tol, max_iter)
+        return EnergySolveResult(result, energy_flash_report(self, result, p, h, z))
 
-    def flash_ps(
+    def flash_ph(self, p: ArrayLike, h: ArrayLike, z: Array, **options: Any) -> EnergyFlashResult:
+        """Isenthalpic flash; NaN when `flash_ph_with_info` reports failure."""
+        solved = self.flash_ph_with_info(p, h, z, **options)
+        return nan_unless_converged(solved.value, solved.report)
+
+    def flash_ps_with_info(
         self,
         p: ArrayLike,
         s: ArrayLike,
@@ -553,13 +954,19 @@ class _PackageBase:
         t_max: float = 1500.0,
         tol: float = 1e-8,
         max_iter: int = 100,
-    ) -> EnergyFlashResult:
+    ) -> EnergySolveResult:
         """Isentropic flash: find ``T`` so the feed entropy equals ``s``.
 
-        The backbone of isentropic compressor and turbine models; same solver and
-        differentiability as `flash_ph`.
+        The backbone of isentropic compressor and turbine models; same solver,
+        differentiability, and independent verification as `flash_ph_with_info`.
         """
-        return self._energy_flash(p, s, z, "entropy", t_init, t_min, t_max, tol, max_iter)
+        result = self._energy_flash(p, s, z, "entropy", t_init, t_min, t_max, tol, max_iter)
+        return EnergySolveResult(result, energy_flash_report(self, result, p, s, z, prop="entropy"))
+
+    def flash_ps(self, p: ArrayLike, s: ArrayLike, z: Array, **options: Any) -> EnergyFlashResult:
+        """Isentropic flash; NaN when `flash_ps_with_info` reports failure."""
+        solved = self.flash_ps_with_info(p, s, z, **options)
+        return nan_unless_converged(solved.value, solved.report)
 
     def flash_tv(
         self,
@@ -576,7 +983,8 @@ class _PackageBase:
 
         Solves ``V(T, P, z) = v`` for ``ln P`` on ``[p_min, p_max]`` (the bulk
         molar volume decreases monotonically with pressure), the specification a
-        fixed-volume vessel or a receiver imposes. Returns ``(P, flash)``.
+        fixed-volume vessel or a receiver imposes. Returns ``(P, flash)``, NaN
+        when no pressure in the bracket reproduces ``v``.
         """
         params = (self, jnp.asarray(t, dtype=float), jnp.asarray(v, dtype=float), jnp.asarray(z))
 
@@ -584,7 +992,7 @@ class _PackageBase:
             pkg, t_, v_, z_ = params
             return jnp.log(pkg.mixture_volume(t_, jnp.exp(ln_p), z_)) - jnp.log(v_)
 
-        ln_p = bracketed_root(
+        solved = bracketed_root_with_info(
             residual,
             params,
             jnp.log(jnp.asarray(p_min)),
@@ -592,8 +1000,12 @@ class _PackageBase:
             tol,
             max_iter,
         )
-        p_star = jnp.exp(ln_p)
+        p_star = nan_unless_converged(jnp.exp(solved.value), solved.report)
         return p_star, self.flash_pt(t, p_star, z)
+
+
+for _name in _COMPILED_METHODS:
+    setattr(_PackageBase, _name, _compiled(_PackageBase.__dict__[_name]))
 
 
 # --------------------------------------------------------------------------- #
@@ -670,21 +1082,34 @@ class CubicPackage(_PackageBase):
             self.eos, t, p, x, self.tc, self.pc, self.omega, phase=phase, kij=self.kij
         )
 
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
-        """Isothermal-isobaric two-phase flash via the cubic EOS."""
-        return flash_pt(self.eos, t, p, z, self.tc, self.pc, self.omega, kij=self.kij)
+    def flash_pt_with_info(
+        self, t: ArrayLike, p: ArrayLike, z: Array, *, tol: float = 1e-12, max_iter: int = 300
+    ) -> FlashSolveResult:
+        """Isothermal-isobaric vapour-liquid flash via the cubic EOS."""
+        return flash_pt_with_info(
+            self.eos,
+            t,
+            p,
+            z,
+            self.tc,
+            self.pc,
+            self.omega,
+            kij=self.kij,
+            tol=tol,
+            max_iter=max_iter,
+        )
 
-    def bubble_pressure(self, t: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Bubble pressure and incipient vapour at fixed ``T``, ``x``."""
-        return bubble_pressure_eos(self.eos, t, x, self.tc, self.pc, self.omega, kij=self.kij)
+    def bubble_pressure_with_info(self, t: ArrayLike, x: Array) -> SaturationSolveResult:
+        """Bubble pressure and incipient vapour at fixed ``T``, ``x``, with a report."""
+        return bubble_pressure_eos_with_info(
+            self.eos, t, x, self.tc, self.pc, self.omega, kij=self.kij
+        )
 
-    def dew_pressure(self, t: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Dew pressure and incipient liquid at fixed ``T``, ``y``."""
-        return dew_pressure_eos(self.eos, t, y, self.tc, self.pc, self.omega, kij=self.kij)
-
-    def stability(self, t: ArrayLike, p: ArrayLike, z: Array) -> StabilityResult:
-        """Michelsen tangent-plane stability of feed ``z`` at ``(T, P)``."""
-        return stability_analysis(self.eos, t, p, z, self.tc, self.pc, self.omega, kij=self.kij)
+    def dew_pressure_with_info(self, t: ArrayLike, y: Array) -> SaturationSolveResult:
+        """Dew pressure and incipient liquid at fixed ``T``, ``y``, with a report."""
+        return dew_pressure_eos_with_info(
+            self.eos, t, y, self.tc, self.pc, self.omega, kij=self.kij
+        )
 
 
 jax.tree_util.register_dataclass(
@@ -766,8 +1191,9 @@ class GammaPhiPackage(_PackageBase):
     (autodiff Gibbs-Helmholtz on the activity model). The liquid entropy follows
     the same construction with the ideal entropy of mixing and ``s^E``.
 
-    Components must be subcritical at the conditions of interest (the reference
-    fugacity is saturation-based, the standard gamma-phi limitation).
+    The saturation-based reference exists only below each component's critical
+    temperature: a state with a present supercritical component is out of the
+    package's domain (every checked calculation reports ``OUT_OF_DOMAIN``).
 
     Attributes:
         activity: Liquid activity-coefficient model (a differentiable pytree).
@@ -816,29 +1242,45 @@ class GammaPhiPackage(_PackageBase):
         )
 
     def _psat(self, t: ArrayLike) -> Array:
-        return saturation_pressures(self.eos, t, self.tc, self.pc, self.omega)
+        """Finite saturation pressures (extrapolated for supercritical components)."""
+        return saturation_pressures_with_info(self.eos, t, self.tc, self.pc, self.omega)[0]
+
+    def _liquid_reference(self, t: ArrayLike, p: ArrayLike) -> Array:
+        """Composition-independent ``ln f^{0,L} - ln P`` of the liquid branch."""
+        f_ref, _ = liquid_reference_fugacity(
+            self.eos,
+            t,
+            p,
+            self.tc,
+            self.pc,
+            self.omega,
+            poynting=self.poynting,
+            phi_saturation=self.phi_saturation,
+        )
+        return jnp.log(f_ref) - jnp.log(jnp.asarray(p))
+
+    def in_domain(self, t: ArrayLike, p: ArrayLike, z: Array) -> Array:
+        """Every present component must have a saturation reference at ``T``."""
+        return reference_domain(t, z, self.tc, self.eos, self.pc, self.omega)
 
     def ln_phi(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
         """Effective ``ln phi``: ``ln gamma + ln f^{0,L} - ln P`` (liquid) or the vapour model."""
         x = jnp.asarray(x)
         if phase == "liquid":
-            f_ref, _ = liquid_reference_fugacity(
-                self.eos,
-                t,
-                p,
-                self.tc,
-                self.pc,
-                self.omega,
-                poynting=self.poynting,
-                phi_saturation=self.phi_saturation,
-            )
-            return self.activity.ln_gamma(x, t) + jnp.log(f_ref) - jnp.log(jnp.asarray(p))
+            return self.activity.ln_gamma(x, t) + self._liquid_reference(t, p)
         if self.vapor == "ideal":
             return jnp.zeros_like(x)
         ln_phi, _ = ln_phi_mixture(
             self.eos, t, p, x, self.tc, self.pc, self.omega, phase="vapor", kij=self.kij
         )
         return ln_phi
+
+    def ln_phi_function(self, t: ArrayLike, p: ArrayLike, *, phase: str) -> LnPhiFn:
+        """Liquid trials reuse one reference fugacity; only ``ln gamma`` varies."""
+        if phase != "liquid":
+            return super().ln_phi_function(t, p, phase=phase)
+        reference = self._liquid_reference(t, p)
+        return lambda w: self.activity.ln_gamma(w, t) + reference
 
     def enthalpy(self, t: ArrayLike, p: ArrayLike, x: Array, *, phase: str) -> Array:
         """Liquid: pure saturated-liquid enthalpies plus ``h^E``; vapour: ideal gas (+ EOS)."""
@@ -925,31 +1367,50 @@ class GammaPhiPackage(_PackageBase):
             "phi_saturation": self.phi_saturation,
         }
 
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
+    def flash_pt_with_info(
+        self, t: ArrayLike, p: ArrayLike, z: Array, *, tol: float = 1e-12, max_iter: int = 300
+    ) -> FlashSolveResult:
         """Isothermal-isobaric gamma-phi flash."""
-        return flash_pt_gamma(self.activity, t, p, z, self.tc, self.pc, self.omega, **self._kw())
+        return flash_pt_gamma_with_info(
+            self.activity,
+            t,
+            p,
+            z,
+            self.tc,
+            self.pc,
+            self.omega,
+            tol=tol,
+            max_iter=max_iter,
+            **self._kw(),
+        )
 
     def k_seed(self, t: ArrayLike, p: ArrayLike, x: Array) -> Array:
         """``gamma_i(x) Psat_i / P``: the modified Raoult K-values (ideal vapour)."""
         gamma = jnp.exp(self.activity.ln_gamma(x, t))
-        psat = saturation_pressures(self.eos, t, self.tc, self.pc, self.omega)
-        return gamma * psat / jnp.asarray(p, dtype=float)
+        return gamma * self._psat(t) / jnp.asarray(p, dtype=float)
 
-    def bubble_pressure(self, t: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Bubble pressure and incipient vapour at fixed ``T``, ``x``."""
-        return bubble_pressure_gamma(
+    def bubble_pressure_with_info(self, t: ArrayLike, x: Array) -> SaturationSolveResult:
+        """Bubble pressure and incipient vapour at fixed ``T``, ``x``, with a report."""
+        return bubble_pressure_gamma_with_info(
             self.activity, t, x, self.tc, self.pc, self.omega, **self._kw()
         )
 
-    def dew_pressure(self, t: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Dew pressure and incipient liquid at fixed ``T``, ``y``."""
-        return dew_pressure_gamma(self.activity, t, y, self.tc, self.pc, self.omega, **self._kw())
+    def dew_pressure_with_info(self, t: ArrayLike, y: Array) -> SaturationSolveResult:
+        """Dew pressure and incipient liquid at fixed ``T``, ``y``, with a report."""
+        return dew_pressure_gamma_with_info(
+            self.activity, t, y, self.tc, self.pc, self.omega, **self._kw()
+        )
 
-    def bubble_temperature(
-        self, p: ArrayLike, x: Array, *, t_min: float = 150.0, t_max: float = 700.0
-    ) -> tuple[Array, Array]:
-        """Bubble temperature and incipient vapour at fixed ``P``, ``x`` (native gamma-phi)."""
-        return bubble_temperature_gamma(
+    def bubble_temperature_with_info(
+        self,
+        p: ArrayLike,
+        x: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Bubble temperature and incipient vapour (native gamma-phi solve)."""
+        return bubble_temperature_gamma_with_info(
             self.activity,
             p,
             x,
@@ -961,11 +1422,16 @@ class GammaPhiPackage(_PackageBase):
             **self._kw(),
         )
 
-    def dew_temperature(
-        self, p: ArrayLike, y: Array, *, t_min: float = 150.0, t_max: float = 700.0
-    ) -> tuple[Array, Array]:
-        """Dew temperature and incipient liquid at fixed ``P``, ``y`` (native gamma-phi solve)."""
-        return dew_temperature_gamma(
+    def dew_temperature_with_info(
+        self,
+        p: ArrayLike,
+        y: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Dew temperature and incipient liquid (native gamma-phi solve)."""
+        return dew_temperature_gamma_with_info(
             self.activity,
             p,
             y,
@@ -1044,21 +1510,21 @@ class SAFTPackage(_PackageBase):
         """Molar volume ``1 / rho`` on the requested density branch (m^3/mol)."""
         return 1.0 / _saft_density(self.params, t, p, x, phase=phase)
 
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
-        """Isothermal-isobaric two-phase flash via PC-SAFT."""
-        return flash_pt_saft(self.params, t, p, z, self.tc, self.pc, self.omega)
+    def flash_pt_with_info(
+        self, t: ArrayLike, p: ArrayLike, z: Array, *, tol: float = 1e-12, max_iter: int = 300
+    ) -> FlashSolveResult:
+        """Isothermal-isobaric vapour-liquid flash via PC-SAFT."""
+        return flash_pt_saft_with_info(
+            self.params, t, p, z, self.tc, self.pc, self.omega, tol=tol, max_iter=max_iter
+        )
 
-    def bubble_pressure(self, t: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Bubble pressure and incipient vapour at fixed ``T``, ``x``."""
-        return bubble_pressure_saft(self.params, t, x, self.tc, self.pc, self.omega)
+    def bubble_pressure_with_info(self, t: ArrayLike, x: Array) -> SaturationSolveResult:
+        """Bubble pressure and incipient vapour at fixed ``T``, ``x``, with a report."""
+        return bubble_pressure_saft_with_info(self.params, t, x, self.tc, self.pc, self.omega)
 
-    def dew_pressure(self, t: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Dew pressure and incipient liquid at fixed ``T``, ``y``."""
-        return dew_pressure_saft(self.params, t, y, self.tc, self.pc, self.omega)
-
-    def stability(self, t: ArrayLike, p: ArrayLike, z: Array) -> StabilityResult:
-        """Michelsen tangent-plane stability of feed ``z`` at ``(T, P)``."""
-        return stability_saft(self.params, t, p, z, self.tc, self.pc, self.omega)
+    def dew_pressure_with_info(self, t: ArrayLike, y: Array) -> SaturationSolveResult:
+        """Dew pressure and incipient liquid at fixed ``T``, ``y``, with a report."""
+        return dew_pressure_saft_with_info(self.params, t, y, self.tc, self.pc, self.omega)
 
 
 jax.tree_util.register_dataclass(
@@ -1081,9 +1547,9 @@ class HelmholtzPackage(_PackageBase):
     CO2, ...) so a pure utility or working fluid can flow through the ordinary
     unit operations with reference-grade properties. Compositions are the
     one-element vector ``[1.0]``; the "flash" is the saturation-line test of a
-    pure substance (vapour fraction 0 or 1 away from the dome, the quality on it),
-    and the energy flashes resolve directly to the steam-table state functions
-    `state_ph` / `state_ps`.
+    pure substance (vapour fraction 0 or 1 away from the dome), and the energy
+    flashes resolve directly to the steam-table state functions `state_ph` /
+    `state_ps`, including the quality inside the dome.
 
     Enthalpy and entropy carry the reference state of the published formulation
     (not the ideal-gas ``T_REF`` reference of the mixture packages).
@@ -1126,25 +1592,56 @@ class HelmholtzPackage(_PackageBase):
         """Molar volume ``1 / rho`` on the requested branch (m^3/mol)."""
         return 1.0 / state_tp(self.fluid, t, p, phase=self._branch(phase)).rho
 
-    def _psat(self, t: Array) -> Array:
+    def _psat(self, t: Array) -> tuple[Array, SolveReport]:
         t_sat = jnp.clip(t, self.fluid.t_triple, T_SAT_MAX_FRACTION * self.fluid.t_critical)
-        return saturation_pressure(self.fluid, t_sat)
+        solved = saturation_pressure_with_info(self.fluid, t_sat)
+        return solved.value, solved.report
 
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult:
-        """Pure-fluid phase test: all vapour below ``Psat(T)`` (or above ``Tc``), else liquid."""
+    def in_domain(self, t: ArrayLike, p: ArrayLike, z: Array) -> Array:
+        """Within the published range of the formulation."""
+        t_arr = jnp.asarray(t, dtype=float)
+        return (t_arr >= self.fluid.t_triple) & (t_arr <= self.fluid.t_max)
+
+    def flash_pt_with_info(
+        self, t: ArrayLike, p: ArrayLike, z: Array, *, tol: float = 1e-12, max_iter: int = 300
+    ) -> FlashSolveResult:
+        """Pure-fluid phase test: all vapour below ``Psat(T)`` (or above ``Tc``), else liquid.
+
+        Exactly on the saturation line a PT specification can't fix the phase
+        amounts; use a PH/PS specification (or a stream's retained inventory).
+        """
         t_arr = jnp.asarray(t, dtype=float)
         p_arr = jnp.asarray(p, dtype=float)
-        psat = self._psat(t_arr)
-        vapor = (t_arr >= self.fluid.t_critical) | (p_arr < psat)
+        psat, psat_report = self._psat(t_arr)
+        supercritical = t_arr >= self.fluid.t_critical
+        vapor = supercritical | (p_arr < psat)
         beta = jnp.where(vapor, 1.0, 0.0)
         one = jnp.ones(1)
-        return FlashResult(beta=beta, x=one, y=one, k=jnp.reshape(psat / p_arr, (1,)))
+        report = residual_report(jnp.zeros(1))
+        report = with_status(report, ~supercritical & ~psat_report.converged, psat_report.status)
+        report = with_status(report, ~input_report(t, p, one), SolveStatus.INVALID_INPUT)
+        report = with_status(report, ~self.in_domain(t, p, one), SolveStatus.OUT_OF_DOMAIN)
+        k = jnp.reshape(psat / p_arr, (1,))
+        return FlashSolveResult(FlashResult(beta=beta, x=one, y=one, k=k), report)
+
+    def stability(
+        self, t: ArrayLike, p: ArrayLike, z: Array, *, iterations: int = 160, tol: float = 1e-7
+    ) -> StabilityResult:
+        """A pure fluid is stable on its lower-Gibbs branch; the test compares the branches."""
+        g_l = self.ln_phi(t, p, jnp.ones(1), phase="liquid")[0]
+        g_v = self.ln_phi(t, p, jnp.ones(1), phase="vapor")[0]
+        return StabilityResult(
+            stable=jnp.asarray(True),
+            tpd=jnp.abs(g_l - g_v),
+            trial=jnp.ones(1),
+            branch=jnp.where(g_l <= g_v, 0, 1),
+            converged=jnp.isfinite(g_l) & jnp.isfinite(g_v),
+        )
 
     def k_seed(self, t: ArrayLike, p: ArrayLike, x: Array) -> Array:
         """``Psat(T) / P`` as a length-1 vector."""
-        return jnp.reshape(
-            self._psat(jnp.asarray(t, dtype=float)) / jnp.asarray(p, dtype=float), (1,)
-        )
+        psat, _ = self._psat(jnp.asarray(t, dtype=float))
+        return jnp.reshape(psat / jnp.asarray(p, dtype=float), (1,))
 
     def mixture_enthalpy(self, t: ArrayLike, p: ArrayLike, z: Array) -> Array:
         """Stable-branch molar enthalpy at ``(T, P)`` (J/mol)."""
@@ -1164,33 +1661,83 @@ class HelmholtzPackage(_PackageBase):
         one = jnp.ones(1)
         return EnergyFlashResult(t=st.t, beta=beta, x=one, y=one, k=one)
 
-    def flash_ph(self, p: ArrayLike, h: ArrayLike, z: Array, **kwargs: Any) -> EnergyFlashResult:
-        """Steam-table ``(P, h)`` state: saturation temperature and quality inside the dome."""
-        return self._energy_result(state_ph(self.fluid, p, h))
+    def flash_ph_with_info(
+        self,
+        p: ArrayLike,
+        h: ArrayLike,
+        z: Array,
+        *,
+        t_init: ArrayLike = 300.0,
+        t_min: float = 50.0,
+        t_max: float = 1500.0,
+        tol: float = 1e-8,
+        max_iter: int = 100,
+    ) -> EnergySolveResult:
+        """Steam-table ``(P, h)`` state, with an independent verification report.
 
-    def flash_ps(self, p: ArrayLike, s: ArrayLike, z: Array, **kwargs: Any) -> EnergyFlashResult:
-        """Steam-table ``(P, s)`` state: saturation temperature and quality inside the dome."""
-        return self._energy_result(state_ps(self.fluid, p, s))
+        The reference-fluid state functions initialize themselves, so the
+        iteration options of the mixture packages are accepted but unused.
+        """
+        result = self._energy_result(state_ph(self.fluid, p, h))
+        return EnergySolveResult(result, energy_flash_report(self, result, p, h, z))
 
-    def bubble_pressure(self, t: ArrayLike, x: Array) -> tuple[Array, Array]:
-        """Saturation pressure at ``T`` (pure fluid)."""
-        return self._psat(jnp.asarray(t, dtype=float)), jnp.ones(1)
+    def flash_ps_with_info(
+        self,
+        p: ArrayLike,
+        s: ArrayLike,
+        z: Array,
+        *,
+        t_init: ArrayLike = 300.0,
+        t_min: float = 50.0,
+        t_max: float = 1500.0,
+        tol: float = 1e-8,
+        max_iter: int = 100,
+    ) -> EnergySolveResult:
+        """Steam-table ``(P, s)`` state, with an independent verification report."""
+        result = self._energy_result(state_ps(self.fluid, p, s))
+        return EnergySolveResult(result, energy_flash_report(self, result, p, s, z, prop="entropy"))
 
-    def dew_pressure(self, t: ArrayLike, y: Array) -> tuple[Array, Array]:
-        """Saturation pressure at ``T`` (pure fluid)."""
-        return self._psat(jnp.asarray(t, dtype=float)), jnp.ones(1)
+    def bubble_pressure_with_info(self, t: ArrayLike, x: Array) -> SaturationSolveResult:
+        """Saturation pressure at ``T`` (pure fluid), with a report."""
+        t_arr = jnp.asarray(t, dtype=float)
+        solved = saturation_pressure_with_info(self.fluid, t_arr)
+        domain = (t_arr >= self.fluid.t_triple) & (
+            t_arr < T_SAT_MAX_FRACTION * self.fluid.t_critical
+        )
+        report = with_status(solved.report, ~domain, SolveStatus.OUT_OF_DOMAIN)
+        value = SaturationResult(solved.value, jnp.ones(1))
+        return SaturationSolveResult(gate_tree(value, report.converged), report)
 
-    def bubble_temperature(
-        self, p: ArrayLike, x: Array, *, t_min: float = 150.0, t_max: float = 700.0
-    ) -> tuple[Array, Array]:
-        """Saturation temperature at ``P`` (pure fluid)."""
-        return saturation_temperature(self.fluid, p), jnp.ones(1)
+    def dew_pressure_with_info(self, t: ArrayLike, y: Array) -> SaturationSolveResult:
+        """Saturation pressure at ``T`` (pure fluid), with a report."""
+        return self.bubble_pressure_with_info(t, y)
 
-    def dew_temperature(
-        self, p: ArrayLike, y: Array, *, t_min: float = 150.0, t_max: float = 700.0
-    ) -> tuple[Array, Array]:
-        """Saturation temperature at ``P`` (pure fluid)."""
-        return saturation_temperature(self.fluid, p), jnp.ones(1)
+    def bubble_temperature_with_info(
+        self,
+        p: ArrayLike,
+        x: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Saturation temperature at ``P`` (pure fluid), with a report."""
+        p_arr = jnp.asarray(p, dtype=float)
+        solved = saturation_temperature_with_info(self.fluid, p_arr)
+        domain = (p_arr >= self.fluid.p_triple) & (p_arr < self.fluid.p_critical)
+        report = with_status(solved.report, ~domain, SolveStatus.OUT_OF_DOMAIN)
+        value = SaturationResult(solved.value, jnp.ones(1))
+        return SaturationSolveResult(gate_tree(value, report.converged), report)
+
+    def dew_temperature_with_info(
+        self,
+        p: ArrayLike,
+        y: Array,
+        *,
+        t_min: ArrayLike | None = None,
+        t_max: ArrayLike | None = None,
+    ) -> SaturationSolveResult:
+        """Saturation temperature at ``P`` (pure fluid), with a report."""
+        return self.bubble_temperature_with_info(p, y)
 
 
 jax.tree_util.register_dataclass(
@@ -1199,7 +1746,7 @@ jax.tree_util.register_dataclass(
 
 
 # --------------------------------------------------------------------------- #
-# Constructors
+# Constructors and verification
 # --------------------------------------------------------------------------- #
 
 
@@ -1236,7 +1783,11 @@ def gamma_phi_package(
     poynting: bool = False,
     phi_saturation: bool = False,
 ) -> GammaPhiPackage:
-    """Construct a `GammaPhiPackage` from an activity model and component constants."""
+    """Construct a `GammaPhiPackage` from an activity model and component constants.
+
+    Raises:
+        ValueError: If ``vapor`` isn't ``"ideal"`` or ``"eos"``.
+    """
     if vapor not in ("ideal", "eos"):
         raise ValueError(f"unknown vapor model {vapor!r}; use 'ideal' or 'eos'")
     return GammaPhiPackage(
@@ -1271,25 +1822,6 @@ def helmholtz_package(fluid: HelmholtzFluid) -> HelmholtzPackage:
     return HelmholtzPackage(fluid=fluid)
 
 
-__all__ = [
-    "CubicPackage",
-    "EnergySolveResult",
-    "GammaPhiPackage",
-    "HelmholtzPackage",
-    "PropertyPackage",
-    "SAFTPackage",
-    "cubic_package",
-    "energy_flash_report",
-    "excess_enthalpy",
-    "excess_entropy",
-    "flash_ph_with_info",
-    "flash_ps_with_info",
-    "gamma_phi_package",
-    "helmholtz_package",
-    "saft_package",
-]
-
-
 def energy_flash_report(
     pkg: PropertyPackage,
     result: EnergyFlashResult,
@@ -1303,8 +1835,10 @@ def energy_flash_report(
     """Verify an energy flash independently from its temperature iteration.
 
     The residual checks component closure, composition normalization, phase
-    fractions, and the specified molar property. The iteration count is zero
-    because this is a verification of the returned state, not its iteration log.
+    fractions, equifugacity of present phases, and the specified molar
+    property. The iteration count is zero because this is a verification of
+    the returned state, not its iteration log. A state outside the package's
+    domain is ``OUT_OF_DOMAIN``.
     """
     fn = getattr(pkg, prop)
     beta = result.beta
@@ -1321,7 +1855,6 @@ def energy_flash_report(
     )
     scale = jnp.maximum(jnp.abs(target), 1e4 if prop == "enthalpy" else 10.0)
     from fugacio.thermo.acceptance import equilibrium_residual
-    from fugacio.thermo.equilibrium import FlashResult
 
     equilibrium = equilibrium_residual(
         pkg,
@@ -1343,63 +1876,22 @@ def energy_flash_report(
             ),
         ]
     )
-    return residual_report(errors, tol)
+    report = residual_report(errors, tol)
+    return with_status(report, ~pkg.in_domain(result.t, p, z), SolveStatus.OUT_OF_DOMAIN)
 
 
-def flash_pt_with_info(
-    pkg: PropertyPackage,
-    t: ArrayLike,
-    p: ArrayLike,
-    z: Array,
-    **options: Any,
-) -> Any:
-    """PT flash and its actual iteration report for cubic, gamma-phi, and PC-SAFT.
-
-    Reference-fluid and custom packages use independent state verification with
-    zero reported iterations. Physical stability and applicability are assessed
-    by ``fugacio.thermo.acceptance.flash_pt_checked``.
-    """
-    from fugacio.thermo.equilibrium import FlashSolveResult
-    from fugacio.thermo.equilibrium import flash_pt_with_info as cubic_solve
-    from fugacio.thermo.gammaphi import flash_pt_gamma_with_info
-    from fugacio.thermo.saft.equilibrium import flash_pt_saft_with_info
-
-    if isinstance(pkg, CubicPackage):
-        return cubic_solve(pkg.eos, t, p, z, pkg.tc, pkg.pc, pkg.omega, kij=pkg.kij, **options)
-    if isinstance(pkg, GammaPhiPackage):
-        return flash_pt_gamma_with_info(
-            pkg.activity, t, p, z, pkg.tc, pkg.pc, pkg.omega, **pkg._kw(), **options
-        )
-    if isinstance(pkg, SAFTPackage):
-        return flash_pt_saft_with_info(pkg.params, t, p, z, pkg.tc, pkg.pc, pkg.omega, **options)
-    if options:
-        raise ValueError("custom/reference package doesn't expose PT iteration options")
-    result = pkg.flash_pt(t, p, z)
-    from fugacio.thermo.acceptance import AcceptancePolicy, assess_flash
-
-    report = assess_flash(pkg, t, p, z, result, policy=AcceptancePolicy(check_stability=False))
-    return FlashSolveResult(result, report.numerical)
-
-
-def flash_ph_with_info(
-    pkg: PropertyPackage,
-    p: ArrayLike,
-    h: ArrayLike,
-    z: Array,
-    **options: Any,
-) -> EnergySolveResult:
-    """PH flash and an independent material/enthalpy verification report."""
-    result = pkg.flash_ph(p, h, z, **options)
-    return EnergySolveResult(result, energy_flash_report(pkg, result, p, h, z))
-
-
-def flash_ps_with_info(
-    pkg: PropertyPackage,
-    p: ArrayLike,
-    s: ArrayLike,
-    z: Array,
-    **options: Any,
-) -> EnergySolveResult:
-    """PS flash and an independent material/entropy verification report."""
-    result = pkg.flash_ps(p, s, z, **options)
-    return EnergySolveResult(result, energy_flash_report(pkg, result, p, s, z, prop="entropy"))
+__all__ = [
+    "CubicPackage",
+    "EnergySolveResult",
+    "GammaPhiPackage",
+    "HelmholtzPackage",
+    "PropertyPackage",
+    "SAFTPackage",
+    "cubic_package",
+    "energy_flash_report",
+    "excess_enthalpy",
+    "excess_entropy",
+    "gamma_phi_package",
+    "helmholtz_package",
+    "saft_package",
+]

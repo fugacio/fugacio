@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
+import stat
+
 import pytest
 
 from fugacio.sim.cases import (
@@ -250,3 +254,27 @@ def test_cli_complete_saved_workflow(tmp_path, capsys):
     assert main(["sweep", str(case), str(request), "--workspace", str(workspace)]) == 2
     assert main(["inspect", "../bad", "--workspace", str(workspace)]) == 1
     assert "artifact IDs" in capsys.readouterr().err
+
+
+def test_cli_reports_every_artifact_kind_with_readable_files(tmp_path, capsys):
+    case, output = tmp_path / "case.json", tmp_path / "run.json"
+    workspace = tmp_path / "workspace"
+    assert main(["example", "heater", str(case)]) == 0
+    previous = os.umask(0o022)
+    try:
+        assert main(["run", str(case), "--workspace", str(workspace), "--output", str(output)]) == 0
+    finally:
+        os.umask(previous)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o644
+    from fugacio.sim.cases import CaseRun
+
+    report = CaseRun.load(output).markdown()
+    assert "| x methane | x ethane |" in report
+    assert "kg/s" in report and "Vapor fraction" in report
+    capsys.readouterr()
+    request = tmp_path / "sweep.json"
+    write_json(request, {"grid": {"temperature": [{"value": 340, "unit": "K"}]}})
+    main(["sweep", str(case), str(request), "--workspace", str(workspace)])
+    sweep = json.loads(capsys.readouterr().out)
+    assert main(["inspect", sweep["artifact_id"], "--workspace", str(workspace), "--report"]) == 0
+    assert capsys.readouterr().out.startswith("# Sweep artifact")

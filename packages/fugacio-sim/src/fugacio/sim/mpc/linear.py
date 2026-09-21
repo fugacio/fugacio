@@ -62,11 +62,6 @@ def _to_floats(v: ArrayLike) -> list[float]:
     return [float(data)]
 
 
-def _all_finite(v: ArrayLike) -> bool:
-    """Whether *every* entry of a static bound is finite (a plain Python bool)."""
-    return all(math.isfinite(x) for x in _to_floats(v))
-
-
 def _any_finite(v: ArrayLike) -> bool:
     """Whether *any* entry of a static bound is finite (a plain Python bool)."""
     return any(math.isfinite(x) for x in _to_floats(v))
@@ -329,7 +324,8 @@ class LinearMPC:
 
         ineq_rows: list[Array] = []
         ineq_rhs: list[Array] = []
-        du_seq = jnp.tile(self.du_max, nc)
+        # An input without a rate limit gets a row that never binds.
+        du_seq = jnp.tile(jnp.where(jnp.isfinite(self.du_max), self.du_max, 1e12), nc)
         rate_ref = pred.e0 @ u_prev
         if rate_finite:
             ineq_rows.append(pred.d_diff)
@@ -572,7 +568,7 @@ def linear_mpc(
     du_vec = _vec(du_max, m)
     y_min_vec = _vec(y_min, p)
     y_max_vec = _vec(y_max, p)
-    has_rate = _all_finite(du_max)
+    has_rate = _any_finite(du_max)
     has_output = _any_finite(y_min) or _any_finite(y_max)
 
     return LinearMPC(

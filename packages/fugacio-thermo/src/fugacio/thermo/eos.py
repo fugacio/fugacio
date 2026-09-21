@@ -159,7 +159,8 @@ def _real_root(big_a: Array, big_b: Array, u: float, w: float, largest: bool) ->
     for _ in range(2):
         f = z**3 + p2 * z**2 + p1 * z + p0
         fp = 3.0 * z**2 + 2.0 * p2 * z + p1
-        fp = jnp.where(jnp.abs(fp) < 1e-12, jnp.sign(fp) * 1e-12 + 1e-12, fp)
+        # Keep the sign of a near-zero slope (a double root at the spinodal).
+        fp = jnp.where(jnp.abs(fp) < 1e-12, jnp.where(fp < 0.0, -1e-12, 1e-12), fp)
         z = z - f / fp
     return z
 

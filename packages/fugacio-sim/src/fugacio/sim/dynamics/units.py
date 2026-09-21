@@ -11,7 +11,7 @@ index at one and reuses the existing thermodynamics:
   balance ``d(holdup)/dt = in - out + generation``;
 * the **constitutive relations** (phase split, density, reaction rate, pressure)
   are evaluated *instantaneously* from the current holdup using the steady-state
-  kernels in `fugacio.thermo`, so a dynamic flash reuses `flash_pt`, a
+  kernels in `fugacio.thermo`, so a dynamic flash reuses the package flash, a
   dynamic reactor reuses the reaction thermochemistry and rate laws, and so on.
 
 Each unit exposes `DynamicUnit.initial_state` and
@@ -34,14 +34,9 @@ from typing import Any, NamedTuple
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.sim.properties import _resolve
+from fugacio.sim.properties import Model, _resolve, resolve_package
 from fugacio.sim.stream import Stream
-from fugacio.thermo import (
-    PR,
-    CubicEOS,
-    flash_pt,
-    liquid_density,
-)
+from fugacio.thermo import liquid_density
 from fugacio.thermo.constants import R
 from fugacio.thermo.ideal import cp_ig, enthalpy_ig
 from fugacio.thermo.reactions import Reaction, delta_h_rxn, reaction_arrays
@@ -501,23 +496,24 @@ class GasReceiver(DynamicUnit):
 class DynamicFlash(DynamicUnit):
     """An isothermal-isobaric flash drum with liquid holdup and equilibrium vapor.
 
-    State is the per-component liquid holdup ``M`` (mol). The vapour drawn off is in
+    State is the per-component liquid holdup ``M`` (mol). The vapor drawn off is in
     instantaneous phase equilibrium with the well-mixed holdup (its composition is
-    the equilibrium vapour of a `flash_pt` on the holdup at ``(T, P)``) and
-    leaves at a commanded rate; the liquid product leaves at the holdup composition.
-    This captures the composition response of a separator to feed and draw
-    disturbances while reusing the rigorous EOS equilibrium.
+    the equilibrium vapor of the package's PT flash on the holdup at ``(T, P)``)
+    and leaves at a commanded rate; the liquid product leaves at the holdup
+    composition. This captures the composition response of a separator to feed
+    and draw disturbances while reusing the rigorous equilibrium. ``model`` is the
+    property package (Peng-Robinson by default); a failed flash makes the vapor
+    composition NaN.
 
     Manipulated variables: ``"vapor_draw"`` (mol/s), ``"liquid_draw"`` (mol/s).
-    Measurements: ``holdup``, ``x`` (liquid composition), ``y`` (vapour composition).
+    Measurements: ``holdup``, ``x`` (liquid composition), ``y`` (vapor composition).
     """
 
     name: str
     components: tuple[str, ...]
     t: ArrayLike = 298.15
     p: ArrayLike = 101325.0
-    eos: CubicEOS = PR
-    kij: Array | None = None
+    model: Model = None
     vapor_draw: ArrayLike = 0.0
     liquid_draw: ArrayLike = 0.0
     m0: Array | None = field(default=None)
@@ -545,14 +541,13 @@ class DynamicFlash(DynamicUnit):
         m = jnp.clip(state, 0.0, None)
         total = jnp.sum(m) + 1e-12
         x = m / total
-        arr = _resolve(self.components)
-        tc, pc, omega = arr[0], arr[1], arr[2]
-        result = flash_pt(
-            self.eos, jnp.asarray(self.t), jnp.asarray(self.p), x, tc, pc, omega, kij=self.kij
-        )
-        # Equilibrium vapour composition in contact with the holdup (fall back to the
-        # holdup composition in the single-phase limit, beta -> 0).
+        pkg = resolve_package(self.components, self.model)
+        result = pkg.flash_pt(jnp.asarray(self.t), jnp.asarray(self.p), x)
+        # Equilibrium vapor composition in contact with the holdup, or the holdup
+        # composition in the single-phase limit (beta -> 0). A failed flash is NaN
+        # (it isn't replaced by the holdup composition).
         y = jnp.where(result.beta > 1e-6, result.y, x)
+        y = jnp.where(jnp.isfinite(result.beta), y, jnp.nan)
         v_draw = jnp.clip(_control(controls, "vapor_draw", self.vapor_draw), 0.0, None)
         l_draw = jnp.clip(_control(controls, "liquid_draw", self.liquid_draw), 0.0, None)
         inflow = _sum_inlets(inlets, len(self.components))

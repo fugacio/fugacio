@@ -27,15 +27,21 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
+from fugacio.thermo.diagnostics import SolveResult
 from fugacio.thermo.helmholtz.fluids import Ancillary, HelmholtzFluid
 from fugacio.thermo.helmholtz.props import enthalpy, entropy, gibbs_energy, pressure
-from fugacio.thermo.implicit import bracketed_root, newton_system
+from fugacio.thermo.implicit import bracketed_root, newton_system_with_info
 
 ArrayLike = Array | float
 
 #: Fraction of ``t_critical`` beyond which the two-density Newton is considered
 #: degenerate (the Jacobian is singular at the critical point itself).
 T_SAT_MAX_FRACTION = 0.99999
+
+#: Coexistence residuals subtract large Helmholtz terms, so their floating-point
+#: floor can sit just above a strict tolerance. A Newton iteration that can no
+#: longer reduce a residual below this is at that floor, not diverging.
+_ROUNDOFF_FLOOR = 1e-9
 
 
 def _evaluate_ancillary(anc: Ancillary, t: ArrayLike) -> Array:
@@ -86,12 +92,12 @@ def _coexistence_residual(x: Array, params: tuple[HelmholtzFluid, Array]) -> Arr
 
 
 @jax.jit
-def saturation_densities(fluid: HelmholtzFluid, t: ArrayLike) -> tuple[Array, Array]:
-    """Coexisting molar densities ``(rho_liquid, rho_vapor)`` at ``t`` (K).
+def saturation_densities_with_info(fluid: HelmholtzFluid, t: ArrayLike) -> SolveResult:
+    """Coexisting molar densities ``[rho_liquid, rho_vapor]`` at ``t`` (K), with a report.
 
-    Valid for ``t_triple <= t < t_critical`` (callers should clip; the Newton
-    Jacobian degenerates at the critical point where both densities merge).
-    Differentiable in ``t`` and the EOS coefficients.
+    Valid for ``t_triple <= t < t_critical`` (the Newton Jacobian degenerates at
+    the critical point where both densities merge). A converged value is
+    differentiable in ``t`` and the EOS coefficients.
     """
     t = jnp.asarray(t, dtype=float)
     x0 = jnp.stack(
@@ -100,16 +106,37 @@ def saturation_densities(fluid: HelmholtzFluid, t: ArrayLike) -> tuple[Array, Ar
             jnp.log(rho_vapor_ancillary(fluid, t) / fluid.rho_reducing),
         ]
     )
-    x_star = newton_system(_coexistence_residual, x0, (fluid, t), 1e-12, 60)
-    rho = jnp.exp(x_star) * fluid.rho_reducing
+    solved = newton_system_with_info(
+        _coexistence_residual, x0, (fluid, t), 1e-12, 60, stall_tol=_ROUNDOFF_FLOOR
+    )
+    return SolveResult(jnp.exp(solved.value) * fluid.rho_reducing, solved.report)
+
+
+def saturation_densities(fluid: HelmholtzFluid, t: ArrayLike) -> tuple[Array, Array]:
+    """Best coexisting densities ``(rho_liquid, rho_vapor)`` at ``t`` (K).
+
+    Callers should clip ``t`` into ``[t_triple, T_SAT_MAX_FRACTION * t_critical)``.
+    An unconverged solve keeps its best iterate but has nonfinite derivatives;
+    use `saturation_densities_with_info` to accept or reject it.
+    """
+    rho = saturation_densities_with_info(fluid, t).value
     return rho[0], rho[1]
 
 
 @jax.jit
+def saturation_pressure_with_info(fluid: HelmholtzFluid, t: ArrayLike) -> SolveResult:
+    """Saturation pressure (Pa) from the Maxwell construction at ``t`` (K), with a report."""
+    t = jnp.asarray(t, dtype=float)
+    solved = saturation_densities_with_info(fluid, t)
+    rho_liquid, rho_vapor = solved.value[0], solved.value[1]
+    return SolveResult(
+        0.5 * (pressure(fluid, rho_liquid, t) + pressure(fluid, rho_vapor, t)), solved.report
+    )
+
+
 def saturation_pressure(fluid: HelmholtzFluid, t: ArrayLike) -> Array:
-    """Saturation pressure (Pa) from the Maxwell construction at ``t`` (K)."""
-    rho_liquid, rho_vapor = saturation_densities(fluid, t)
-    return 0.5 * (pressure(fluid, rho_liquid, t) + pressure(fluid, rho_vapor, t))
+    """Best saturation pressure (Pa) at ``t`` (K); see `saturation_pressure_with_info`."""
+    return saturation_pressure_with_info(fluid, t).value
 
 
 def _tsat_seed(fluid: HelmholtzFluid, p: ArrayLike) -> Array:
@@ -139,14 +166,14 @@ def _boiling_residual(x: Array, params: tuple[HelmholtzFluid, Array]) -> Array:
 
 
 @jax.jit
-def saturation_temperature(fluid: HelmholtzFluid, p: ArrayLike) -> Array:
-    """Saturation (boiling) temperature (K) at pressure ``p`` (Pa).
+def saturation_temperature_with_info(fluid: HelmholtzFluid, p: ArrayLike) -> SolveResult:
+    """Saturation (boiling) temperature (K) at pressure ``p`` (Pa), with a report.
 
-    Valid for ``p_triple <= p < p_critical`` (callers should clip).
-    Differentiable in ``p`` and the EOS coefficients.
+    Valid for ``p_triple <= p < p_critical``. A converged value is
+    differentiable in ``p`` and the EOS coefficients.
     """
     p = jnp.asarray(p, dtype=float)
-    t0 = _tsat_seed(fluid, p)
+    t0 = jax.lax.stop_gradient(_tsat_seed(fluid, p))
     x0 = jnp.stack(
         [
             jnp.log(rho_liquid_ancillary(fluid, t0) / fluid.rho_reducing),
@@ -154,8 +181,18 @@ def saturation_temperature(fluid: HelmholtzFluid, p: ArrayLike) -> Array:
             t0 / fluid.t_critical,
         ]
     )
-    x_star = newton_system(_boiling_residual, x0, (fluid, p), 1e-12, 60)
-    return x_star[2] * fluid.t_critical
+    solved = newton_system_with_info(
+        _boiling_residual, x0, (fluid, p), 1e-12, 60, stall_tol=_ROUNDOFF_FLOOR
+    )
+    return SolveResult(solved.value[2] * fluid.t_critical, solved.report)
+
+
+def saturation_temperature(fluid: HelmholtzFluid, p: ArrayLike) -> Array:
+    """Best saturation temperature (K) at ``p`` (Pa); see `saturation_temperature_with_info`.
+
+    Callers should clip ``p`` into ``[p_triple, p_critical)``.
+    """
+    return saturation_temperature_with_info(fluid, p).value
 
 
 @dataclass(frozen=True)
@@ -243,7 +280,10 @@ __all__ = [
     "rho_liquid_ancillary",
     "rho_vapor_ancillary",
     "saturation_densities",
+    "saturation_densities_with_info",
     "saturation_pressure",
+    "saturation_pressure_with_info",
     "saturation_state",
     "saturation_temperature",
+    "saturation_temperature_with_info",
 ]

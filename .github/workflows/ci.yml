@@ -157,6 +157,8 @@ jobs:
               heavy=(
                 packages/fugacio-thermo/tests/test_helmholtz.py
                 packages/fugacio-thermo/tests/test_helmholtz_consistency.py
+                packages/fugacio-thermo/tests/test_package_conformance.py
+                packages/fugacio-thermo/tests/test_silent_failure_corpus.py
               )
               for module in "${heavy[@]}"; do run "$module"; done
               run packages/fugacio-thermo/tests "${heavy[@]/#/--ignore=}"
@@ -183,9 +185,16 @@ jobs:
                 packages/fugacio-sim/tests/test_eo_structure.py
                 packages/fugacio-sim/tests/test_case_performance.py
               )
-              run packages/fugacio-sim/tests/test_utilities.py
+              # The contract and compile-reuse suites keep whole flowsheets and
+              # audits alive, so they run in their own processes too.
+              isolated=(
+                packages/fugacio-sim/tests/test_utilities.py
+                packages/fugacio-sim/tests/test_unit_contract.py
+                packages/fugacio-sim/tests/test_compile_reuse.py
+              )
+              for module in "${isolated[@]}"; do run "$module"; done
               run packages/fugacio-sim/tests \
-                --ignore=packages/fugacio-sim/tests/test_utilities.py \
+                "${isolated[@]/#/--ignore=}" \
                 "${flowsheeting[@]/#/--ignore=}"
               ;;
             flowsheeting)

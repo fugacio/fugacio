@@ -14,6 +14,7 @@ from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 
+from fugacio.sim import unit_limits as limits
 from fugacio.sim.cases.quantities import (
     AREA,
     CONDUCTANCE,
@@ -74,6 +75,7 @@ class UnitType:
     structural: tuple[str, ...] = ()
     description: str = ""
     backends: tuple[str, ...] = ("sequential", "eo")
+    structural_required: tuple[str, ...] = ()
 
 
 UNIT_TYPES: dict[str, UnitType] = {
@@ -90,15 +92,24 @@ UNIT_TYPES: dict[str, UnitType] = {
         (2, 100),
         {},
         structural=("fractions",),
+        structural_required=("fractions",),
         description="Conservative flow splitter.",
     ),
     "heater": UnitType(
         "heater",
         (1, 1),
         (1, 1),
-        {"t_out": _TEMPERATURE, "duty": ScalarSetting(POWER), "dp": _DROP},
-        exactly_one=("t_out", "duty"),
-        description="Heater or cooler with a temperature or duty specification.",
+        {
+            "t_out": _TEMPERATURE,
+            "duty": ScalarSetting(POWER),
+            "vapor_fraction": ScalarSetting(lower=0.0, upper=1.0),
+            "dp": _DROP,
+        },
+        exactly_one=("t_out", "duty", "vapor_fraction"),
+        description=(
+            "Heater or cooler with an outlet temperature, duty, or outlet vapor-fraction "
+            "specification (any fraction for a pure fluid; 0 or 1 for a mixture)."
+        ),
     ),
     "valve": UnitType(
         "valve",
@@ -136,9 +147,13 @@ UNIT_TYPES: dict[str, UnitType] = {
         "flash",
         (1, 1),
         (2, 2),
-        {"t": _TEMPERATURE, "p": _PRESSURE},
-        required=("t", "p"),
-        description="Isothermal flash with vapor and liquid products and required duty.",
+        {"t": _TEMPERATURE, "p": _PRESSURE, "duty": ScalarSetting(POWER)},
+        required=("p",),
+        exactly_one=("t", "duty"),
+        description=(
+            "Flash drum with vapor and liquid products: isothermal at t (duty reported) "
+            "or at a specified duty (zero is an adiabatic drum)."
+        ),
     ),
     "component_separator": UnitType(
         "component_separator",
@@ -151,6 +166,7 @@ UNIT_TYPES: dict[str, UnitType] = {
             "bottom_p": _PRESSURE,
         },
         structural=("split_to_top",),
+        structural_required=("split_to_top",),
         description="Specified component split; inferred heat is explicitly reported.",
     ),
     "heat_exchanger": UnitType(
@@ -195,6 +211,7 @@ UNIT_TYPES: dict[str, UnitType] = {
             "reaction_set",
             "reaction_volumes",
         ),
+        structural_required=("n_stages", "feed_stages", "specs"),
         description="Rigorous MESH column with complete products and stage profiles.",
     ),
     "stoichiometric_reactor": UnitType(
@@ -210,6 +227,7 @@ UNIT_TYPES: dict[str, UnitType] = {
         required=("conversion",),
         exactly_one=("t_out", "duty"),
         structural=("nu", "key"),
+        structural_required=("nu", "key"),
         description=(
             "One reaction with specified key-reactant conversion and formation-consistent energy."
         ),
@@ -590,16 +608,14 @@ def validate_unit_values(units: tuple[UnitDefinition, ...], parameters: dict[str
                 raise CaseValidationError(
                     path + "." + key, "value is outside the physical setting limits"
                 )
-        for key in ("fractions", "split_to_top"):
-            if key in unit.settings:
-                values = [r(v) for v in unit.settings[key]]
-                if any(v < 0 or v > 1 for v in values) or (
-                    key == "fractions" and abs(sum(values) - 1) > 1e-10
-                ):
-                    raise CaseValidationError(
-                        path + "." + key,
-                        "fractions must be in [0, 1]; splitter fractions must sum to one",
-                    )
+        for key, check, message in (
+            ("fractions", limits.split_fractions_valid, limits.SPLIT_FRACTIONS),
+            ("split_to_top", limits.recoveries_valid, limits.RECOVERIES),
+        ):
+            if key not in unit.settings:
+                continue
+            if not bool(check(jnp.asarray([r(v) for v in unit.settings[key]]))):
+                raise CaseValidationError(path + "." + key, message)
         if "reactions" in unit.structure:
             from fugacio.sim.cases.reactions import validate_reaction_values
 
@@ -707,8 +723,11 @@ def evaluate_unit(
         if hasattr(result, "ideal_work"):
             quantities["ideal_work"] = result.ideal_work
     elif kind == "flash":
-        outputs = ops.flash_drum(inputs[0], model=package, **kw)
-        heat = h(outputs) - h(inputs)
+        if "duty" in kw:
+            result = ops.adiabatic_flash(inputs[0], kw["p"], duty=kw["duty"], model=package)
+        else:
+            result = ops.flash_drum_with_info(inputs[0], kw["t"], kw["p"], model=package)
+        outputs, heat, report = result.outlets, result.duty, result.report
     elif kind == "component_separator":
         outputs = ops.component_separator(inputs[0], **kw)
         heat = h(outputs) - h(inputs)
@@ -839,26 +858,30 @@ def evaluate_unit(
         heat, generation, report = result.duty, result.generation, result.report
         quantities.update(extent=result.extent, generation=result.generation)
     elif kind == "stoichiometric_reactor":
-        from fugacio.thermo.reactions import reaction_arrays
+        from fugacio.sim.reactors import stoichiometric_reactor
+        from fugacio.thermo.reactions import Reaction
 
-        nu = jnp.asarray(definition.structure["nu"])
+        nu = definition.structure["nu"]
         key = definition.structure["key"]
+        # The key component is the limiting reactant: the specified conversion
+        # applies to it (not to whichever reactant runs out first).
         extent = kw["conversion"] * inputs[0].n[key] / -nu[key]
-        generation = extent * nu
-        n = inputs[0].n + generation
-        p = inputs[0].p - kw["dp"]
-        hf, _, _ = reaction_arrays(list(inputs[0].components))
-        if "t_out" in kw:
-            output = Stream(n, kw["t_out"], p, inputs[0].components)
-            heat = h((output,)) - h(inputs) + generation @ hf
-        else:
-            heat = kw["duty"]
-            target = (h(inputs) + heat - generation @ hf) / jnp.sum(n)
-            output = Stream.from_ph(
-                inputs[0].components, n / jnp.sum(n), jnp.sum(n), p, target, model=package
-            )
-        outputs = (output,)
-        quantities["extent"] = extent
+        result = stoichiometric_reactor(
+            inputs[0],
+            Reaction(tuple(inputs[0].components), jnp.asarray(nu, dtype=float)),
+            extent=extent,
+            t_out=kw.get("t_out"),
+            duty=kw.get("duty"),
+            dp=kw["dp"],
+            model=package,
+        )
+        outputs, heat, generation, report = (
+            result.outlets,
+            result.duty,
+            result.generation,
+            result.report,
+        )
+        quantities["extent"] = result.extent[0]
     else:
         raise ValueError(f"unregistered unit {kind!r}")
     quantities.update(heat=heat, work=work)
@@ -885,7 +908,7 @@ def registry_schema() -> list[dict[str, Any]]:
             "outlets": list(entry.outputs),
             "backends": list(entry.backends),
             "settings": list(entry.scalars) + list(entry.structural),
-            "required": list(entry.required),
+            "required": list(entry.required) + list(entry.structural_required),
             "exactly_one": list(entry.exactly_one),
             "scalar_settings": {
                 name: {

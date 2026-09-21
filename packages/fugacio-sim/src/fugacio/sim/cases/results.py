@@ -12,12 +12,14 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 
+from fugacio.sim import unit_limits as limits
 from fugacio.sim.acceptance import audit_stream
 from fugacio.sim.cases.expressions import output_derived
 from fugacio.sim.cases.jsonio import canonical_json, digest, loads, read_json, write_json
 from fugacio.sim.cases.quantities import display_value
 from fugacio.sim.properties import enthalpy_flow, vapor_fraction
 from fugacio.thermo.acceptance import AcceptancePolicy
+from fugacio.thermo.components import get
 
 
 def json_value(value: Any) -> Any:
@@ -31,6 +33,22 @@ def json_value(value: Any) -> Any:
     if isinstance(value, float) and not math.isfinite(value):
         return None
     return value
+
+
+#: Case unit kinds with no pressure-raising work specification.
+_NO_SHAFT_WORK = frozenset(
+    {
+        "valve",
+        "flash",
+        "mixer",
+        "column",
+        "reactive_flash",
+        "equilibrium_reactor",
+        "cstr",
+        "pfr",
+        "stoichiometric_reactor",
+    }
+)
 
 
 def sealed(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -345,38 +363,28 @@ def build_run(
         inlet_pressures = [float(evaluation.streams[k].p) for k in definition.inlets]
         outlet_pressures = [float(evaluation.streams[k].p) for k in definition.outlets]
         issues = []
-        if (
-            definition.kind in ("pump", "compressor")
-            and outlet_pressures[0] < inlet_pressures[0] - 1e-4
+        if definition.kind in ("pump", "compressor") and not bool(
+            limits.pressure_not_lowered(inlet_pressures[0], outlet_pressures[0])
         ):
-            issues.append("Compression equipment requires outlet pressure at least inlet pressure.")
-        if (
-            definition.kind
-            in (
-                "valve",
-                "turbine",
-                "flash",
-                "mixer",
-                "column",
-                "reactive_flash",
-                "equilibrium_reactor",
-                "cstr",
-                "pfr",
-                "stoichiometric_reactor",
-            )
-            and max(outlet_pressures) > min(inlet_pressures) + 1e-4
+            issues.append(limits.NO_PRESSURE_DROP)
+        if definition.kind in _NO_SHAFT_WORK and not bool(
+            limits.pressure_not_raised(min(inlet_pressures), max(outlet_pressures))
         ):
-            issues.append(
-                "This unit has no pressure-raising work specification; "
-                "feed pressure is insufficient."
-            )
+            issues.append(limits.NO_PRESSURE_RISE)
+        if definition.kind == "turbine" and not bool(
+            limits.pressure_not_raised(inlet_pressures[0], outlet_pressures[0])
+        ):
+            issues.append(limits.EXPANSION_ONLY)
         inlet = streams[definition.inlets[0]]
         if (
             definition.kind == "pump"
             and float(inlet["flow_mol_s"]) > 0
-            and (inlet["vapor_fraction"] is None or inlet["vapor_fraction"] > 1e-7)
+            and (
+                inlet["vapor_fraction"] is None
+                or not bool(limits.liquid_inlet(inlet["vapor_fraction"]))
+            )
         ):
-            issues.append("The liquid-pump model requires a liquid inlet.")
+            issues.append(limits.LIQUID_INLET)
         unit_limits[definition.name] = {"accepted": not issues, "issues": issues}
     checks: dict[str, Any] = {
         "numerical": {"accepted": numerical_ok, "reports": numerical},
@@ -468,6 +476,41 @@ def _cell(value: Any) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ")
 
 
+def _number(value: Any) -> str:
+    finite = isinstance(value, int | float) and math.isfinite(value)
+    return f"{value:.8g}" if finite else "unavailable"
+
+
+def _failure_detail(check: dict[str, Any]) -> str:
+    """The first-level causes of a failed check, named for a reader."""
+    reasons: list[str] = []
+    if "error" in check:
+        reasons.append(str(check["error"]))
+    for group in ("units", "streams", "boundaries", "reports"):
+        items = check.get(group)
+        if isinstance(items, dict):
+            for name, item in items.items():
+                if not isinstance(item, dict):
+                    continue
+                if item.get("accepted") is False or item.get("converged") is False:
+                    issues = item.get("issues") or []
+                    reasons.append(f"{name}: {'; '.join(issues)}" if issues else str(name))
+    for name, item in check.items():
+        if (
+            isinstance(item, dict)
+            and item.get("accepted") is False
+            and name
+            not in (
+                "units",
+                "streams",
+                "boundaries",
+                "reports",
+            )
+        ):
+            reasons.append(str(name))
+    return ", ".join(reasons[:6]) + (" (and more)" if len(reasons) > 6 else "")
+
+
 def render_report(run: CaseRun) -> str:
     """Render only recorded values, keeping qualification and acceptance distinct."""
     d = run.to_dict()
@@ -484,10 +527,10 @@ def render_report(run: CaseRun) -> str:
         "| Check | Result |",
         "| --- | --- |",
     ]
-    lines += [
-        f"| {_cell(k)} | {'passed' if v['accepted'] else 'failed'} |"
-        for k, v in d["checks"].items()
-    ]
+    for k, v in d["checks"].items():
+        result = "passed" if v["accepted"] else "failed"
+        detail = "" if v["accepted"] else _failure_detail(v)
+        lines.append(f"| {_cell(k)} | {result}{': ' + _cell(detail) if detail else ''} |")
     lines += [
         "",
         "## Metrics",
@@ -498,17 +541,32 @@ def render_report(run: CaseRun) -> str:
     for k, m in d["metrics"].items():
         value = f"{m['value']:.8g}" if m["value"] is not None else "unavailable"
         lines.append(f"| {_cell(k)} | {value} | {_cell(m['unit'])} | {_cell(m['source'])} |")
+    components = list(d["case"]["components"])
+    molar_masses = [get(c).mw * 1e-3 for c in components]
     lines += [
         "",
         "## Streams",
         "",
-        "| Stream | mol/s | K | Pa | Enthalpy, W |",
-        "| --- | ---: | ---: | ---: | ---: |",
+        "Mole fractions follow the case component order; the vapor fraction is molar.",
+        "",
+        "| Stream | mol/s | kg/s | K | Pa | Vapor fraction | "
+        + " | ".join(f"x {_cell(c)}" for c in components)
+        + " | Enthalpy, W |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | "
+        + " | ".join("---:" for _ in components)
+        + " | ---: |",
     ]
-    for k, s in d["streams"].items():
+    for k, st in d["streams"].items():
+        mass = sum(n * m for n, m in zip(st["component_flow_mol_s"], molar_masses, strict=True))
+        fractions = st["mole_fractions"] or [None] * len(components)
         values = [
-            f"{s[p]:.8g}" if s[p] is not None else "unavailable"
-            for p in ("flow_mol_s", "temperature_k", "pressure_pa", "enthalpy_flow_w")
+            _number(st["flow_mol_s"]),
+            _number(mass),
+            _number(st["temperature_k"]),
+            _number(st["pressure_pa"]),
+            _number(st.get("vapor_fraction")),
+            *(_number(v) for v in fractions),
+            _number(st["enthalpy_flow_w"]),
         ]
         lines.append(f"| {_cell(k)} | " + " | ".join(values) + " |")
     lines += [
@@ -520,7 +578,10 @@ def render_report(run: CaseRun) -> str:
         "| Unit | Heat, W | Work, W |",
         "| --- | ---: | ---: |",
     ]
-    lines += [f"| {_cell(k)} | {u['heat_w']} | {u['work_w']} |" for k, u in d["units"].items()]
+    lines += [
+        f"| {_cell(k)} | {_number(u['heat_w'])} | {_number(u['work_w'])} |"
+        for k, u in d["units"].items()
+    ]
     lines += [
         "",
         "## Evidence and limits",
@@ -541,6 +602,42 @@ def render_report(run: CaseRun) -> str:
         lines += [d["reaction_evidence"]["scope"], ""]
     lines += ["- " + _cell(a) for a in d["parameter_evidence"].get("assumptions", [])]
     lines += ["- " + _cell(u["assumption"]) for u in d["units"].values() if "assumption" in u]
+    return "\n".join(lines) + "\n"
+
+
+def render_artifact(artifact: dict[str, Any]) -> str:
+    """Render any verified workspace artifact as Markdown.
+
+    A run gets the full engineering report (`render_report`). Studies and
+    comparisons get a summary of their recorded fields; nothing is recomputed.
+    """
+    data = verify_artifact(artifact)
+    if data.get("kind") == "run":
+        return render_report(CaseRun.from_dict(artifact))
+    lines = [
+        f"# {_cell(str(data.get('kind', 'artifact')).capitalize())} artifact",
+        "",
+        f"Artifact `{data.get('artifact_id', '')}`",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+    ]
+    for key, value in data.items():
+        if key in ("artifact_id", "kind", "schema_version"):
+            continue
+        if isinstance(value, bool | int | float | str) or value is None:
+            shown = (
+                _number(value)
+                if isinstance(value, int | float) and not isinstance(value, bool)
+                else str(value)
+            )
+        elif isinstance(value, list):
+            shown = f"{len(value)} item(s)"
+        elif isinstance(value, dict):
+            shown = f"{len(value)} field(s): " + ", ".join(sorted(map(str, value))[:8])
+        else:
+            shown = type(value).__name__
+        lines.append(f"| {_cell(key)} | {_cell(shown)} |")
     return "\n".join(lines) + "\n"
 
 

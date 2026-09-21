@@ -18,7 +18,13 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
-from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, residual_report
+from fugacio.thermo.diagnostics import (
+    SolveReport,
+    SolveStatus,
+    nan_unless_converged,
+    require_converged,
+    residual_report,
+)
 
 if TYPE_CHECKING:
     from fugacio.sim.properties import Model
@@ -169,14 +175,11 @@ class Stream:
         The phase split is retained even on a pure fluid's saturation line.
         """
         from fugacio.sim.properties import resolve_package
-        from fugacio.thermo.package import flash_ph_with_info
 
         pkg = resolve_package(components, model)
-        solved = flash_ph_with_info(pkg, p, h, jnp.asarray(z))
+        solved = pkg.flash_ph_with_info(p, h, jnp.asarray(z))
         require_converged(solved.report, "PH stream")
-        result = jax.tree_util.tree_map(
-            lambda x: x * jnp.where(solved.report.converged, 1.0, jnp.nan), solved.value
-        )
+        result = nan_unless_converged(solved.value, solved.report)
         return cls(
             jnp.asarray(z) * flow,
             result.t,
@@ -198,14 +201,11 @@ class Stream:
     ) -> Stream:
         """Build a stream from pressure and molar entropy (Pa, J/mol/K)."""
         from fugacio.sim.properties import resolve_package
-        from fugacio.thermo.package import flash_ps_with_info
 
         pkg = resolve_package(components, model)
-        solved = flash_ps_with_info(pkg, p, s, jnp.asarray(z))
+        solved = pkg.flash_ps_with_info(p, s, jnp.asarray(z))
         require_converged(solved.report, "PS stream")
-        result = jax.tree_util.tree_map(
-            lambda x: x * jnp.where(solved.report.converged, 1.0, jnp.nan), solved.value
-        )
+        result = nan_unless_converged(solved.value, solved.report)
         return cls(
             jnp.asarray(z) * flow,
             result.t,

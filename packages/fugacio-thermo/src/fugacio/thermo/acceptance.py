@@ -20,8 +20,10 @@ from jax import Array, lax
 from fugacio.thermo.diagnostics import SolveReport, residual_report
 from fugacio.thermo.energy import EnergyFlashResult
 from fugacio.thermo.equilibrium import FlashResult
-from fugacio.thermo.package import GammaPhiPackage, PropertyPackage
+from fugacio.thermo.implicit import gate_tree
+from fugacio.thermo.package import PropertyPackage
 from fugacio.thermo.provenance import ApplicabilityReport, PackageEvidence, assess_applicability
+from fugacio.thermo.stability import enrichment_starts, tpd_search
 
 
 @dataclass(frozen=True)
@@ -93,6 +95,37 @@ class PhysicalReport(NamedTuple):
             "applicability": self.applicability.to_dict(),
         }
 
+    def failures(self, policy: AcceptancePolicy = DEFAULT_POLICY) -> list[str]:
+        """Plain-language descriptions of the criteria a concrete state failed."""
+        issues = []
+        if not bool(self.input_valid):
+            issues.append("the state specification is invalid or outside the model's domain")
+        if not bool(self.numerical.converged):
+            issues.append(f"the solve didn't converge ({self.numerical.to_dict()['status']})")
+        if float(self.material_error) > policy.material_tolerance:
+            issues.append(f"material balance error {float(self.material_error):.3g}")
+        if float(self.phase_error) > policy.material_tolerance:
+            issues.append(f"phase normalization error {float(self.phase_error):.3g}")
+        if float(self.equilibrium_error) > policy.equilibrium_tolerance:
+            issues.append(f"fugacity mismatch {float(self.equilibrium_error):.3g}")
+        if (
+            bool(self.energy_checked)
+            and float(self.energy_error) > policy.energy_relative_tolerance
+        ):
+            issues.append(f"energy specification error {float(self.energy_error):.3g}")
+        if bool(self.stability_checked):
+            if float(self.minimum_tpd) < -policy.stability_tolerance:
+                issues.append(
+                    f"phase stability: a trial phase lowers the Gibbs energy (minimum "
+                    f"tangent-plane distance {float(self.minimum_tpd):.3g}), so the state "
+                    "splits further (for example, into two liquids)"
+                )
+            elif not bool(self.stability_converged):
+                issues.append("phase stability couldn't be established (trials not stationary)")
+        if not bool(self.applicability.accepted):
+            issues.append("outside the parameters' evidence (extrapolation)")
+        return issues
+
 
 class CheckedFlash(NamedTuple):
     """PT flash value plus physical acceptance; failed values have invalid derivatives."""
@@ -113,26 +146,26 @@ class PhysicalAcceptanceError(RuntimeError):
 
     def __init__(self, report: PhysicalReport, context: str = "thermodynamic state") -> None:
         self.report, self.context = report, context
-        super().__init__(f"{context} failed physical acceptance; inspect the attached report")
+        try:
+            detail = "; ".join(report.failures()) or "inspect the attached report"
+        except (TypeError, jax.errors.ConcretizationTypeError):
+            detail = "inspect the attached report"
+        super().__init__(f"{context} failed physical acceptance: {detail}")
+
+
+class PhysicalAcceptanceWarning(UserWarning):
+    """A converged result that an independent physical check found suspect.
+
+    Issued by eager calls that don't raise for physical criteria (for example,
+    `fugacio.sim.flash_drum` on a feed that splits into two liquids). Use the
+    ``*_checked`` variants to turn the finding into an error.
+    """
 
 
 def require_accepted(report: PhysicalReport, context: str = "thermodynamic state") -> None:
     """Raise for rejected host states; compiled callers inspect ``report.accepted``."""
     if not isinstance(report.accepted, jax.core.Tracer) and not bool(report.accepted):
         raise PhysicalAcceptanceError(report, context)
-
-
-@jax.custom_jvp
-def accepted_value(value: Array, accepted: Array) -> Array:
-    """Retain a failed primal for diagnosis while invalidating its derivative."""
-    return value
-
-
-@accepted_value.defjvp
-def _accepted_value_jvp(primals: Any, tangents: Any) -> tuple[Array, Array]:
-    value, accepted = primals
-    tangent, _ = tangents
-    return value, tangent * jnp.where(accepted, 1.0, jnp.nan)
 
 
 def _normalize(x: Array) -> Array:
@@ -167,66 +200,30 @@ def phase_stability(
     iterations: int = 160,
     tolerance: float = 1e-7,
 ) -> tuple[Array, Array]:
-    """Search both liquid and vapor trial phases against the returned common tangent.
+    """Search liquid and vapor trial phases against the returned state's tangent plane.
 
-    Starts include the feed, returned phases, and every component enrichment.
-    Exactly absent components stay absent. Acceptance requires stationary trials
-    and nonnegative observed TPD. A negative TPD rejects even if a trial stalled.
+    Starts include the feed, the returned phases, and every component
+    enrichment (`fugacio.thermo.stability.tpd_search`). Exactly absent
+    components stay absent. Acceptance requires stationary trials and a
+    nonnegative observed TPD; a negative TPD rejects even if a trial stalled.
+
+    Returns:
+        ``(minimum_tpd, all_trials_stationary)``.
     """
-    z, result = lax.stop_gradient((z, result))
+    z, result = lax.stop_gradient((jnp.asarray(z), result))
     support = z > 0
     x, y = _normalize(jnp.maximum(result.x, 0)), _normalize(jnp.maximum(result.y, 0))
-    # Cache composition-independent gamma-phi references outside the trial loops.
-    if isinstance(pkg, GammaPhiPackage):
-        reference = pkg.ln_phi(t, p, z, phase="liquid") - pkg.activity.ln_gamma(z, t)
-
-        def liquid(w: Array) -> Array:
-            return pkg.activity.ln_gamma(w, t) + reference
-    else:
-
-        def liquid(w: Array) -> Array:
-            return pkg.ln_phi(t, p, w, phase="liquid")
-
-    def vapor(w: Array) -> Array:
-        return pkg.ln_phi(t, p, w, phase="vapor")
-
+    liquid = pkg.ln_phi_function(t, p, phase="liquid")
+    vapor = pkg.ln_phi_function(t, p, phase="vapor")
     d = lax.cond(
         result.beta < 1,
         lambda _: jnp.log(jnp.maximum(x, 1e-300)) + liquid(x),
         lambda _: jnp.log(jnp.maximum(y, 1e-300)) + vapor(y),
         None,
     )
-    enrich = 0.95 * jnp.eye(z.size) + 0.05 * z
-    starts = jnp.concatenate((z[None, :], x[None, :], y[None, :], enrich))
-    starts = jax.vmap(lambda w: _normalize(jnp.where(support, w, 0)))(starts)
-
-    def trial(ln_phi: Any, w0: Array) -> tuple[Array, Array]:
-        def composition(logw: Array) -> Array:
-            return jax.nn.softmax(jnp.where(support, logw, -jnp.inf))
-
-        def tpd(w: Array) -> Array:
-            term = jnp.log(jnp.maximum(w, 1e-300)) + ln_phi(w) - d
-            return jnp.sum(jnp.where(support, w * term, 0))
-
-        def body(_: int, state: tuple[Array, Array]) -> tuple[Array, Array]:
-            logw, minimum = state
-            w = composition(logw)
-            proposed = jnp.clip(d - ln_phi(w), -690, 690)
-            lognew = 0.5 * logw + 0.5 * proposed
-            return lognew, jnp.minimum(minimum, tpd(w))
-
-        logw, minimum = lax.fori_loop(
-            0, iterations, body, (jnp.log(jnp.maximum(w0, 1e-300)), tpd(w0))
-        )
-        w = composition(logw)
-        final = composition(d - ln_phi(w))
-        stationary = jnp.max(jnp.abs(w - final)) <= tolerance
-        return jnp.minimum(minimum, tpd(w)), stationary & jnp.all(jnp.isfinite(w))
-
-    l_tpd, l_ok = jax.vmap(lambda w: trial(liquid, w))(starts)
-    v_tpd, v_ok = jax.vmap(lambda w: trial(vapor, w))(starts)
-    minimum = jnp.minimum(jnp.min(l_tpd), jnp.min(v_tpd))
-    return lax.stop_gradient((minimum, jnp.all(l_ok) & jnp.all(v_ok) & jnp.isfinite(minimum)))
+    starts = jnp.concatenate((enrichment_starts(z), x[None, :], y[None, :]))
+    search = tpd_search((liquid, vapor), d, support, starts, iterations=iterations, tol=tolerance)
+    return search.tpd, search.converged
 
 
 def assess_flash(
@@ -305,9 +302,9 @@ def assess_flash(
         else (jnp.asarray(0.0), jnp.asarray(False))
     )
     applicability = assess_applicability(getattr(pkg, "evidence", PackageEvidence()), t, p, z)
-    # Saturation-based liquid references cannot represent supercritical solutes.
-    if isinstance(pkg, GammaPhiPackage):
-        valid = valid & jnp.all(jnp.where(z > 0, jnp.asarray(t) < pkg.tc, True))
+    # For example, a saturation-based liquid reference can't represent a
+    # supercritical solute; the package declares its own domain.
+    valid = valid & pkg.in_domain(t, p, z)
     applicable = (
         applicability.parameters_available if policy.allow_extrapolation else applicability.accepted
     )
@@ -350,12 +347,9 @@ def flash_pt_checked(
     **options: Any,
 ) -> CheckedFlash:
     """Solve PT, assess physics, and attach derivative validity to the returned values."""
-    from fugacio.thermo.package import flash_pt_with_info
-
-    solved = flash_pt_with_info(pkg, t, p, z, **options)
+    solved = pkg.flash_pt_with_info(t, p, z, **options)
     report = assess_flash(pkg, t, p, z, solved.value, numerical=solved.report, policy=policy)
-    value = jax.tree.map(lambda v: accepted_value(v, report.accepted), solved.value)
-    return CheckedFlash(value, report)
+    return CheckedFlash(gate_tree(solved.value, report.accepted), report)
 
 
 def _energy_checked(
@@ -367,17 +361,14 @@ def _energy_checked(
     policy: AcceptancePolicy,
     options: dict[str, Any],
 ) -> CheckedEnergyFlash:
-    from fugacio.thermo.package import flash_ph_with_info, flash_ps_with_info
-
-    solve = flash_ph_with_info if prop == "enthalpy" else flash_ps_with_info
-    result = solve(pkg, p, target, z, **options)
+    solve = pkg.flash_ph_with_info if prop == "enthalpy" else pkg.flash_ps_with_info
+    result = solve(p, target, z, **options)
     state = result.value
     pt = FlashResult(state.beta, state.x, state.y, state.k)
     report = assess_flash(
         pkg, state.t, p, z, pt, numerical=result.report, target=target, prop=prop, policy=policy
     )
-    value = jax.tree.map(lambda v: accepted_value(v, report.accepted), state)
-    return CheckedEnergyFlash(value, report)
+    return CheckedEnergyFlash(gate_tree(state, report.accepted), report)
 
 
 def flash_ph_checked(

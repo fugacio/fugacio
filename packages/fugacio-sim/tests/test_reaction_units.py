@@ -160,13 +160,13 @@ def test_multiple_and_non_equimolar_reactions_conserve_atoms():
     assert jnp.all(r.extent > 0)
 
 
-def test_legacy_entry_points_accept_reusable_sets_without_duplicate_laws():
+def test_reactor_wrappers_accept_reusable_sets_without_duplicate_laws():
     from fugacio.sim import cstr, pfr
 
     inlet, rx = feed(), system()
-    assert cstr(inlet, rx, volume=1.0).converged
-    assert pfr(inlet, rx, volume=1.0, steps=8).converged
+    assert cstr(inlet, rx, 1.0).converged
+    assert pfr(inlet, rx, 1.0, steps=8).converged
     with pytest.raises(ValueError, match="already supplies"):
-        cstr(inlet, rx, rx.rate_laws, 1.0)
-    with pytest.raises(ValueError, match="volume"):
+        cstr(inlet, rx, 1.0, rx.rate_laws)
+    with pytest.raises(TypeError, match="volume"):
         cstr(inlet, rx)

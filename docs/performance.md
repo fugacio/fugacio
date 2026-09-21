@@ -5,6 +5,59 @@ structured solvers solve the same residual equations as their dense references.
 A short runtime doesn't establish convergence, derivative accuracy, or measured
 qualification. Failed runs and resource limits remain visible in saved evidence.
 
+## Compile-once kernels
+
+JAX compiles a program the first time it sees a new structure, and that
+compilation, not the arithmetic, dominates the first call to a process
+calculation. Fugacio arranges its calculations so a structure compiles once:
+
+- Every unit operation in `fugacio.sim.units` is one compiled kernel. The
+  property package and every operating value (temperatures, pressures, duties,
+  efficiencies, split fractions) are dynamic arguments, so a unit compiles once
+  per package structure and specification kind. A new operating point, or new
+  package parameters such as fitted NRTL coefficients, reuses the executable.
+  Changing the specification kind (a heater on `t_out` instead of `duty`) or the
+  package structure (another component count or method) compiles a new kernel.
+- Property-package solve methods (`flash_pt`, `stability`, the bubble and dew
+  calls, `flash_ph`, `mixture_enthalpy`, and so on) run through kernels cached
+  per method and static options, with the package as a dynamic argument. A
+  package whose pytree holds a non-array leaf, such as an unregistered
+  activity-model object, runs eagerly instead.
+- `Flowsheet` caches each recycle block's map, so solving again at a new
+  `theta` reuses the compiled recycle iteration. Registering a unit or a tear
+  clears the cache.
+- Saved-case unit templates are shared by every `CaseRunner` in a process,
+  keyed by the template's fixed settings, so another case with the same unit
+  structure reuses them.
+
+A new process compiles again. To keep compiled programs on disk and reuse them
+across processes (a CLI run, a sweep worker, a notebook restart), enable JAX's
+persistent compilation cache before the first calculation:
+
+```python
+from fugacio.sim import enable_compilation_cache
+
+enable_compilation_cache(".jax_cache")   # created if missing; returns the resolved path
+```
+
+By default it stores every program, however quickly it compiled, because
+process kernels are small individually but numerous; pass
+`min_compile_time_s` to store only slower ones. A later call also works: the
+cache is reinitialized so the next compilation uses it. The cache is keyed by
+the JAX version, the backend, and the exact program, so a stale entry is never
+reused for a different computation. It grows with every distinct program, so
+it's opt-in. The CLI enables it with `--jax-cache DIR` on `run`, `sweep`,
+`optimize`, `sensitivities`, `profile`, and `replay`, or with the
+`FUGACIO_JAX_CACHE` environment variable:
+
+```bash
+uv run fugacio run examples/process-cases/depropanizer.json --jax-cache .jax_cache
+export FUGACIO_JAX_CACHE="$PWD/.jax_cache"      # or set it once for every command
+```
+
+A warm cache reduces compilation time, not the peak memory each compilation
+needs.
+
 ## Numerical choices
 
 ```python
@@ -123,8 +176,8 @@ mixture energy solves after the profiles have already converged.
 uv run fugacio diagnose examples/process-cases/depropanizer.json
 ```
 
-Case runners share compiled unit templates when their numerical structure and
-fixed settings match. Each instance binds its own parameter values; renaming
+Case runners in one process share compiled unit templates when their numerical
+structure and fixed settings match. Each instance binds its own parameter values; renaming
 units, streams, or parameters doesn't require another executable. Scalar inputs
 keep their precision but use consistent JAX scalar types across cold starts,
 recycles, and derivative replays. Structural diagnostics report the instance
@@ -267,6 +320,29 @@ outputs inherit a 7 GB guarantee. The default-allocator cold run reached
 Failed resource observations remain in the benchmark record. A warm persistent
 cache can reduce compilation time without reducing peak resident memory.
 
+### What checked solves cost
+
+Checked solves, retained reports, and per-unit kernels enlarge the compiled
+process graph, so the same studies need more compile memory and time than they
+did before the engine reported every failure. Measured on the same CI runner,
+same case, and same JAX 0.10.1: the depropanizer optimization's audited
+baseline run went from 2.533 GB and 88 seconds to 3.148 GB and 139 seconds, and
+its first plant linearization from 6.104 GB to more than 7 GB, which is why
+that job's limit is now 9 GB. The 12-stage ethanol/water train's audited run
+went from 5.984 GB and 379 seconds to 8.041 GB and 654 seconds, and its first
+linearization no longer fits a 16 GB runner at all (it passed 12 GB before
+completing), so a pull request skips that benchmark. Shrinking the column
+doesn't recover it: at eight stages the same train has to work harder for the
+same distillate rate, and its audited run peaked higher still, at 10.494 GB.
+The depropanizer optimization now completes in 639 seconds at 8.043 GB, within
+its 9 GB limit. A local comparison on one
+macOS host attributes the increase to the process graph rather than to the
+retained kernels: the same depropanizer solve moved from 3.794 GB and 122
+seconds to 4.758 GB and 158 seconds, while its per-unit kernels *reduced* peak
+memory (4.755 GB with them, 4.987 GB without), and the heat exchanger's
+compiled program is about three times smaller yet still costs 24% more memory
+to build.
+
 The Linux memory-budget workflow limits glibc's allocation arenas to reduce
 retained allocation memory. Set `MALLOC_ARENA_MAX=2` before starting Python to
 reproduce that runtime configuration. This changes allocation behavior, not
@@ -318,12 +394,14 @@ uv run python scripts/benchmark_process.py \
 
 uv run python scripts/benchmark_process.py \
   --scenario depropanizer --study optimization --release-caches \
-  --max-rss-gb 7 --timeout-seconds 3000 \
+  --max-rss-gb 9 --timeout-seconds 3000 \
   --output artifacts/performance/depropanizer-optimization
 
+# This train needs a host with more than 16 GB of RAM: CI runs it only on a
+# manual workflow dispatch (see the measurements below).
 uv run python scripts/benchmark_process.py \
   --scenario ethanol-train --stages 12 --study sensitivities --release-caches \
-  --max-rss-gb 12 --timeout-seconds 3000 \
+  --max-rss-gb 16 --timeout-seconds 3000 \
   --output artifacts/performance/ethanol-train
 
 uv run python scripts/benchmark_process.py \
@@ -356,8 +434,10 @@ pure execution time.
 
 The process-performance CI workflow runs 32- and 64-stage columns, the saved
 depropanizer optimization, the NRTL train, and a 24-variable study in separate
-jobs. The depropanizer, columns, and heater bank have a 7 GB process limit;
-the NRTL sensitivity train has a separate 12 GB budget. All these Linux jobs
+jobs. The columns and heater bank have a 7 GB process limit and the
+depropanizer optimization a 9 GB limit. The NRTL sensitivity train exceeds a
+16 GB runner with the checked engine, so a pull request skips it with a notice
+and it runs on a manual workflow dispatch, on a host with more memory. All these Linux jobs
 set `MALLOC_ARENA_MAX=2` before process startup. The NRTL job needs enough
 additional RAM for the runner and operating system. GitHub documents 16 GB
 for public-repository Linux runners; private forks need to select a runner

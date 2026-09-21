@@ -1,10 +1,11 @@
 # Reactors & reactive separations
 
-Equilibrium and kinetic reactors (Gibbs/stoichiometric equilibrium, CSTR, PFR)
-and reactive separations that solve phase and reaction equilibrium together
-(reactive flash and reactive distillation).
+Equilibrium, kinetic (CSTR and PFR), stoichiometric, and batch reactors on a
+common property package, and reactive separations that solve phase and reaction
+equilibrium together (reactive flash and reactive MESH columns).
 
-See the [reactions & reactors guide](../../reactions.md) for worked examples.
+See the [reactions & reactors guide](../../reactions.md) and
+[reactive process workflows](../../reactive-workflows.md) for worked examples.
 
 ## Reactors
 

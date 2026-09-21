@@ -23,10 +23,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-#: Number of (acceptor, donor) association sites for each Huang-Radosz scheme.
+#: Number of (acceptor, donor) association sites for each supported Huang-Radosz
+#: scheme. The model bonds only acceptor-donor pairs, so a self-bonding ``1A``
+#: (carboxylic-acid dimerization) scheme can't be represented and isn't listed.
 ASSOCIATION_SITES: dict[str, tuple[int, int]] = {
     "none": (0, 0),
-    "1A": (1, 0),
     "2B": (1, 1),
     "3B": (2, 1),
     "4C": (2, 2),

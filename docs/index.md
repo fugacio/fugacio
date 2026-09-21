@@ -12,9 +12,10 @@ Fugacio is built as three layered packages (strict direction
   (vdW / RK / SRK / PR) with fugacity coefficients,
   [reference multiparameter Helmholtz EOS](reference-fluids.md) (IAPWS-95
   water/steam, Span–Wagner CO₂, 26 fluids, with steam-table state functions and
-  IAPWS transport), real-fluid energy properties
-  (residual/departure functions, enthalpy/entropy, isenthalpic & isentropic
-  flashes), [liquid & transport properties](physical-properties.md) (density,
+  IAPWS transport), [property packages](property-packages.md) that own phase
+  equilibrium *and* energy for every method class (residual functions,
+  enthalpy/entropy, isenthalpic & isentropic flashes, stability),
+  [liquid & transport properties](physical-properties.md) (density,
   viscosity, thermal conductivity, surface tension, diffusivity, both pure and
   mixture), activity-coefficient models (Margules, van Laar, Wilson, NRTL,
   UNIQUAC), group contribution (UNIFAC + Dortmund, Joback), EOS *and* γ–φ
@@ -25,12 +26,13 @@ Fugacio is built as three layered packages (strict direction
   thermochemistry, equilibrium, and kinetics](reactions.md).
 - **`fugacio.sim`**, flowsheet / unit-operation engine (depends on `thermo`):
   a differentiable `Stream` pytree, energy-balanced unit operations (`flash_drum`,
-  `heater`, `valve`, `pump`, `compressor`, `turbine`, `mix`, `splitter`), a
+  `adiabatic_flash`, `heater`, `valve`, `pump`, `compressor`, `turbine`, `mix`,
+  `splitter`), each a compile-once kernel that reports or raises on failure, a
   recycle/tear solver with implicit-diff gradients (`tear_solve`, `Flowsheet`),
   distillation columns (shortcut FUG and a rigorous equilibrium-stage model),
   binary diagrams / azeotropes / residue-curve maps,
   [reactors](reactions.md) (equilibrium, stoichiometric, CSTR, PFR, batch),
-  reactive separations (reactive flash & distillation),
+  reactive separations (reactive flash & reactive MESH columns),
   [steam & cooling-water utilities](reference-fluids.md#steam-cooling-water-utilities-fugaciosim)
   on IAPWS-95,
   [differentiable optimization, design specs & process economics](optimization.md)
@@ -70,15 +72,21 @@ feed = Stream.from_fractions(
 )
 vapor, liquid = flash_drum(feed, 320.0, 20e5)
 
-# Exact sensitivity of vapour product flow to drum temperature:
+# Exact sensitivity of vapor product flow to drum temperature:
 jax.grad(lambda T: flash_drum(feed, T, 20e5)[0].total)(320.0)
 ```
+
+A failed solve never returns a plausible number: value-only calls return NaN,
+checked `*_with_info` calls return a report, and an eager unit raises (see
+[reliability](reliability.md)). Upgrading from 0.8? See
+[upgrading to 0.9](upgrading.md).
 
 ## Correctness as an executable harness
 
 Physical correctness is continuously machine-checked: first-principles
 consistency laws that need no external data (Gibbs-Duhem, equifugacity,
-fugacity-pressure identity, phase stability), automatic-differentiation gradients
+fugacity-pressure identity, the Gibbs-Helmholtz and fugacity-enthalpy
+consistency of property packages, phase stability), automatic-differentiation gradients
 checked against finite differences, and opt-in differential testing against open
 reference codes: [CoolProp](https://github.com/CoolProp/CoolProp) and
 [`chemicals`](https://github.com/CalebBell/chemicals) for pure-fluid properties

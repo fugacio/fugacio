@@ -25,9 +25,35 @@ uv run fugacio replay RUN_ID
 uv run fugacio compare BASELINE_ID CANDIDATE_ID
 ```
 
+`inspect` verifies an artifact's hash and prints it as JSON. With `--report`, it
+renders any artifact kind as Markdown: a run gets its full engineering report,
+and a study or comparison gets a summary of its recorded fields. Nothing is
+recomputed.
+
 The command exits with status 0 on success, 1 for an input or execution error,
 and 2 when a completed run or study fails its checks. A failed calculation is
 still saved. Input validation errors don't fabricate a run.
+
+The Markdown run report lists each check with the reasons a failed one gives,
+the metrics, and a stream table with molar flow, mass flow (kg/s), temperature,
+pressure, molar vapor fraction, one mole-fraction column per component in the
+case's order, and enthalpy flow, followed by each unit's heat and work.
+
+### Reuse compiled kernels across commands
+
+Each CLI command is a new process, so it compiles its kernels again. Pass
+`--jax-cache DIR` to `run`, `sweep`, `optimize`, `sensitivities`, `profile`, or
+`replay` to keep compiled programs in `DIR` and load them in later commands.
+Setting the `FUGACIO_JAX_CACHE` environment variable does the same for every
+command:
+
+```bash
+uv run fugacio run heater.json --jax-cache .jax_cache
+export FUGACIO_JAX_CACHE="$PWD/.jax_cache"
+```
+
+In Python, call `fugacio.sim.enable_compilation_cache(directory)` before the
+first calculation. See the [performance guide](performance.md#compile-once-kernels).
 
 The Python equivalent is:
 
@@ -94,12 +120,31 @@ allowed and partitioned by the existing flowsheet engine.
 
 ## Units and backends
 
-The initial registry supports mixers, splitters, heaters/coolers, valves,
-pumps, compressors, turbines, PT flashes, ideal component separators,
-two-sided heat exchangers, rigorous MESH columns, and single-reaction
-stoichiometric reactors. Common-package equilibrium reactors, CSTRs, PFRs, and
-reactive flashes share named reaction sets; columns accept reacting phase volumes.
-See [reactive workflows](reactive-workflows.md) for complete examples.
+The registry supports mixers, splitters, heaters/coolers, valves, pumps,
+compressors, turbines, flash drums, ideal component separators, two-sided heat
+exchangers, rigorous MESH columns, and single-reaction stoichiometric reactors.
+Common-package equilibrium reactors, CSTRs, PFRs, and reactive flashes share
+named reaction sets; columns accept reacting phase volumes. See
+[reactive workflows](reactive-workflows.md) for complete examples. Run
+`fugacio registry` for every kind's settings.
+
+A `flash` unit requires its pressure `p` and exactly one of `t` or `duty`. With
+`t` it's an isothermal drum whose required heat is reported. With `duty` it's a
+drum with a specified heat input, and `{"value": 0, "unit": "W"}` is an
+adiabatic drum whose temperature follows from the energy balance, the right
+model for a letdown into a separator. A `heater` takes exactly one of `t_out`,
+`duty`, or `vapor_fraction`; a vapor fraction may be any value in `[0, 1]` for a
+pure fluid and 0 (bubble point) or 1 (dew point) for a mixture.
+
+```json
+{
+  "name": "separator",
+  "kind": "flash",
+  "inlets": ["letdown"],
+  "outlets": ["gas", "condensate"],
+  "settings": {"p": {"parameter": "letdown_pressure"}, "duty": {"value": 0, "unit": "W"}}
+}
+```
 
 Columns retain all product streams, side draws, condenser and reboiler duties,
 stage temperatures and pressures, phase compositions, K-values, and traffic.
@@ -113,7 +158,8 @@ for these reaction cases.
 ```python
 from fugacio.sim.cases import CaseRunner, SolverOptions
 
-sequential = CaseRunner(case, options=SolverOptions(recycle_method="broyden"))
+sequential = CaseRunner(case)                        # Broyden recycles by default
+wegstein = CaseRunner(case, options=SolverOptions(recycle_method="wegstein"))
 simultaneous = CaseRunner(case, options=SolverOptions(backend="eo"))
 ```
 
@@ -123,14 +169,16 @@ doesn't expand a column into global MESH unknowns. Pure-fluid EO streams retain
 enthalpy coordinates so quality isn't lost on the saturation line. Failed
 solves retain their reports, and no backend silently substitutes another.
 Execution compiles each complete registered unit, including feed-property
-preparation and retained outputs, with dynamic operating values. Studies reuse
+preparation and retained outputs, with dynamic operating values. Compiled unit
+templates are cached for the whole process, so every runner with the same unit
+structure and fixed settings shares them. Studies reuse
 one local linearization per operating point, selecting forward or reverse
 directions from the input/output counts. They retain the individual unit kernels.
 Fixed case topology and dynamic recycle parameters let optimizer trials reuse
 the compiled maps. Saved
 profiles remain available without becoming study derivative outputs.
-Separate CLI invocations can reuse JAX's persistent compilation cache with
-`export JAX_COMPILATION_CACHE_DIR="$PWD/.jax_cache"` before running commands.
+Separate CLI invocations can reuse compiled programs with `--jax-cache DIR` or
+`FUGACIO_JAX_CACHE`, as described above.
 The [performance guide](performance.md) covers structured column solves,
 flowsheet coloring, reusable derivatives, profiling artifacts, and isolated
 benchmarks. Timings depend on hardware, JAX version, and cache state.
@@ -287,6 +335,22 @@ source hashes, then reevaluates the declared independent publication holdout.
 The stored fit coefficients don't supply a trusted qualification flag. The
 example stays within observed training bounds. The example evidence can be
 regenerated with `scripts/qualify.py`; its source IDs and hashes remain in JSON.
+
+## Joule-Thomson separator
+
+```bash
+uv run fugacio example jt-separator jt-separator.json
+uv run fugacio run jt-separator.json --jax-cache .jax_cache --report jt-separator.md
+```
+
+The `jt-separator` case expands 10 mol/s of a rich natural gas (methane,
+ethane, propane, and n-butane on Peng-Robinson) from 90 bar to 25 bar across an
+isenthalpic Joule-Thomson valve, then separates the chilled two-phase outlet in
+a flash drum at zero duty. The drum's temperature follows from the energy balance: about
+262.4 K, condensing about 0.573 mol/s, with about 52.6% of the n-butane
+recovered in the condensate. The letdown pressure is a bounded parameter
+between 15 and 60 bar, so sweeping it trades separator temperature against
+heavy-ends recovery. The feed composition is illustrative.
 
 ## Acceptance and reproducibility
 

@@ -171,11 +171,12 @@ def test_saturation_pressure_is_differentiable_in_the_dispersion_energy() -> Non
 
 
 def test_flash_vapor_fraction_is_differentiable_in_pressure() -> None:
-    from fugacio.thermo import component_arrays
-    from fugacio.thermo.saft import saft_model
+    from fugacio.thermo import component_arrays, get, ideal_gas_coeffs, saft_package
 
-    arr = component_arrays(["propane", "n-butane"])
-    model = saft_model(MIX, arr["tc"], arr["pc"], arr["omega"])
+    names = ["propane", "n-butane"]
+    arr = component_arrays(names)
+    cp = ideal_gas_coeffs([get(n) for n in names])
+    model = saft_package(MIX, arr["tc"], arr["pc"], arr["omega"], cp)
     z = jnp.array([0.5, 0.5])
     t = 320.0
 

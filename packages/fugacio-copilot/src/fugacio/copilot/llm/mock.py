@@ -26,10 +26,13 @@ class MockProvider:
         script: Either a list of replies returned in order, or a function
             ``(messages) -> ChatResponse`` evaluated on each call.
         calls: Recorded ``(messages, tools)`` for each ``chat`` invocation.
+        call_kwargs: Recorded ``{"temperature", "max_tokens"}`` for each
+            ``chat`` invocation.
     """
 
     script: Script
     calls: list[tuple[list[Message], list[JsonDict]]] = field(default_factory=list)
+    call_kwargs: list[JsonDict] = field(default_factory=list)
     _index: int = 0
 
     def chat(
@@ -37,16 +40,17 @@ class MockProvider:
         messages: Sequence[Message],
         *,
         tools: Sequence[JsonDict] = (),
-        temperature: float = 0.0,
-        max_tokens: int = 1024,
+        temperature: float | None = None,
+        max_tokens: int = 16000,
     ) -> ChatResponse:
         """Return the next scripted reply (or evaluate the script callable)."""
         self.calls.append((list(messages), list(tools)))
+        self.call_kwargs.append({"temperature": temperature, "max_tokens": max_tokens})
         if callable(self.script):
             return self.script(list(messages))
         if self._index >= len(self.script):
             # Exhausted script: end the conversation gracefully.
-            return ChatResponse(content="(mock provider: script exhausted)")
+            return ChatResponse(content="(mock provider: script exhausted)", stop_reason="end_turn")
         reply = self.script[self._index]
         self._index += 1
         return reply

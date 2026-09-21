@@ -7,8 +7,8 @@ density range between a light gas and a dense liquid. Fugacio's third class of
 thermodynamic method, **PC-SAFT** (perturbed-chain statistical associating fluid
 theory, Gross and Sadowski 2001), is built for exactly that regime. It models a
 fluid as chains of spherical segments with dispersion attraction and optional
-short-range association, and it plugs into the rest of the stack through the same
-`EquilibriumModel` interface as everything else.
+short-range association, and it plugs into the rest of the stack as a
+[property package](property-packages.md), `SAFTPackage`, like every other method.
 
 Like the [reference Helmholtz fluids](reference-fluids.md), PC-SAFT is *one scalar
 reduced residual Helmholtz energy* and every property is an autodiff derivative of
@@ -20,10 +20,13 @@ differentiable in both the thermodynamic state and the molecular parameters.
 A non-associating species needs three parameters: the segment number `m`, the
 segment diameter `sigma`, and the dispersion energy `epsilon/k`. Associating
 species carry two more, the association energy `epsilon_AB/k` and volume
-`kappa_AB`, plus a Huang-Radosz site scheme. `saft_parameters_for` assembles a
-differentiable `SaftParameters` pytree straight from component names, drawing on
-the curated Gross and Sadowski parameter bank and filling binary corrections
-`k_ij` from the database where available.
+`kappa_AB`, plus a Huang-Radosz site scheme: `2B`, `3B`, or `4C`. The Wertheim
+term bonds only acceptor-donor site pairs, so it can't represent a self-bonding
+`1A` scheme, and a component with an unsupported scheme raises `ValueError`.
+`saft_parameters_for` assembles a differentiable `SaftParameters` pytree
+straight from component names, drawing on the curated Gross and Sadowski
+parameter bank and filling binary corrections `k_ij` from the database where
+available.
 
 ```python
 from fugacio.thermo import saft_parameters_for
@@ -63,31 +66,42 @@ res.enthalpy, res.entropy, res.cp   # departure functions (J/mol, J/mol/K)
 ```
 
 The `phase` argument selects the density branch: `"liquid"` and `"vapor"` seed a
-Newton solve from a dense packing or the ideal gas, while `"stable"` returns the
-root with the lower molar Gibbs energy when more than one branch exists.
+Newton solve from a dense packing or the ideal gas, and fall back to the other
+branch's root where the requested one doesn't exist (a compressed liquid has no
+vapor root, for example). `"stable"` returns the root with the lower molar Gibbs
+energy when more than one branch exists.
 
 ## Phase equilibrium
 
-`SAFTModel` wraps a parameter set and the critical constants (used only to seed
-Wilson K-values) behind the unified model interface: `flash_pt`,
-`bubble_pressure` / `bubble_temperature`, `dew_pressure` / `dew_temperature`, and a
-tangent-plane `stability` test. The `fugacio.sim` helper `saft_model_for` builds
-one from component names.
+`SAFTPackage` wraps a parameter set, the critical constants (used only to seed
+Wilson K-values), and the ideal-gas heat capacities behind the
+[property-package](property-packages.md) interface: `flash_pt`,
+`bubble_pressure` / `bubble_temperature`, `dew_pressure` / `dew_temperature`, a
+tangent-plane `stability` test, and the energy methods. Each solve also has a
+checked `*_with_info` form. `fugacio.sim.package_for(components, "pcsaft")`
+builds one from component names; `fugacio.thermo.saft_package` builds one from
+a parameter set.
 
 ```python
 import jax.numpy as jnp
-from fugacio.sim import saft_model_for
+from fugacio.sim import package_for
 
-model = saft_model_for(["propane", "n-butane"])
+model = package_for(["propane", "n-butane"], "pcsaft")
 res = model.flash_pt(320.0, 8e5, jnp.array([0.5, 0.5]))
-res.beta, res.x, res.y   # vapour fraction and phase compositions
+res.beta, res.x, res.y   # vapor fraction and phase compositions
 
 p_bub, y = model.bubble_pressure(320.0, jnp.array([0.4, 0.6]))
 # beta, p_bub, y are differentiable w.r.t. T, P, z, *and* the PC-SAFT parameters.
 ```
 
+The value-only calls return NaN when their solve fails. A bubble or dew
+iteration that collapses onto one density root with identical phases is
+reported as `TRIVIAL` by the `*_with_info` form rather than returned as a
+saturation point.
+
 For a pure component, `psat_saft` solves the saturation pressure by equifugacity
-from an initial guess (a Wilson or Antoine value is fine):
+from an initial guess (a Wilson or Antoine value is fine). It returns NaN when
+the solve fails, and `psat_saft_with_info` returns the value with its report:
 
 ```python
 from fugacio.thermo import saft_parameters_for
@@ -118,9 +132,9 @@ rho_liquid_exp = jnp.array([8_800.0, 8_550.0, 8_280.0, 7_980.0])       # mol/m^3
 fitted, cost = fit_saft_pure(base, temperatures, psat_exp, rho_liquid_exp)
 ```
 
-The same differentiability is what lets a `SAFTModel` sit inside a flowsheet and
-still expose gradients of a downstream objective with respect to the thermodynamic
-model's own parameters.
+The same differentiability is what lets a `SAFTPackage` sit inside a flowsheet
+and still expose gradients of a downstream objective with respect to the
+thermodynamic model's own parameters.
 
 ## Copilot tools
 
@@ -128,7 +142,9 @@ The design copilot exposes PC-SAFT through deterministic, JSON-in/JSON-out tools
 `saft_flash`, `saft_density`, `saft_saturation_pressure`, `saft_bubble_pressure`,
 and `saft_residual_enthalpy`. They accept the same component names as the rest of
 the registry but route the calculation through the molecular EOS, the method of
-choice when the agent reasons about associating fluids.
+choice when the agent reasons about associating fluids. A failed or
+out-of-domain solve returns a structured error to the agent rather than an
+unconverged number.
 
 ## Validation
 

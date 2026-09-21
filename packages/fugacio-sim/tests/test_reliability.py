@@ -183,10 +183,8 @@ def test_continuation_never_labels_a_partial_path_as_success():
 
 
 def test_energy_flash_reports_reject_an_unreachable_specification():
-    from fugacio.thermo import flash_ph_with_info
-
     pkg = package_for(["benzene", "toluene"])
-    result = flash_ph_with_info(pkg, 1e5, 1e9, jnp.array([0.5, 0.5]), max_iter=2)
+    result = pkg.flash_ph_with_info(1e5, 1e9, jnp.array([0.5, 0.5]), max_iter=2)
     assert not result.report.converged
     assert result.report.residual_norm > 0.1
 
@@ -208,7 +206,7 @@ def test_stoichiometric_reactor_can_share_the_flowsheet_energy_reference():
     pkg = package_for(components)
     feed = Stream.from_fractions(components, jnp.array([0.3, 0.4, 0.1, 0.2]), 10.0, 650.0, 1e6)
     reaction = Reaction(components, jnp.array([-1.0, -1.0, 1.0, 1.0]))
-    result = stoichiometric_reactor(feed, reaction, conversion=0.3, adiabatic=True, model=pkg)
+    result = stoichiometric_reactor(feed, reaction, conversion=0.3, duty=0.0, model=pkg)
     hf, _, _ = reaction_arrays(list(components))
     before = enthalpy_flow(feed, model=pkg) + feed.n @ hf
     after = enthalpy_flow(result.outlet, model=pkg) + result.outlet.n @ hf

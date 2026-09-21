@@ -72,7 +72,10 @@ def test_batched_saturation_pressures_terminate_for_extreme_column_trials() -> N
     )
     batch = jax.jit(jax.vmap(pressures, in_axes=(0, None, None, None)))
     actual = batch(temperatures, arr["tc"], arr["pc"], arr["omega"])
-    assert bool(jnp.all(jnp.isfinite(actual) & (actual > 0.0)))
+    # Every lane terminates. A lane the EOS can't solve (the subfreezing trials)
+    # is NaN rather than a finite guess; the liquid-vapor lanes all converge.
+    assert bool(jnp.all(jnp.isnan(actual) | (actual > 0.0)))
+    assert bool(jnp.all(jnp.isfinite(actual[liquid_vapor])))
     assert actual[liquid_vapor] == pytest.approx(expected, rel=1e-6)
 
 
@@ -124,11 +127,17 @@ def test_bubble_dew_round_trip() -> None:
 
 
 def test_stability_detects_two_phase_and_single_phase() -> None:
-    arr = comp.component_arrays(["methane", "propane", "n-pentane"])
+    from fugacio.thermo.ideal import ideal_gas_coeffs
+    from fugacio.thermo.package import cubic_package
+
+    names = ["methane", "propane", "n-pentane"]
+    arr = comp.component_arrays(names)
+    cp = ideal_gas_coeffs([comp.get(n) for n in names])
+    pkg = cubic_package(arr["tc"], arr["pc"], arr["omega"], cp)
     z = jnp.array([0.5, 0.3, 0.2])
-    unstable = eq.stability_analysis(PR, 320.0, 20e5, z, arr["tc"], arr["pc"], arr["omega"])
-    assert not bool(unstable.stable)
+    assert not bool(pkg.stability(320.0, 20e5, z).stable)
     # A nearly pure liquid at low pressure should be stable.
     pure = jnp.array([1e-9, 1e-9, 1.0 - 2e-9])
-    stable = eq.stability_analysis(PR, 300.0, 5e5, pure, arr["tc"], arr["pc"], arr["omega"])
+    stable = pkg.stability(300.0, 5e5, pure)
     assert bool(stable.stable)
+    assert bool(stable.converged)

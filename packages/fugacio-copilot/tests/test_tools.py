@@ -32,6 +32,36 @@ def test_saturation_pressure_tool() -> None:
     assert result["component"].lower() == "propane"
 
 
+@pytest.mark.parametrize(("temperature", "reason"), [(-5.0, "positive"), (450.0, "critical")])
+def test_saturation_pressure_tool_rejects_states_without_a_vapor_pressure(
+    temperature, reason
+) -> None:
+    with pytest.raises(ValueError, match=reason):
+        call_tool("saturation_pressure", {"component": "propane", "temperature": temperature})
+
+
+def test_compressor_tool_rejects_a_pressure_decrease() -> None:
+    arguments = {
+        "components": ["methane"],
+        "z": [1.0],
+        "flow": 1.0,
+        "temperature": 300.0,
+        "pressure": 5e5,
+        "pressure_out": 1e5,
+    }
+    with pytest.raises(ValueError, match="inlet pressure"):
+        call_tool("compressor", arguments)
+
+
+def test_liquid_liquid_split_defaults_to_predictive_unifac() -> None:
+    result = call_tool(
+        "liquid_liquid_split",
+        {"components": ["water", "toluene"], "z": [0.5, 0.5], "temperature": 298.15},
+    )
+    assert result["method"] == "unifac"
+    assert result["splits_into_two_liquids"]
+
+
 def test_flash_drum_tool_balances() -> None:
     result = call_tool(
         "flash_drum",

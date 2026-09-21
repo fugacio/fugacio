@@ -1,28 +1,22 @@
-"""Reactive separations: simultaneous reaction + phase equilibrium.
+"""Reactive flash: simultaneous reaction and phase equilibrium.
 
 The esterification ``acetic acid + ethanol <=> ethyl acetate + water`` is the
-canonical reactive-distillation system and is *equimolar* (no net mole change), so
-constant molar overflow preserves the total molar material balance. It does
-not close an energy balance. Tests check three things:
-
-* :func:`reactive_flash` returns a state where the liquid simultaneously satisfies
-  reaction equilibrium (activity quotient equals ``K(T)``) and the V/L material
-  balance (total moles conserved for the equimolar reaction);
-* :func:`reactive_distillation` produces ester, concentrates the light ester into
-  the distillate, converts the acid beyond zero, conserves every atom (the
-  component balance ``feed + generation = distillate + bottoms`` closes tightly),
-  and reduces to a non-reactive column at zero holdup;
-* more catalyst holdup gives more conversion.
+canonical reactive-distillation system and is equimolar (no net mole change).
+`reactive_flash` must return a state where the liquid satisfies reaction
+equilibrium (activity quotient equals ``K(T)``) and the V/L material balance
+(total moles conserved for the equimolar reaction). Energy-balanced reactive
+columns are covered in ``test_reactive_mesh.py``.
 """
 
 import jax.numpy as jnp
 import pytest
 
-from fugacio.sim import Stream, reactive_distillation, reactive_flash
-from fugacio.thermo import component_arrays, gamma_phi_model
+from fugacio.sim import Stream, reactive_flash
+from fugacio.thermo import component_arrays, get
 from fugacio.thermo.activity.models import nrtl
 from fugacio.thermo.constants import P_REF, R
-from fugacio.thermo.kinetics import MassActionReversible
+from fugacio.thermo.ideal import ideal_gas_coeffs
+from fugacio.thermo.package import GammaPhiPackage, gamma_phi_package
 from fugacio.thermo.reactions import Reaction, delta_g_rxn, reaction_arrays
 from fugacio.thermo.reference import liquid_reference_fugacity
 
@@ -31,25 +25,16 @@ RX = Reaction.of(COMPS, {"acetic acid": 1, "ethanol": 1}, {"ethyl acetate": 1, "
 P = 101325.0
 
 
-def _model() -> object:
+def _model() -> GammaPhiPackage:
     arr = component_arrays(list(COMPS))
     alpha = jnp.full((4, 4), 0.3) - jnp.eye(4) * 0.3
     activity = nrtl(a=jnp.zeros((4, 4)), b=jnp.zeros((4, 4)), alpha=alpha)
-    return gamma_phi_model(activity, arr["tc"], arr["pc"], arr["omega"])
+    cp = ideal_gas_coeffs([get(c) for c in COMPS])
+    return gamma_phi_package(activity, arr["tc"], arr["pc"], arr["omega"], cp)
 
 
 def _feed() -> Stream:
     return Stream(jnp.array([1.0, 1.0, 1e-4, 1e-4]), jnp.asarray(360.0), jnp.asarray(P), COMPS)
-
-
-def _law(a_f: float = 2.0, a_r: float = 1.0) -> MassActionReversible:
-    return MassActionReversible(
-        a_f=jnp.asarray(a_f),
-        ea_f=jnp.asarray(0.0),
-        a_r=jnp.asarray(a_r),
-        ea_r=jnp.asarray(0.0),
-        nu=RX.nu,
-    )
 
 
 def _ln_k(t: float) -> float:
@@ -118,66 +103,3 @@ def test_reactive_flash_rejects_mismatched_components() -> None:
     bad = Reaction.of(("water", "ethanol"), {"water": 1}, {"ethanol": 1})
     with pytest.raises(ValueError, match="same order"):
         reactive_flash(feed, bad, 355.0, P, model)
-
-
-# --------------------------------------------------------------------------- #
-# Reactive distillation (single 6-stage / 4-component shape, reused)
-# --------------------------------------------------------------------------- #
-def _column(holdup: float, a_f: float = 2.0) -> object:
-    return reactive_distillation(
-        _feed(),
-        _model(),
-        RX,
-        _law(a_f=a_f),
-        holdup,
-        n_stages=6,
-        feed_stage=3,
-        reflux=2.0,
-        distillate_rate=1.0,
-        t_min=300.0,
-        t_max=420.0,
-    )
-
-
-def test_reactive_distillation_converts_and_concentrates_ester() -> None:
-    feed = _feed()
-    res = _column(0.1)
-    d = res.distillate.n
-    b = res.bottoms.n
-    # Acid is converted.
-    conversion = 1.0 - float((d[0] + b[0]) / feed.n[0])
-    assert conversion > 0.05
-    # The light ester is enriched in the distillate relative to the feed.
-    assert float(res.distillate.z[2]) > float(feed.z[2]) + 0.05
-    # Atom balance: feed + net generation = distillate + bottoms (to ~machine eps).
-    generation = jnp.sum(res.generation, axis=0)
-    leak = (feed.n + generation) - (d + b)
-    assert float(jnp.max(jnp.abs(leak))) < 1e-6
-    # Equimolar reaction conserves total moles.
-    assert float(jnp.sum(d + b)) == pytest.approx(float(feed.total), rel=1e-7)
-    # Valid composition profiles.
-    assert jnp.allclose(jnp.sum(res.x, axis=1), 1.0, atol=1e-8)
-    assert bool(jnp.all(res.x >= -1e-9))
-
-
-def test_reactive_distillation_zero_holdup_is_non_reactive() -> None:
-    feed = _feed()
-    res = _column(0.0)
-    # No holdup -> no reaction anywhere.
-    assert float(jnp.max(jnp.abs(res.generation))) == 0.0
-    # Acid passes through unconverted; essentially no ester is made.
-    assert float(res.distillate.n[0] + res.bottoms.n[0]) == pytest.approx(
-        float(feed.n[0]), rel=1e-6
-    )
-    assert float(res.distillate.n[2] + res.bottoms.n[2]) < 1e-3
-
-
-def test_reactive_distillation_more_holdup_more_conversion() -> None:
-    feed = _feed()
-    low = _column(0.05)
-    high = _column(0.15)
-
-    def acid_conversion(res: object) -> float:
-        return 1.0 - float((res.distillate.n[0] + res.bottoms.n[0]) / feed.n[0])
-
-    assert acid_conversion(high) > acid_conversion(low) > 0.0

@@ -16,6 +16,7 @@ EXAMPLES = (
     "heater-bank",
     "reactive-recycle",
     "reactive-separation",
+    "jt-separator",
 )
 
 
@@ -46,6 +47,8 @@ def example_case(name: str = "heater") -> ProcessCase:
         return ethanol_train_case()
     if name == "heater-bank":
         return heater_bank_case()
+    if name == "jt-separator":
+        return jt_separator_case()
     document: dict[str, Any] = {
         "schema_version": 1,
         "name": name,
@@ -285,6 +288,72 @@ def example_case(name: str = "heater") -> ProcessCase:
                 }
             },
         )
+    return ProcessCase.from_dict(document)
+
+
+def jt_separator_case() -> ProcessCase:
+    """A Joule-Thomson letdown into an adiabatic low-temperature separator.
+
+    Rich natural gas expands across a valve at constant enthalpy, and the
+    cooled two-phase outlet settles in a drum with no heat input (a flash at
+    zero duty). The letdown pressure is the design parameter: a lower pressure
+    chills the gas more and condenses more heavy ends. Illustrative feed.
+    """
+    document: dict[str, Any] = {
+        "schema_version": 1,
+        "name": "jt-separator",
+        "description": (
+            "Joule-Thomson valve and adiabatic low-temperature separator on "
+            "Peng-Robinson. Feed composition is illustrative."
+        ),
+        "components": ["methane", "ethane", "propane", "n-butane"],
+        "property_package": {"method": "pr"},
+        "parameters": {
+            "letdown_pressure": {"value": 25, "unit": "bar", "lower": 15, "upper": 60},
+        },
+        "feeds": {
+            "feed": {
+                "flow": _q(10, "mol/s"),
+                "z": [0.8, 0.08, 0.07, 0.05],
+                "temperature": _q(295, "K"),
+                "pressure": _q(90, "bar"),
+            }
+        },
+        "units": [
+            {
+                "name": "jt_valve",
+                "kind": "valve",
+                "inlets": ["feed"],
+                "outlets": ["letdown"],
+                "settings": {"p_out": _p("letdown_pressure")},
+            },
+            {
+                "name": "separator",
+                "kind": "flash",
+                "inlets": ["letdown"],
+                "outlets": ["gas", "condensate"],
+                "settings": {"p": _p("letdown_pressure"), "duty": _q(0, "W")},
+            },
+        ],
+        "metrics": {
+            "separator_temperature": _metric({"stream": "gas", "property": "temperature"}, "K"),
+            "condensate_flow": _metric({"stream": "condensate", "property": "flow"}, "mol/s"),
+            "butane_recovery": _metric(
+                {
+                    "op": "divide",
+                    "args": [
+                        {
+                            "stream": "condensate",
+                            "property": "component_flow",
+                            "component": "n-butane",
+                        },
+                        {"stream": "feed", "property": "component_flow", "component": "n-butane"},
+                    ],
+                },
+                "%",
+            ),
+        },
+    }
     return ProcessCase.from_dict(document)
 
 

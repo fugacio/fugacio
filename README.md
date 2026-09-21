@@ -66,8 +66,18 @@ print(f"Vapor-flow sensitivity: {d_vapor_dT:.3f} mol/(s K)")
 ```
 
 Equilibrium and recycle solvers use implicit differentiation of converged
-solutions. The [reliability guide](docs/reliability.md) explains solve reports,
-phase inventories, warm starts, continuation, and derivative limits.
+solutions. A failed solve never returns a plausible number: value-only calls
+return NaN, checked `*_with_info` calls return a solve report, and eager unit
+operations raise. The [reliability guide](docs/reliability.md) explains solve
+reports, stability checks, phase inventories, warm starts, continuation, and
+derivative limits. Upgrading from 0.8? See the
+[upgrading guide](docs/upgrading.md).
+
+Each unit operation compiles once per property-package structure and
+specification kind; new operating points and package parameters reuse the
+compiled kernel. To reuse compiled kernels across processes, call
+`fugacio.sim.enable_compilation_cache(".jax_cache")` before the first
+calculation.
 
 ### Saved process workflow
 
@@ -76,17 +86,21 @@ run and engineering report:
 
 ```bash
 uv run fugacio example heater heater.json
-uv run fugacio run heater.json --output run.json --report report.md
+uv run fugacio run heater.json --output run.json --report report.md --jax-cache .jax_cache
 ```
 
-The [process cases guide](docs/process-cases.md) covers case revisions, both
+`--jax-cache DIR` (or the `FUGACIO_JAX_CACHE` environment variable) keeps
+compiled kernels on disk, so later commands skip most compilation. The
+[process cases guide](docs/process-cases.md) covers case revisions, both
 flowsheet backends, bounded design specifications, sweeps, constrained
 optimization, gradient checks, and copilot submissions tied to computed runs.
-It includes a rigorous depropanizer with heat recovery and a measured NRTL
-heater whose independent holdout is reevaluated when the case is loaded.
-The [performance guide](docs/performance.md) covers structured column solves,
-reusable forward and reverse sensitivities, and benchmarks that retain timing,
-memory, and physical-acceptance evidence.
+It includes a rigorous depropanizer with heat recovery, a measured NRTL heater
+whose independent holdout is reevaluated when the case is loaded, and a
+Joule-Thomson letdown into an adiabatic separator.
+The [performance guide](docs/performance.md) covers compile-once kernels, the
+persistent compilation cache, structured column solves, reusable forward and
+reverse sensitivities, and benchmarks that retain timing, memory, and
+physical-acceptance evidence.
 
 ## Packages
 
@@ -119,7 +133,8 @@ API reference generated from package docstrings.
   parameter regression. UNIFAC and Joback provide group-contribution estimates
   where curated parameters aren't available.
 - **Steady-state simulation:** Energy-balanced units, automatic recycle
-  partitioning and tear selection, and two-sided heat exchangers support
+  partitioning and tear selection, optional physical audits of every solved
+  stream, and two-sided heat exchangers support
   [flowsheeting](docs/flowsheeting.md). The engine also includes
   [rigorous MESH distillation](docs/distillation.md),
   [reactors and reactive separations](docs/reactions.md), and simultaneous
@@ -138,8 +153,8 @@ API reference generated from package docstrings.
   and economic model predictive control, plus state estimation.
 - **AI design copilot:** A [tool registry](docs/api/copilot/tools.md) exposes
   calculations across the stack through a multi-turn
-  [agent loop](docs/api/copilot/agent.md), with OpenAI, Anthropic, and mock
-  [providers](docs/api/copilot/providers.md).
+  [agent loop](docs/api/copilot/agent.md), with OpenAI, Anthropic (Claude Opus 5
+  by default), and mock [providers](docs/api/copilot/providers.md).
   The [accountable design loop](docs/process-cases.md#accountable-copilot)
   requires an accepted current-case run and generates its final report from
   recorded metrics.
@@ -176,7 +191,8 @@ specific systems and properties; it doesn't extend to every model family.
 
 Parameter evidence distinguishes measured fits, curated data, predictive methods,
 and explicit zero-interaction assumptions. `package_for` rejects missing NRTL
-or UNIQUAC pairs unless the caller explicitly permits them. The older bundled
+or UNIQUAC pairs unless the caller explicitly permits them with
+`parameter_policy="allow_ideal"`. The older bundled
 parameter bank remains synthetic demonstration data, separate from the measured
 corpus.
 

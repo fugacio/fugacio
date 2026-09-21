@@ -22,9 +22,11 @@ The public surface is:
   `pressure`, `molar_density`, `ln_fugacity_coefficients`,
   `residual_properties`, and `site_fractions`;
 * **phase equilibrium**: `flash_pt_saft`, `bubble_pressure_saft`,
-  `dew_pressure_saft`, `psat_saft`, `stability_saft`;
-* **model**: the unified `SAFTModel` / `saft_model`;
+  `dew_pressure_saft`, `psat_saft`, each with a checked ``_with_info`` form;
 * **regression**: `fit_saft_pure`, `fit_saft_kij`.
+
+Use `fugacio.thermo.package.SAFTPackage` (or ``package_for(..., "pcsaft")``
+in `fugacio.sim`) to run PC-SAFT inside unit operations and flowsheets.
 """
 
 from fugacio.thermo.saft.association import (
@@ -34,12 +36,14 @@ from fugacio.thermo.saft.association import (
 )
 from fugacio.thermo.saft.equilibrium import (
     bubble_pressure_saft,
+    bubble_pressure_saft_with_info,
     dew_pressure_saft,
+    dew_pressure_saft_with_info,
     flash_pt_saft,
+    flash_pt_saft_with_info,
     psat_saft,
-    stability_saft,
+    psat_saft_with_info,
 )
-from fugacio.thermo.saft.model import SAFTModel, saft_model
 from fugacio.thermo.saft.parameters import (
     SaftParameters,
     saft_parameters,
@@ -63,7 +67,6 @@ from fugacio.thermo.saft.regression import fit_saft_kij, fit_saft_pure
 
 __all__ = [
     "ResidualProperties",
-    "SAFTModel",
     "SaftParameters",
     "alpha_association",
     "alpha_dispersion",
@@ -71,20 +74,22 @@ __all__ = [
     "alpha_residual",
     "association_strength",
     "bubble_pressure_saft",
+    "bubble_pressure_saft_with_info",
     "compressibility_factor",
     "dew_pressure_saft",
+    "dew_pressure_saft_with_info",
     "fit_saft_kij",
     "fit_saft_pure",
     "flash_pt_saft",
+    "flash_pt_saft_with_info",
     "ln_fugacity_coefficients",
     "molar_density",
     "pressure",
     "psat_saft",
+    "psat_saft_with_info",
     "residual_properties",
-    "saft_model",
     "saft_parameters",
     "saft_parameters_for",
     "segment_diameter",
     "site_fractions",
-    "stability_saft",
 ]

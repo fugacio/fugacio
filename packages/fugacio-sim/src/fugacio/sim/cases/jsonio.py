@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import tempfile
+import secrets
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +63,21 @@ def read_json(path: str | Path) -> Any:
     return loads(raw.decode("utf-8"))
 
 
+def _create_temporary(directory: Path) -> tuple[int, Path]:
+    """Exclusively create a sibling temporary file with the process umask's permissions.
+
+    `tempfile.mkstemp` always creates mode 0600, which would make every saved
+    artifact private regardless of the user's umask.
+    """
+    for _ in range(100):
+        candidate = directory / f".fugacio-{secrets.token_hex(8)}.tmp"
+        try:
+            return os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666), candidate
+        except FileExistsError:
+            continue
+    raise FileExistsError(f"couldn't create a temporary file in {directory}")
+
+
 def write_json(path: str | Path, value: Any) -> None:
     """Atomically replace a JSON file after validating its complete serialized contents."""
     raw = json.dumps(value, indent=2, sort_keys=True, allow_nan=False, ensure_ascii=False) + "\n"
@@ -72,7 +87,7 @@ def write_json(path: str | Path, value: Any) -> None:
         raise CaseValidationError("json", "document exceeds 16 MiB")
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=".fugacio-", dir=target.parent)
+    fd, temporary = _create_temporary(target.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(raw)

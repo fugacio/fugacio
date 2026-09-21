@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import copy
+from collections import OrderedDict
 from dataclasses import asdict, dataclass, replace
 from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
 
-from fugacio.sim.cases.backends import CaseFlowsheet, RegisteredBlock
+from fugacio.sim.cases.backends import RegisteredBlock
 from fugacio.sim.cases.costing import evaluate_economics, parse_economics, validate_economic_values
 from fugacio.sim.cases.evidence import build_package
 from fugacio.sim.cases.expressions import metric_values
@@ -30,6 +31,7 @@ from fugacio.sim.cases.registry import (
 )
 from fugacio.sim.cases.schema import ProcessCase, parse_feeds, resolve_value, validate_feed_values
 from fugacio.sim.eo import EOFlowsheet
+from fugacio.sim.flowsheet import Flowsheet
 from fugacio.sim.stream import Stream
 from fugacio.thermo.acceptance import DEFAULT_POLICY, AcceptancePolicy
 from fugacio.thermo.diagnostics import SolveReport, residual_report
@@ -80,6 +82,34 @@ def _unit_template(definition: UnitDefinition) -> tuple[UnitDefinition, dict[str
     ), bindings
 
 
+#: Compiled unit templates shared by every runner in this process, keyed by the
+#: canonical template document and the column linear solver. Literal settings
+#: are part of the template document, so templates that differ in any fixed
+#: value never share a kernel. The package enters each kernel as a dynamic
+#: argument; its structure is part of JAX's own compilation key.
+_TEMPLATE_CACHE: OrderedDict[tuple[str, str], Any] = OrderedDict()
+_TEMPLATE_CACHE_SIZE = 256
+
+
+def _compiled_template(template: UnitDefinition, column_solver: str) -> Any:
+    """The process-wide compiled kernel of one unit template (bounded LRU)."""
+    key = (canonical_json(asdict(template)), column_solver)
+    if key in _TEMPLATE_CACHE:
+        _TEMPLATE_CACHE.move_to_end(key)
+        return _TEMPLATE_CACHE[key]
+
+    @jax.jit
+    def compiled(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
+        return evaluate_unit(
+            template, inputs, parameters, package, guess=guess, column_solver=column_solver
+        )
+
+    _TEMPLATE_CACHE[key] = compiled
+    while len(_TEMPLATE_CACHE) > _TEMPLATE_CACHE_SIZE:
+        _TEMPLATE_CACHE.popitem(last=False)
+    return compiled
+
+
 def _typed_arrays(tree: Any) -> Any:
     """Keep dtypes while removing weak scalar types from numerical call boundaries."""
     return jax.tree_util.tree_map(
@@ -92,7 +122,7 @@ class SolverOptions:
     """Reproducible numerical choices; no solver silently falls back to another backend."""
 
     backend: str = "sequential"
-    recycle_method: str = "wegstein"
+    recycle_method: str = "broyden"
     tolerance: float = 1e-9
     max_iterations: int = 100
     specification_iterations: int = 40
@@ -171,7 +201,7 @@ class CaseRunner:
                 "units",
                 "reaction formation enthalpies aren't compatible with the reference-fluid datum",
             )
-        self._sequential = CaseFlowsheet()
+        self._sequential = Flowsheet()
         self._eo = EOFlowsheet(model=self.package, jacobian_mode=self.options.eo_jacobian)
         self._unit_kernels: dict[str, Any] = {}
         self._unit_templates: dict[str, Any] = {}
@@ -186,22 +216,8 @@ class CaseRunner:
                 # preparation and retained outputs. Keeping every operating
                 # value dynamic lets later design points reuse these kernels.
                 template, bindings = _unit_template(d)
-                key = canonical_json(asdict(template))
-                if key not in self._unit_templates:
-
-                    @jax.jit
-                    def compiled(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
-                        return evaluate_unit(
-                            template,
-                            inputs,
-                            parameters,
-                            package,
-                            guess=guess,
-                            column_solver=self.options.column_solver,
-                        )
-
-                    self._unit_templates[key] = compiled
-                compiled = self._unit_templates[key]
+                compiled = _compiled_template(template, self.options.column_solver)
+                self._unit_templates[canonical_json(asdict(template))] = compiled
 
                 def kernel(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
                     local = {k: resolve_value(v, parameters) for k, v in bindings.items()}
@@ -231,7 +247,6 @@ class CaseRunner:
                     self._unit_kernels[definition.name],
                 )
             )
-        self._sequential.freeze_maps()
         consumed = {s for u in self.units for s in u.inlets}
         self.products = tuple(s for u in self.units for s in u.outlets if s not in consumed)
         self._specs = self.document["specifications"]
@@ -393,6 +408,7 @@ class CaseRunner:
             solution = flow.solve_with_info(
                 (parameters, package, guesses),
                 guess=stream_guess,
+                audit=False,
                 method=self.options.recycle_method,
                 tol=self.options.tolerance,
                 max_iter=self.options.max_iterations,

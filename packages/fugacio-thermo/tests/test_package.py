@@ -1,7 +1,7 @@
 """Property packages: one interface, four thermodynamic methods, consistent energy.
 
 The checks here are the ones that make a package trustworthy in an energy
-balance: the cubic package reproduces the legacy cubic property functions, the
+balance: the cubic package's bulk properties follow the lever rule, the
 gamma-phi package's autodiff excess enthalpy satisfies Gibbs-Helmholtz against a
 finite difference of ``g^E`` and gives a heat of mixing of the right sign and
 size for ethanol/water, every package round-trips its PH and PS flashes, the
@@ -21,7 +21,6 @@ from fugacio.thermo import (
     PropertyPackage,
     SAFTPackage,
     cubic_package,
-    energy,
     excess_enthalpy,
     excess_entropy,
     gamma_phi_package,
@@ -74,16 +73,16 @@ def test_every_package_satisfies_the_protocol() -> None:
         assert isinstance(pkg.signature(), tuple)
 
 
-def test_cubic_package_matches_legacy_cubic_functions() -> None:
+def test_cubic_bulk_properties_follow_the_lever_rule() -> None:
     pkg = _cubic()
-    tc, pc, omega, cp = _consts(LIGHT)
     t, p = 300.0, 20e5  # two-phase at these conditions
-    h_pkg = pkg.mixture_enthalpy(t, p, Z)
-    h_ref = energy.mixture_enthalpy(PR, t, p, Z, tc, pc, omega, cp)
-    assert float(h_pkg) == pytest.approx(float(h_ref), rel=1e-10)
-    s_pkg = pkg.mixture_entropy(t, p, Z)
-    s_ref = energy.mixture_entropy(PR, t, p, Z, tc, pc, omega, cp)
-    assert float(s_pkg) == pytest.approx(float(s_ref), rel=1e-10)
+    flash = pkg.flash_pt(t, p, Z)
+    assert 0.0 < float(flash.beta) < 1.0
+    for bulk, single in ((pkg.mixture_enthalpy, pkg.enthalpy), (pkg.mixture_entropy, pkg.entropy)):
+        vapor = single(t, p, flash.y, phase="vapor")
+        liquid = single(t, p, flash.x, phase="liquid")
+        expected = flash.beta * vapor + (1.0 - flash.beta) * liquid
+        assert float(bulk(t, p, Z)) == pytest.approx(float(expected), rel=1e-10)
 
 
 @pytest.mark.parametrize("t_true", [280.0, 330.0])

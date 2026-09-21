@@ -13,6 +13,7 @@ sequences them lives behind the optional ``llm`` extra (`fugacio.copilot.agent`)
 
 from __future__ import annotations
 
+import inspect
 import json
 import math
 from collections.abc import Callable
@@ -49,7 +50,6 @@ from fugacio.sim import (
     heat_exchanger_area,
     lmtd,
     npv,
-    nrtl_model_for,
     package_for,
     pfr,
     pump,
@@ -65,8 +65,6 @@ from fugacio.sim import (
     total_annual_cost,
     turbine,
     txy_diagram,
-    unifac_model_for,
-    uniquac_model_for,
     utility_cost,
     valve,
     vapor_molar_volume_ideal,
@@ -78,12 +76,12 @@ from fugacio.thermo import (
     PR,
     PowerLaw,
     Reaction,
-    bubble_pressure_eos,
+    SolveStatus,
+    bubble_pressure_eos_with_info,
     component_arrays,
     fit_nrtl_binary,
-    flash_lle,
-    flash_pt,
-    flash_vlle,
+    flash_lle_with_info,
+    flash_vlle_with_info,
     gas_diffusivity,
     gas_mixture_thermal_conductivity,
     gas_mixture_viscosity,
@@ -97,8 +95,9 @@ from fugacio.thermo import (
     liquid_stability,
     mixture_surface_tension,
     names,
-    psat_eos,
+    psat_eos_with_info,
     reaction_properties,
+    require_converged,
     vapor_density,
 )
 from fugacio.thermo import helmholtz as _helmholtz
@@ -145,8 +144,16 @@ def _component_properties(component: str) -> JsonDict:
 
 def _saturation_pressure(component: str, temperature: float) -> JsonDict:
     c = get(component)
-    psat = float(psat_eos(PR, temperature, c.tc, c.pc, c.omega))
-    return {"component": c.name, "temperature_k": temperature, "psat_pa": psat}
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("temperature must be a positive, finite number of kelvins")
+    solved = psat_eos_with_info(PR, temperature, c.tc, c.pc, c.omega)
+    if int(solved.report.status) == int(SolveStatus.OUT_OF_DOMAIN):
+        raise ValueError(
+            f"{c.name} has no saturation pressure at {temperature} K: that is at or above "
+            f"its critical temperature ({c.tc:.2f} K)"
+        )
+    require_converged(solved.report, f"saturation pressure of {c.name}")
+    return {"component": c.name, "temperature_k": temperature, "psat_pa": float(solved.value)}
 
 
 def _physical_properties(
@@ -234,7 +241,11 @@ def _binary_diffusivity(
 
 def _bubble_pressure(components: list[str], x: list[float], temperature: float) -> JsonDict:
     arr = component_arrays(components)
-    p, y = bubble_pressure_eos(PR, temperature, jnp.asarray(x), arr["tc"], arr["pc"], arr["omega"])
+    solved = bubble_pressure_eos_with_info(
+        PR, temperature, jnp.asarray(x), arr["tc"], arr["pc"], arr["omega"]
+    )
+    require_converged(solved.report, "bubble pressure")
+    p, y = solved.value
     return {
         "temperature_k": temperature,
         "bubble_pressure_pa": float(p),
@@ -391,10 +402,9 @@ def _shortcut_distillation(
     hk_recovery: float = 0.01,
     q: float = 1.0,
 ) -> JsonDict:
-    arr = component_arrays(components)
     z_arr = jnp.asarray(z)
     alpha = relative_volatility(
-        PR, temperature, pressure, z_arr, arr["tc"], arr["pc"], arr["omega"], ref=heavy_key
+        package_for(components, "pr"), temperature, pressure, z_arr, ref=heavy_key
     )
     recoveries = _distillation_recoveries(
         [float(a) for a in alpha], light_key, heavy_key, lk_recovery, hk_recovery
@@ -585,12 +595,11 @@ def _optimize_flash_temperature(
     t_min: float = 100.0,
     t_max: float = 800.0,
 ) -> JsonDict:
-    arr = component_arrays(components)
+    pkg = package_for(components, "pr")
     z_arr = jnp.asarray(z)
 
     def beta_of_t(t: float) -> Any:
-        result = flash_pt(PR, t, pressure, z_arr, arr["tc"], arr["pc"], arr["omega"])
-        return result.beta
+        return pkg.flash_pt(t, pressure, z_arr).beta
 
     t_opt = _safeguarded_newton(lambda t: beta_of_t(t) - target_vapor_fraction, t_min, t_max)
     from fugacio.copilot.evidence_tools import checked_flash
@@ -646,21 +655,16 @@ _ACTIVITY_METHODS = ("nrtl", "uniquac", "unifac", "dortmund")
 
 
 def _gamma_phi(components: list[str], method: str) -> Any:
-    """Build a gamma-phi model for ``components`` by activity ``method`` name."""
+    """Build a gamma-phi package for ``components`` by activity ``method`` name.
+
+    Curated NRTL/UNIQUAC pairs are required (the strict parameter policy).
+    """
     key = method.lower()
     if key == "modified_unifac":
         key = "dortmund"
-    if key in _ACTIVITY_METHODS:
-        package_for(components, key)  # Validate curated/group parameter coverage.
-    if key == "nrtl":
-        return nrtl_model_for(components, strict=True)
-    if key == "uniquac":
-        return uniquac_model_for(components, strict=True)
-    if key == "unifac":
-        return unifac_model_for(components)
-    if key in ("dortmund", "modified_unifac"):
-        return unifac_model_for(components, dortmund=True)
-    raise ValueError(f"unknown method {method!r}; use one of {_ACTIVITY_METHODS}")
+    if key not in _ACTIVITY_METHODS:
+        raise ValueError(f"unknown method {method!r}; use one of {_ACTIVITY_METHODS}")
+    return package_for(components, key)
 
 
 def _ln_gamma_values(components: list[str], x: list[float], temperature: float, method: str) -> Any:
@@ -743,11 +747,20 @@ def _find_azeotrope(
         az = azeotrope_temperature(model, float(pressure), t_min=t_min, t_max=t_max)
     else:
         raise ValueError("provide exactly one of 'temperature' or 'pressure'")
+    if not bool(az.exists):
+        return {
+            "components": list(components),
+            "method": method,
+            "exists": False,
+            "x_azeotrope": None,
+            "temperature_k": float(temperature) if temperature is not None else None,
+            "pressure_pa": float(pressure) if pressure is not None else None,
+        }
     x1 = float(az.x1)
     return {
         "components": list(components),
         "method": method,
-        "exists": bool(az.exists),
+        "exists": True,
         "x_azeotrope": [x1, 1.0 - x1],
         "temperature_k": float(az.t),
         "pressure_pa": float(az.p),
@@ -761,13 +774,16 @@ def _liquid_liquid_split(
     t = float(temperature)
     z_arr = jnp.asarray(z)
     stab = liquid_stability(model.activity, t, z_arr)
-    res = flash_lle(model.activity, t, z_arr)
+    solved = flash_lle_with_info(model.activity, t, z_arr)
+    require_converged(solved.report, "liquid-liquid split")
+    res = solved.value
     return {
         "components": list(components),
         "temperature_k": t,
         "method": method,
-        "splits_into_two_liquids": (not bool(stab.stable)),
+        "splits_into_two_liquids": bool(res.psi > 0) and bool(res.psi < 1),
         "tangent_plane_distance": float(stab.tpd),
+        "stability_search_converged": bool(stab.converged),
         "phase_I": {
             "fraction": float(1.0 - res.psi),
             "composition": [float(v) for v in res.x_i],
@@ -787,7 +803,7 @@ def _three_phase_flash(
     method: str = "nrtl",
 ) -> JsonDict:
     model = _gamma_phi(components, method)
-    res = flash_vlle(
+    solved = flash_vlle_with_info(
         model.activity,
         float(temperature),
         float(pressure),
@@ -801,6 +817,18 @@ def _three_phase_flash(
         poynting=model.poynting,
         phi_saturation=model.phi_saturation,
     )
+    if int(solved.report.status) == int(SolveStatus.INFEASIBLE):
+        return {
+            "components": list(components),
+            "method": method,
+            "three_phase": False,
+            "message": (
+                "The feed isn't three-phase at this temperature and pressure; use "
+                "flash for a vapor-liquid split or liquid_liquid_split for two liquids."
+            ),
+        }
+    require_converged(solved.report, "three-phase flash")
+    res = solved.value
     return {
         "components": list(components),
         "method": method,
@@ -960,6 +988,7 @@ def _reaction_equilibrium(
     res = _reaction_equilibrium_solve(
         reactions, jnp.asarray(n, dtype=float), float(temperature), float(pressure), **kwargs
     )
+    require_converged(res.report, "reaction equilibrium")
     return {
         "components": list(components),
         "equations": list(equations),
@@ -1012,12 +1041,16 @@ def _reactor(
         jnp.asarray(pressure),
         tuple(components),
     )
+    if adiabatic and t_out is not None:
+        raise ValueError("choose an adiabatic reactor or an outlet temperature, not both")
+    duty = 0.0 if adiabatic else None
+    res: Any
     if mode == "equilibrium":
-        res = equilibrium_reactor(feed, rxn, t_out=t_out, adiabatic=adiabatic)
+        res = equilibrium_reactor(feed, rxn, t_out=t_out, duty=duty)
     elif mode == "stoichiometric":
         extent_arr = None if extent is None else jnp.asarray(extent, dtype=float)
         res = stoichiometric_reactor(
-            feed, rxn, extent=extent_arr, conversion=conversion, t_out=t_out, adiabatic=adiabatic
+            feed, rxn, extent=extent_arr, conversion=conversion, t_out=t_out, duty=duty
         )
     elif mode in ("cstr", "pfr"):
         if a is None or ea is None or orders is None or volume is None:
@@ -1026,7 +1059,7 @@ def _reactor(
             a=jnp.asarray(a), ea=jnp.asarray(ea), orders=jnp.asarray(orders, dtype=float)
         )
         unit = cstr if mode == "cstr" else pfr
-        res = unit(feed, rxn, law, float(volume), t_out=t_out, adiabatic=adiabatic)
+        res = unit(feed, rxn, float(volume), law, t_out=t_out, duty=duty)
     else:
         raise ValueError(f"unknown reactor mode {mode!r}")
     return {
@@ -2411,20 +2444,10 @@ def call_tool(
         and registry[name].run.__module__ == __name__
         and "components" in arguments
     ):
-        method = arguments.get("method") or (
-            "unifac"
-            if name == "activity_coefficients"
-            else "nrtl"
-            if name
-            in (
-                "vle_diagram",
-                "find_azeotrope",
-                "residue_curve_map",
-                "liquid_liquid_split",
-                "three_phase_flash",
-            )
-            else "pr"
-        )
+        # Evidence describes the method the tool actually ran: its own default.
+        declared = inspect.signature(registry[name].run).parameters.get("method")
+        default = declared.default if declared is not None else None
+        method = arguments.get("method") or (default if isinstance(default, str) else "pr")
         if method == "modified_unifac":
             method = "dortmund"
         pkg = _package(arguments["components"], method)

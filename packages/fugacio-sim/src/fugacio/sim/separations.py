@@ -1,75 +1,51 @@
-"""Non-ideal separation units: model-driven flash, decanter, three-phase flash.
+"""Liquid-liquid and three-phase separators on an activity-coefficient package.
 
-These complement the equation-of-state blocks in `fugacio.sim.units` with the
-non-ideal phase behaviour the gamma-phi property system unlocks:
+These complement the vapor-liquid blocks in `fugacio.sim.units` with the
+non-ideal phase behavior an activity-coefficient (gamma-phi) package describes:
 
-* `flash_vle`: a two-phase V-L flash driven by *any*
-  `EquilibriumModel` (EOS or gamma-phi), so the same drum
-  works on Peng-Robinson or NRTL/UNIQUAC/UNIFAC;
-* `decanter`: a liquid-liquid separator (settling tank) that splits one
-  feed into two conjugate liquid products via the isoactivity LLE flash; and
-* `three_phase_flash`: a vapour + two-liquid (V-L-L) separator for
-  heterogeneous systems (water/organic decantation, heteroazeotropic columns).
+* `decanter`: a liquid-liquid separator (settling tank) that splits one feed
+  into two conjugate liquid products via the stability-first isoactivity flash;
+* `three_phase_flash`: a vapor + two-liquid (V-L-L) separator for heterogeneous
+  systems (water/organic decantation, heteroazeotropic columns).
 
-Every product is a differentiable `Stream`; flows carry
-gradients with respect to the operating ``T``, ``P``, the feed, and (through the
-model object) the thermodynamic parameters themselves.
+Both follow the unit contract: an eager call raises on failure (with a hint
+naming the separator that does apply), and a traced call returns NaN products.
+Every product is a differentiable `Stream`; flows carry gradients with respect
+to the operating ``T``, ``P``, the feed, and the package's activity parameters.
 """
 
 from __future__ import annotations
 
-from typing import Protocol
-
+import jax
 import jax.numpy as jnp
 from jax import Array
 
 from fugacio.sim.stream import Stream
-from fugacio.thermo import FlashResult, GammaPhiModel, flash_lle, flash_vlle
+from fugacio.thermo.diagnostics import (
+    ConvergenceError,
+    SolveStatus,
+    nan_unless_converged,
+    require_converged,
+)
+from fugacio.thermo.lle import flash_lle_with_info
+from fugacio.thermo.package import GammaPhiPackage
+from fugacio.thermo.vlle import flash_vlle_with_info
 
 ArrayLike = Array | float
 
 
-class _VLEModel(Protocol):
-    """Minimal structural type: anything offering an isothermal-isobaric flash."""
-
-    def flash_pt(self, t: ArrayLike, p: ArrayLike, z: Array) -> FlashResult: ...
-
-
-def flash_vle(feed: Stream, t: ArrayLike, p: ArrayLike, model: _VLEModel) -> tuple[Stream, Stream]:
-    """Two-phase vapour-liquid flash of ``feed`` at ``(T, P)`` using ``model``.
-
-    Works with any `EquilibriumModel` (an
-    `EOSModel` for the phi-phi route or a
-    `GammaPhiModel` for the activity-coefficient route)
-    so the drum's thermodynamics are chosen by the model passed in.
-
-    Returns:
-        ``(vapor, liquid)`` product streams at ``(T, P)``.
-    """
-    res = model.flash_pt(t, p, feed.z)
-    total = feed.total
-    t_arr = jnp.asarray(t)
-    p_arr = jnp.asarray(p)
-    vapor = Stream(
-        n=res.y * res.beta * total,
-        vapor_n=res.y * res.beta * total,
-        t=t_arr,
-        p=p_arr,
-        components=feed.components,
-    )
-    liquid = Stream(
-        n=res.x * (1.0 - res.beta) * total,
-        vapor_n=jnp.zeros_like(feed.n),
-        t=t_arr,
-        p=p_arr,
-        components=feed.components,
-    )
-    return vapor, liquid
+def _activity_package(model: object, unit: str) -> GammaPhiPackage:
+    if not isinstance(model, GammaPhiPackage):
+        raise TypeError(
+            f"{unit} needs an activity-coefficient (gamma-phi) package, for example "
+            "package_for(components, 'nrtl'); got " + type(model).__name__
+        )
+    return model
 
 
 def decanter(
     feed: Stream,
-    model: GammaPhiModel,
+    model: GammaPhiPackage,
     *,
     t: ArrayLike | None = None,
     tol: float = 1e-12,
@@ -77,28 +53,31 @@ def decanter(
 ) -> tuple[Stream, Stream]:
     """Liquid-liquid settler: split ``feed`` into two conjugate liquid products.
 
-    Solves the isoactivity LLE flash (`fugacio.thermo.flash_lle`) with the
-    model's activity description at temperature ``t`` (default: the feed
-    temperature) and the feed pressure. For a feed outside any miscibility gap the
-    LLE flash collapses to the trivial split and one product carries essentially
-    the whole feed; check with `fugacio.thermo.liquid_stability` upstream
-    if that matters.
+    Solves the stability-first isoactivity LLE flash
+    (`fugacio.thermo.lle.flash_lle_with_info`) with the package's activity model
+    at temperature ``t`` (default: the feed temperature) and the feed pressure.
+    A feed outside any miscibility gap is one liquid: ``liquid_I`` carries it all
+    and ``liquid_II`` is empty.
 
     Returns:
-        ``(liquid_I, liquid_II)`` product streams. The two isoactivity LLE roots
-        are symmetric, so which phase the solver labels ``I`` vs ``II`` is not
-        stable across platforms/precision; the order here is made deterministic by
-        returning the product richest in the first component (index 0) as
-        ``liquid_I``.
+        ``(liquid_I, liquid_II)`` product streams. The two isoactivity roots are
+        symmetric, so the order is made deterministic by returning the product
+        richest in the first component (index 0) as ``liquid_I``.
+
+    Raises:
+        TypeError: If ``model`` isn't a gamma-phi package.
+        ConvergenceError: If an eager split fails.
     """
+    pkg = _activity_package(model, "decanter")
     t_arr = feed.t if t is None else jnp.asarray(t)
-    res = flash_lle(model.activity, t_arr, feed.z, tol=tol, max_iter=max_iter)
+    solved = flash_lle_with_info(pkg.activity, t_arr, feed.z, tol=tol, max_iter=max_iter)
+    res = solved.value
     total = feed.total
     n_a = res.x_i * (1.0 - res.psi) * total
     n_b = res.x_ii * res.psi * total
     # Canonical phase order: the component-0-rich product is liquid_I. Swapping the
     # whole stream (not just the composition) preserves the material balance.
-    i_first = res.x_i[0] >= res.x_ii[0]
+    i_first = (res.x_i[0] >= res.x_ii[0]) | (res.psi <= 0)
     n_i = jnp.where(i_first, n_a, n_b)
     n_ii = jnp.where(i_first, n_b, n_a)
     liquid_i = Stream(
@@ -107,48 +86,65 @@ def decanter(
     liquid_ii = Stream(
         n=n_ii, vapor_n=jnp.zeros_like(n_ii), t=t_arr, p=feed.p, components=feed.components
     )
-    return liquid_i, liquid_ii
+    require_converged(solved.report, "decanter liquid-liquid split")
+    return nan_unless_converged((liquid_i, liquid_ii), solved.report)
 
 
 def three_phase_flash(
     feed: Stream,
     t: ArrayLike,
     p: ArrayLike,
-    model: GammaPhiModel,
+    model: GammaPhiPackage,
     *,
     tol: float = 1e-11,
     max_iter: int = 300,
 ) -> tuple[Stream, Stream, Stream]:
-    """Vapour-liquid-liquid (V-L-L) flash of ``feed`` at ``(T, P)``.
+    """Vapor-liquid-liquid (V-L-L) flash of ``feed`` at ``(T, P)``.
 
-    Drives the three-phase flash (`fugacio.thermo.flash_vlle`) with the
-    model's activity liquid and its EOS/ideal vapour. Use for heterogeneous
-    systems (water/organic decantation and heteroazeotropic distillation) where
-    a vapour coexists with two liquids.
+    Drives the three-phase flash (`fugacio.thermo.vlle.flash_vlle_with_info`)
+    with the package's activity liquid and its EOS or ideal vapor. Use it where a
+    vapor coexists with two liquids (water/organic decantation, heteroazeotropic
+    distillation).
 
     Returns:
-        ``(vapor, liquid_I, liquid_II)`` product streams. When the feed is not
-        genuinely three-phase one of the liquid flows collapses to (near) zero.
+        ``(vapor, liquid_I, liquid_II)`` product streams.
+
+    Raises:
+        TypeError: If ``model`` isn't a gamma-phi package.
+        ConvergenceError: If an eager flash fails. A feed that isn't three-phase
+            at ``(T, P)`` is reported as infeasible, with a hint to use
+            `fugacio.sim.flash_drum` (vapor-liquid) or `decanter` (liquid-liquid).
     """
-    res = flash_vlle(
-        model.activity,
+    pkg = _activity_package(model, "three-phase flash")
+    solved = flash_vlle_with_info(
+        pkg.activity,
         t,
         p,
         feed.z,
-        model.tc,
-        model.pc,
-        model.omega,
-        eos=model.eos,
-        kij=model.kij,
-        vapor=model.vapor,
-        poynting=model.poynting,
-        phi_saturation=model.phi_saturation,
+        pkg.tc,
+        pkg.pc,
+        pkg.omega,
+        eos=pkg.eos,
+        kij=pkg.kij,
+        vapor=pkg.vapor,
+        poynting=pkg.poynting,
+        phi_saturation=pkg.phi_saturation,
         tol=tol,
         max_iter=max_iter,
     )
+    report = solved.report
+    traced = isinstance(report.status, jax.core.Tracer)
+    if not traced and int(report.status) == int(SolveStatus.INFEASIBLE):
+        raise ConvergenceError(
+            report,
+            "three-phase flash: the feed isn't three-phase at these conditions; use "
+            "flash_drum for a vapor-liquid split or decanter for a liquid-liquid split",
+        )
+    require_converged(report, "three-phase flash")
+    res = solved.value
     total = feed.total
-    t_arr = jnp.asarray(t)
-    p_arr = jnp.asarray(p)
+    t_arr = jnp.asarray(t, dtype=float)
+    p_arr = jnp.asarray(p, dtype=float)
     vapor = Stream(
         n=res.y * res.beta_v * total,
         vapor_n=res.y * res.beta_v * total,
@@ -170,7 +166,7 @@ def three_phase_flash(
         p=p_arr,
         components=feed.components,
     )
-    return vapor, liquid_i, liquid_ii
+    return nan_unless_converged((vapor, liquid_i, liquid_ii), report)
 
 
-__all__ = ["decanter", "flash_vle", "three_phase_flash"]
+__all__ = ["decanter", "three_phase_flash"]

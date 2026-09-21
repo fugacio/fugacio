@@ -1,0 +1,116 @@
+{
+  "components": [
+    "methane",
+    "ethane",
+    "propane",
+    "n-butane"
+  ],
+  "description": "Joule-Thomson valve and adiabatic low-temperature separator on Peng-Robinson. Feed composition is illustrative.",
+  "feeds": {
+    "feed": {
+      "flow": {
+        "unit": "mol/s",
+        "value": 10
+      },
+      "pressure": {
+        "unit": "bar",
+        "value": 90
+      },
+      "temperature": {
+        "unit": "K",
+        "value": 295
+      },
+      "z": [
+        0.8,
+        0.08,
+        0.07,
+        0.05
+      ]
+    }
+  },
+  "metrics": {
+    "butane_recovery": {
+      "expression": {
+        "args": [
+          {
+            "component": "n-butane",
+            "property": "component_flow",
+            "stream": "condensate"
+          },
+          {
+            "component": "n-butane",
+            "property": "component_flow",
+            "stream": "feed"
+          }
+        ],
+        "op": "divide"
+      },
+      "unit": "%"
+    },
+    "condensate_flow": {
+      "expression": {
+        "property": "flow",
+        "stream": "condensate"
+      },
+      "unit": "mol/s"
+    },
+    "separator_temperature": {
+      "expression": {
+        "property": "temperature",
+        "stream": "gas"
+      },
+      "unit": "K"
+    }
+  },
+  "name": "jt-separator",
+  "parameters": {
+    "letdown_pressure": {
+      "lower": 15,
+      "unit": "bar",
+      "upper": 60,
+      "value": 25
+    }
+  },
+  "property_package": {
+    "method": "pr"
+  },
+  "schema_version": 1,
+  "specifications": [],
+  "units": [
+    {
+      "inlets": [
+        "feed"
+      ],
+      "kind": "valve",
+      "name": "jt_valve",
+      "outlets": [
+        "letdown"
+      ],
+      "settings": {
+        "p_out": {
+          "parameter": "letdown_pressure"
+        }
+      }
+    },
+    {
+      "inlets": [
+        "letdown"
+      ],
+      "kind": "flash",
+      "name": "separator",
+      "outlets": [
+        "gas",
+        "condensate"
+      ],
+      "settings": {
+        "duty": {
+          "unit": "W",
+          "value": 0
+        },
+        "p": {
+          "parameter": "letdown_pressure"
+        }
+      }
+    }
+  ]
+}

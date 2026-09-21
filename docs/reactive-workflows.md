@@ -119,8 +119,11 @@ result = reaction_reactor(feed, system, kind="cstr", volume=1.0, t_out=400.0)
 result.check()
 ```
 
-`kind` selects `equilibrium`, `cstr`, or `pfr`. The default package is
-Peng-Robinson; `model` accepts the common package interface. Supply `t_out` for
+`kind` selects `equilibrium`, `cstr`, or `pfr`. The unit wrappers
+`equilibrium_reactor`, `cstr`, and `pfr` call `reaction_reactor` with the same
+arguments and accept either reactions or a `ReactionSet` (see
+[reactions and reactors](reactions.md#reactors)). The default package is
+Peng-Robinson; `model` accepts any property package. Supply `t_out` for
 isothermal operation, or `duty` in W for a specified heat input. `duty=0` is
 adiabatic. These specifications are mutually exclusive. When both are omitted,
 the reactor retains the inlet temperature. Positive `dp` represents pressure
@@ -144,7 +147,9 @@ points.
 
 These reactors require the declared homogeneous phase at the audited states.
 Use a reactive flash or column when reaction and phase separation occur
-together. `check=False` retains failed primals and reports. Failed outputs and
+together. A rejected concrete result raises `ConvergenceError`, and negative
+inventories are rejected rather than clipped. `check=False` retains failed
+primals and reports. Failed outputs and
 profiles have nonfinite derivatives; callers must inspect acceptance before
 using a design gradient. A finite PT flash alone isn't a global stability proof.
 Saved runs add the existing finite-start stability audit to process streams.
@@ -178,13 +183,9 @@ phase inventories. The result contains duty, generation, a combined acceptance
 report, and the final PT `phase_report`. Property and thermochemical parameters
 pass explicitly through the implicit root, including under JIT differentiation.
 
-The older `reactive_distillation` function remains a constant-molar-overflow
-approximation with molar holdup and liquid `x * gamma` kinetic inputs. Its
-holdup isn't a volume, and its material closure doesn't establish energy
-closure. Use the MESH API for the saved workflows described here. Legacy
-`equilibrium_reactor`, `cstr`, and `pfr` calls without a package or `ReactionSet`
-retain their ideal-gas behavior. Supplying either selects the checked common
-implementation. The batch API remains separate.
+`batch_reactor` remains a separate closed-vessel model: an ideal-gas,
+constant-volume batch integrated in time, whose adiabatic form conserves
+internal energy.
 
 ## Portable definitions and measurements
 

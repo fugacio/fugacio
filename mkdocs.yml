@@ -65,6 +65,7 @@ extra:
 nav:
   - Home: index.md
   - Guides:
+    - Upgrading to 0.9: upgrading.md
     - Non-ideal phase equilibrium: phase-equilibrium.md
     - Property packages: property-packages.md
     - Molecular SAFT (PC-SAFT): molecular-saft.md

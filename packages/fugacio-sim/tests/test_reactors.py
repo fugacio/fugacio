@@ -1,16 +1,20 @@
 """Reactor unit operations: material balances, energy balances, and gradients.
 
-The reactor blocks are checked against independent references:
+The reactors run on a property package (Peng-Robinson by default), so
+equilibrium uses real-fluid fugacities and energy uses real-fluid enthalpies
+plus ideal-gas formation enthalpies. They're checked against independent
+references:
 
-* the *equilibrium* reactor must reproduce
-  :func:`fugacio.thermo.reaction_equilibrium.equilibrium` and satisfy an adiabatic
-  enthalpy balance when run adiabatically;
+* the *equilibrium* reactor must satisfy each reaction's equilibrium constant
+  with the package's fugacity coefficients, close the energy balance, and
+  approach the ideal-gas solver where the gas is nearly ideal;
 * the *stoichiometric* reactor must place the outlet exactly at the requested
-  extent / conversion;
-* the *kinetic* reactors (CSTR, PFR, batch) are validated against the closed-form
-  solutions of a first-order gas-phase isomerisation, where the algebra is exact;
-* duties are checked to equal the heat of reaction, and conversions are
-  differentiated through the solvers and compared with finite differences.
+  extent or conversion;
+* the *kinetic* reactors (CSTR, PFR, batch) must satisfy their own balances
+  exactly and match the closed-form first-order isomerization at low pressure,
+  where the concentration is the ideal-gas one;
+* conversions are differentiated through the solvers and compared with finite
+  differences.
 """
 
 import jax
@@ -22,15 +26,16 @@ from fugacio.sim import (
     batch_reactor,
     conversion,
     cstr,
+    enthalpy_flow,
     equilibrium_reactor,
+    package_for,
     pfr,
     stoichiometric_reactor,
 )
 from fugacio.thermo.constants import P_REF, R
-from fugacio.thermo.ideal import enthalpy_ig
 from fugacio.thermo.kinetics import PowerLaw, arrhenius
 from fugacio.thermo.reaction_equilibrium import equilibrium
-from fugacio.thermo.reactions import Reaction, delta_g_rxn, delta_h_rxn, reaction_arrays
+from fugacio.thermo.reactions import Reaction, delta_g_rxn, reaction_arrays
 
 ISOM = ("n-butane", "isobutane")
 ISOM_RX = Reaction.of(ISOM, {"n-butane": 1}, {"isobutane": 1})
@@ -44,59 +49,71 @@ def _isom_feed(fa: float = 10.0, fb: float = 0.0, t: float = 350.0, p: float = 3
     return Stream(jnp.array([fa, fb]), jnp.asarray(t), jnp.asarray(p), ISOM)
 
 
-def _h_total(n: jnp.ndarray, t: float, comps: tuple[str, ...]) -> float:
-    hf, _gf, (a, b, c, d, e) = reaction_arrays(list(comps))
-    return float(jnp.sum(n * (hf + enthalpy_ig(t, a, b, c, d, e))))
+def _energy(stream: Stream) -> float:
+    """Real-fluid enthalpy flow plus formation enthalpy (W)."""
+    hf, _gf, _cp = reaction_arrays(list(stream.components))
+    return float(enthalpy_flow(stream) + stream.n @ hf)
+
+
+def _equilibrium_gap(stream: Stream, reactions: list[Reaction]) -> float:
+    """Largest ``|ln K_j - sum_i nu_ji ln(y_i phi_i P / P_ref)|`` at the stream state."""
+    hf, gf, coeffs = reaction_arrays(list(stream.components))
+    y = stream.n / jnp.sum(stream.n)
+    ln_phi = package_for(stream.components).ln_phi(stream.t, stream.p, y, phase="vapor")
+    ln_a = jnp.log(y) + ln_phi + jnp.log(stream.p / P_REF)
+    gaps = [
+        -delta_g_rxn(rx.nu, stream.t, hf, gf, *coeffs) / (R * stream.t) - rx.nu @ ln_a
+        for rx in reactions
+    ]
+    return float(jnp.max(jnp.abs(jnp.array(gaps))))
 
 
 # --------------------------------------------------------------------------- #
 # Equilibrium reactor
 # --------------------------------------------------------------------------- #
-def test_equilibrium_reactor_matches_thermo_solver() -> None:
+def test_equilibrium_reactor_satisfies_real_fluid_equilibrium() -> None:
     feed = _isom_feed(t=330.0, p=5e5)
     res = equilibrium_reactor(feed, ISOM_RX)
-    ref = equilibrium(ISOM_RX, feed.n, 330.0, 5e5)
-    assert jnp.allclose(res.outlet.n, ref.moles, atol=1e-8)
-    assert float(res.extent[0]) == pytest.approx(float(ref.extent[0]), rel=1e-6)
+    assert bool(res.converged)
+    assert _equilibrium_gap(res.outlet, [ISOM_RX]) < 1e-8
     assert float(res.outlet.t) == pytest.approx(330.0)
     assert float(res.outlet.p) == pytest.approx(5e5)
+    assert float(jnp.sum(res.outlet.n)) == pytest.approx(10.0, rel=1e-12)
     # n-butane -> isobutane is exothermic, so holding T requires heat removal.
     assert float(res.duty) < 0.0
 
 
-def test_equilibrium_reactor_isothermal_duty_equals_heat_of_reaction() -> None:
+def test_equilibrium_reactor_approaches_the_ideal_gas_solver_at_low_pressure() -> None:
+    feed = _isom_feed(t=330.0, p=1e3)
+    res = equilibrium_reactor(feed, ISOM_RX)
+    ideal = equilibrium(ISOM_RX, feed.n, 330.0, 1e3)
+    assert jnp.allclose(res.outlet.n, ideal.moles, rtol=1e-4)
+
+
+def test_equilibrium_reactor_isothermal_duty_closes_the_energy_balance() -> None:
     feed = _isom_feed(t=360.0)
     res = equilibrium_reactor(feed, ISOM_RX)
-    hf, _gf, (a, b, c, d, e) = reaction_arrays(list(ISOM))
-    dh = float(delta_h_rxn(ISOM_RX.nu, 360.0, hf, a, b, c, d, e))
-    assert float(res.duty) == pytest.approx(float(res.extent[0]) * dh, rel=1e-6)
+    assert float(res.duty) == pytest.approx(_energy(res.outlet) - _energy(feed), rel=1e-8)
 
 
-def test_equilibrium_reactor_adiabatic_balances_energy_and_equilibrium() -> None:
+def test_adiabatic_equilibrium_reactor_balances_energy_and_equilibrium() -> None:
     feed = _isom_feed(fa=10.0, t=300.0, p=2e5)
-    res = equilibrium_reactor(feed, ISOM_RX, adiabatic=True)
-    t_out = float(res.outlet.t)
-    assert t_out > 300.0  # exothermic temperature rise
+    res = equilibrium_reactor(feed, ISOM_RX, duty=0.0)
+    assert float(res.outlet.t) > 300.0  # exothermic temperature rise
     assert float(res.duty) == 0.0
-    # Adiabatic enthalpy balance: outlet enthalpy equals the feed enthalpy.
-    assert _h_total(res.outlet.n, t_out, ISOM) == pytest.approx(
-        _h_total(feed.n, 300.0, ISOM), rel=1e-7
-    )
-    # Equilibrium holds at the solved outlet temperature.
-    hf, gf, (a, b, c, d, e) = reaction_arrays(list(ISOM))
-    ln_k = -float(delta_g_rxn(ISOM_RX.nu, t_out, hf, gf, a, b, c, d, e)) / (R * t_out)
-    y = res.outlet.n / jnp.sum(res.outlet.n)
-    ln_q = float(ISOM_RX.nu @ (jnp.log(y) + jnp.log(jnp.asarray(2e5) / P_REF)))
-    assert ln_q == pytest.approx(ln_k, abs=1e-6)
+    assert _energy(res.outlet) == pytest.approx(_energy(feed), rel=1e-8)
+    assert _equilibrium_gap(res.outlet, [ISOM_RX]) < 1e-8
 
 
-def test_equilibrium_reactor_multireaction_matches_solver() -> None:
+def test_equilibrium_reactor_multireaction_satisfies_both_equilibria() -> None:
     feed = Stream(
         jnp.array([1.0, 3.0, 1e-6, 1e-6, 1e-6]), jnp.asarray(1100.0), jnp.asarray(1e5), SMR
     )
     res = equilibrium_reactor(feed, [SMR_RX, WGS_RX], max_iter=100)
-    ref = equilibrium([SMR_RX, WGS_RX], feed.n, 1100.0, 1e5, max_iter=100)
-    assert jnp.allclose(res.outlet.n, ref.moles, atol=1e-6)
+    assert _equilibrium_gap(res.outlet, [SMR_RX, WGS_RX]) < 1e-7
+    # At 1 bar and 1100 K the gas is nearly ideal.
+    ideal = equilibrium([SMR_RX, WGS_RX], feed.n, 1100.0, 1e5, max_iter=100)
+    assert jnp.allclose(res.outlet.n, ideal.moles, rtol=1e-3, atol=1e-5)
 
 
 # --------------------------------------------------------------------------- #
@@ -112,12 +129,10 @@ def test_stoichiometric_conversion_sets_outlet() -> None:
 
 def test_stoichiometric_extent_and_adiabatic_temperature_rise() -> None:
     feed = _isom_feed(fa=10.0, t=300.0)
-    res = stoichiometric_reactor(feed, ISOM_RX, extent=[3.0], adiabatic=True)
+    res = stoichiometric_reactor(feed, ISOM_RX, extent=[3.0], duty=0.0)
     assert jnp.allclose(res.outlet.n, jnp.array([7.0, 3.0]), atol=1e-9)
     assert float(res.outlet.t) > 300.0
-    assert _h_total(res.outlet.n, float(res.outlet.t), ISOM) == pytest.approx(
-        _h_total(feed.n, 300.0, ISOM), rel=1e-7
-    )
+    assert _energy(res.outlet) == pytest.approx(_energy(feed), rel=1e-8)
 
 
 def test_stoichiometric_requires_exactly_one_spec() -> None:
@@ -135,95 +150,101 @@ def test_stoichiometric_conversion_rejects_multireaction() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Kinetic reactors vs. analytic first-order isomerisation
+# Kinetic reactors and the first-order isomerization
 # --------------------------------------------------------------------------- #
 _T = 350.0
-_P = 3e5
-_FA0 = 5.0
+_P_LOW = 1e3  # near-ideal gas, so c = y P / (R T) to about 1e-4
+_FA0 = 0.01
 _LAW = PowerLaw(a=jnp.asarray(2.0e3), ea=jnp.asarray(30e3), orders=jnp.array([1.0, 0.0]))
 
 
-def _alpha() -> float:
+def _alpha(p: float = _P_LOW) -> float:
+    """First-order ``k c_total / F_total`` (1/m^3); the isomerization keeps F constant."""
     k = float(arrhenius(_T, 2.0e3, 30e3))
-    return k * (_P / (R * _T)) / _FA0  # 1/m^3, isomerisation keeps total flow at F_A0
+    return k * (p / (R * _T)) / _FA0
+
+
+def _volume(target: float = 1.0) -> float:
+    """Reactor volume with ``alpha V = target``."""
+    return target / _alpha()
+
+
+def test_cstr_satisfies_its_mole_balance_exactly() -> None:
+    feed = _isom_feed(fa=_FA0, fb=0.0, t=_T, p=3e5)
+    volume = 1e-3
+    res = cstr(feed, ISOM_RX, volume, _LAW)
+    assert bool(res.converged)
+    y = res.outlet.n / jnp.sum(res.outlet.n)
+    v = package_for(ISOM).volume(_T, 3e5, y, phase="vapor")
+    rate = _LAW.rate(_T, y / v)
+    balance = res.outlet.n - feed.n - volume * (rate * ISOM_RX.nu)
+    assert float(jnp.max(jnp.abs(balance))) < 1e-12
 
 
 def test_cstr_first_order_matches_analytic() -> None:
-    volume = 0.5
-    feed = _isom_feed(fa=_FA0, fb=0.0, t=_T, p=_P)
-    res = cstr(feed, ISOM_RX, _LAW, volume)
-    av = _alpha() * volume
-    x_analytic = av / (1.0 + av)
+    feed = _isom_feed(fa=_FA0, fb=0.0, t=_T, p=_P_LOW)
+    res = cstr(feed, ISOM_RX, _volume(), _LAW)
     x = float(conversion(feed, res.outlet, 0))
-    assert 0.2 < x < 0.8
-    assert x == pytest.approx(x_analytic, rel=1e-6)
-    # Steady-state mole balance residual is satisfied at the returned outlet.
-    c = res.outlet.n / jnp.sum(res.outlet.n) * (_P / (R * _T))
-    r = _LAW.rate(_T, c)
-    assert jnp.allclose(res.outlet.n - feed.n - volume * (r * ISOM_RX.nu), 0.0, atol=1e-9)
+    assert x == pytest.approx(0.5, rel=1e-3)  # alpha V / (1 + alpha V)
 
 
 def test_pfr_first_order_matches_analytic() -> None:
-    volume = 0.5
-    feed = _isom_feed(fa=_FA0, fb=0.0, t=_T, p=_P)
-    res = pfr(feed, ISOM_RX, _LAW, volume, steps=400)
-    x_analytic = 1.0 - jnp.exp(-_alpha() * volume)
+    feed = _isom_feed(fa=_FA0, fb=0.0, t=_T, p=_P_LOW)
+    res = pfr(feed, ISOM_RX, _volume(), _LAW, steps=128)
     x = float(conversion(feed, res.outlet, 0))
-    assert x == pytest.approx(float(x_analytic), rel=1e-5)
+    assert x == pytest.approx(1.0 - float(jnp.exp(-1.0)), rel=1e-3)
 
 
 def test_pfr_outperforms_cstr_for_positive_order() -> None:
-    volume = 0.5
-    feed = _isom_feed(fa=_FA0, t=_T, p=_P)
-    x_pfr = float(conversion(feed, pfr(feed, ISOM_RX, _LAW, volume, steps=400).outlet, 0))
-    x_cstr = float(conversion(feed, cstr(feed, ISOM_RX, _LAW, volume).outlet, 0))
+    feed = _isom_feed(fa=_FA0, t=_T, p=_P_LOW)
+    x_pfr = float(conversion(feed, pfr(feed, ISOM_RX, _volume(), _LAW).outlet, 0))
+    x_cstr = float(conversion(feed, cstr(feed, ISOM_RX, _volume(), _LAW).outlet, 0))
     assert x_pfr > x_cstr
 
 
 def test_batch_first_order_matches_analytic() -> None:
-    # Constant-volume batch isomerisation: N_A = N_A0 exp(-k t), independent of V.
+    # Constant-volume batch isomerization: N_A = N_A0 exp(-k t), independent of V.
     n0, vol, time = 4.0, 0.01, 30.0
-    feed = Stream(jnp.array([n0, 0.0]), jnp.asarray(_T), jnp.asarray(_P), ISOM)
+    feed = Stream(jnp.array([n0, 0.0]), jnp.asarray(_T), jnp.asarray(3e5), ISOM)
     res = batch_reactor(feed, ISOM_RX, _LAW, vol, time, steps=400)
     k = float(arrhenius(_T, 2.0e3, 30e3))
-    x_analytic = 1.0 - jnp.exp(-k * time)
-    x = float(conversion(feed, res.outlet, 0))
+    x = float(conversion(feed, res.contents, 0))
     assert 0.2 < x < 0.95
-    assert x == pytest.approx(float(x_analytic), rel=1e-5)
+    assert x == pytest.approx(float(1.0 - jnp.exp(-k * time)), rel=1e-5)
 
 
-def test_pfr_adiabatic_temperature_rises() -> None:
-    feed = _isom_feed(fa=_FA0, t=_T, p=_P)
-    res = pfr(feed, ISOM_RX, _LAW, 0.5, adiabatic=True, steps=400)
+def test_adiabatic_pfr_temperature_rises() -> None:
+    feed = _isom_feed(fa=_FA0, t=_T, p=_P_LOW)
+    res = pfr(feed, ISOM_RX, _volume(), _LAW, duty=0.0)
     assert float(res.outlet.t) > _T  # exothermic
     assert float(conversion(feed, res.outlet, 0)) > 0.0
     assert float(res.duty) == 0.0
+    assert _energy(res.outlet) == pytest.approx(_energy(feed), rel=1e-6)
 
 
 # --------------------------------------------------------------------------- #
 # Differentiability
 # --------------------------------------------------------------------------- #
 def test_cstr_conversion_gradient_wrt_volume_matches_fd() -> None:
-    feed = _isom_feed(fa=_FA0, t=_T, p=_P)
+    feed = _isom_feed(fa=_FA0, t=_T, p=_P_LOW)
 
     def x_of_v(v: jax.Array) -> jax.Array:
-        res = cstr(feed, ISOM_RX, _LAW, v)
-        return conversion(feed, res.outlet, 0)
+        return conversion(feed, cstr(feed, ISOM_RX, v, _LAW).outlet, 0)
 
-    v0 = jnp.asarray(0.5)
+    v0 = jnp.asarray(_volume())
     g = float(jax.grad(x_of_v)(v0))
-    dv = 1e-4
+    dv = 1e-4 * float(v0)
     fd = (float(x_of_v(v0 + dv)) - float(x_of_v(v0 - dv))) / (2 * dv)
     assert g == pytest.approx(fd, rel=1e-4)
-    assert g > 0.0  # more volume -> more conversion
+    assert g > 0.0  # more volume, more conversion
 
 
 def test_pfr_conversion_differentiable_wrt_rate_constant() -> None:
-    feed = _isom_feed(fa=_FA0, t=_T, p=_P)
+    feed = _isom_feed(fa=_FA0, t=_T, p=_P_LOW)
 
     def x_of_a(a: jax.Array) -> jax.Array:
         law = PowerLaw(a=a, ea=jnp.asarray(30e3), orders=jnp.array([1.0, 0.0]))
-        return conversion(feed, pfr(feed, ISOM_RX, law, 0.5, steps=200).outlet, 0)
+        return conversion(feed, pfr(feed, ISOM_RX, _volume(), law).outlet, 0)
 
     g = float(jax.grad(x_of_a)(jnp.asarray(2.0e3)))
     assert g > 0.0  # a faster reaction converts more

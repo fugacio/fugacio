@@ -164,6 +164,7 @@ def saft_parameters_for(
 
     Raises:
         KeyError: If any component lacks curated PC-SAFT parameters.
+        ValueError: If a component's association scheme isn't supported.
     """
     names = [c.strip().lower() for c in components]
     missing = [c for c in names if c not in PURE_SAFT_PARAMS]
@@ -173,6 +174,12 @@ def saft_parameters_for(
     records = [PURE_SAFT_PARAMS[c] for c in names]
     n = len(records)
 
+    unsupported = sorted({r.scheme for r in records} - set(ASSOCIATION_SITES))
+    if unsupported:
+        raise ValueError(
+            f"unsupported association scheme(s) {unsupported}; the acceptor-donor model "
+            f"supports {sorted(ASSOCIATION_SITES)}"
+        )
     sites = [ASSOCIATION_SITES[r.scheme] for r in records]
     matrix = kij
     if matrix is None and use_database_kij:

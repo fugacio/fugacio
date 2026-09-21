@@ -8,8 +8,7 @@ reboiler and any design specifications as one Newton system, with the Jacobian
 from JAX autodiff and the converged column differentiable in every input by the
 implicit function theorem.
 
-That replaces the earlier constant-molar-overflow column (`solve_column`, which
-stays available) with the model a process simulator actually needs:
+It's the model a process simulator needs:
 
 * full stage energy balances, so vapor and liquid traffic vary down the column
   and the reboiler and condenser duties are consistent with the property
@@ -157,6 +156,20 @@ linear residual and uses a pivoted dense fallback if block elimination fails.
 `linear_solver="dense"` retains the reference implementation. See the
 [performance guide](performance.md) for direction counts, scaling, fallback
 limits, and reproducible column benchmarks.
+
+## Failures and flowsheets
+
+`rigorous_column` checks its own report. An eager solve that fails raises
+`ConvergenceError`, naming the stage equation (a material, equilibrium, or
+energy row) or the specification with the largest residual. A traced solve
+returns NaN products with nonfinite derivatives. `check=False` returns the best
+iterate with its `report` for diagnosis.
+
+The result exposes `outlets`, the distillate, the bottoms, and then any side
+draws, and `heat`, the condenser, reboiler, and intermediate stage duties
+together (`stage_duties` holds the intermediate duty on each stage). A
+[flowsheet](flowsheeting.md) unit can therefore return the result directly, and
+the flowsheet keeps the column's heat and report.
 
 The `Column` block in [`fugacio.sim.eo`](equation-oriented.md) embeds a
 converged `rigorous_column` inside an equation-oriented flowsheet, so a column
