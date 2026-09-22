@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.9.0 (2026-09-22)
+
+### Bug Fixes
+
+- Bound the Intel-macOS resolver requirement by Python version
+  ([#26](https://github.com/fugacio/fugacio/pull/26),
+  [`8a5e655`](https://github.com/fugacio/fugacio/commit/8a5e655bdaf5a498ee393926be8b74bf60405a63))
+
+### Features
+
+- Report solve failures and compile kernels once ([#25](https://github.com/fugacio/fugacio/pull/25),
+  [`46b7b8c`](https://github.com/fugacio/fugacio/commit/46b7b8cdd36dcc4242e110a32f135777d7a54d5e))
+
+
 ## v0.8.0 (2026-09-12)
 
 ### Features
