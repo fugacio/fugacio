@@ -69,6 +69,23 @@ jobs:
       - name: Import boundaries (import-linter)
         run: uv run --no-sync lint-imports
 
+  # The release job re-resolves uv.lock after stamping the next version, which
+  # `uv sync --locked` never does. Replay that step and the package builds so a
+  # release that would fail fails here instead of after merge.
+  release-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # The semantic-release action runs build_command on Python 3.14.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Stamp a version, run build_command, and build every package
+        run: python scripts/rehearse_release.py
+
   test:
     runs-on: ubuntu-latest
     # Cold-cache XLA compilation is the long pole (the reference Helmholtz

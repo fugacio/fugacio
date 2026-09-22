@@ -45,7 +45,9 @@ jobs:
       # (pins intra-workspace deps to the new version and refreshes uv.lock; see
       # [tool.semantic_release] in pyproject.toml), updates the changelog,
       # commits (including uv.lock), tags, and creates the GitHub Release. The
-      # per-package PyPI build/publish runs in the deploy job below.
+      # per-package PyPI build/publish runs in the deploy job below. CI's
+      # release-rehearsal job replays the stamp, build_command, and package
+      # builds on every pull request (scripts/rehearse_release.py).
       - name: Python Semantic Release
         id: release
         uses: python-semantic-release/python-semantic-release@v10

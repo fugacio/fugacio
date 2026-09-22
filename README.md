@@ -229,6 +229,19 @@ those tests explicitly. CI runs reference comparisons on pull requests, pushes
 to `main`, and a weekly schedule. The separate Julia comparison requires Julia
 1.10.10 and uses Clapeyron 0.6.25 with a committed dependency manifest.
 
+On Intel Macs, `uv.lock` resolves JAX 0.4.38, the last release with Intel macOS
+wheels, which cover Python 3.11 through 3.13. Everywhere else it resolves current
+JAX. CI runs only current JAX, so a change that relies on a newer JAX API can pass
+CI and still fail on an Intel Mac. The `required-environments` setting in
+`pyproject.toml` keeps this fork in the lock. Once no one develops on an Intel
+Mac, delete that setting and run `uv lock`.
+
+Releases are automated. When a merge to `main` includes a `feat`, `fix`, or
+`perf` commit, the release workflow stamps the next version, refreshes the lock,
+and publishes every package to PyPI. CI rehearses that release on every pull
+request with `scripts/rehearse_release.py`, so a release that would fail fails
+before merge.
+
 Documentation sources live in [`docs/`](docs/). Public APIs use Google-style
 docstrings, enforced by Ruff; keep their argument, return, and exception
 descriptions accurate. `just docs-serve` provides live preview.
