@@ -556,20 +556,19 @@ def validate_topology(feeds: tuple[FeedDefinition, ...], units: tuple[UnitDefini
     would otherwise duplicate matter. Recycles are allowed and need a path from
     a feed plus at least one external product.
     """
+    from fugacio.sim.graph import connection_edges
+
     feed_names = {f.name for f in feeds}
-    producers = {name: "feed" for name in feed_names}
-    consumers: Counter[str] = Counter()
-    for unit in units:
-        for name in unit.outlets:
-            if name in producers:
-                raise CaseValidationError(
-                    "units." + unit.name, f"duplicate producer for stream {name!r}"
-                )
-            producers[name] = unit.name
-        consumers.update(unit.inlets)
+    try:
+        connection_edges(
+            tuple(f.name for f in feeds),
+            tuple((u.name, u.inlets, u.outlets) for u in units),
+        )
+    except ValueError as exc:
+        raise CaseValidationError("connections", str(exc)) from exc
+    producers = feed_names | {name for unit in units for name in unit.outlets}
+    consumers = Counter(name for unit in units for name in unit.inlets)
     for name, count in consumers.items():
-        if name not in producers:
-            raise CaseValidationError("connections", f"stream {name!r} has no producer")
         if count > 1:
             raise CaseValidationError(
                 "connections", f"stream {name!r} is consumed more than once; add a splitter"

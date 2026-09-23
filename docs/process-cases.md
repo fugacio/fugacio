@@ -4,7 +4,9 @@
 artifact. A case declares its component basis, property package, feeds, units,
 parameters, measurements, specifications, and optional economics. The same
 definition can be saved as JSON, solved with either flowsheet backend, studied,
-and reopened by the copilot.
+and reopened by the copilot. Both backends use the
+[shared process graph](process-runtime.md), including sparse implicit
+derivatives and coupled bounded specifications.
 
 ## Run a saved case
 
@@ -163,15 +165,16 @@ wegstein = CaseRunner(case, options=SolverOptions(recycle_method="wegstein"))
 simultaneous = CaseRunner(case, options=SolverOptions(backend="eo"))
 ```
 
-Both backends delegate unit physics to the same kernels. The case EO adapter
-solves simultaneous stream equations with nested implicit unit solves; it
-doesn't expand a column into global MESH unknowns. Pure-fluid EO streams retain
-enthalpy coordinates so quality isn't lost on the saturation line. Failed
+Both backends execute the same process graph and physical unit kernels.
+Simultaneous execution solves stream connection equations with nested implicit
+unit solves; it doesn't expand a column into global MESH unknowns. Stream
+coordinates include vapor inventory so quality isn't lost on the saturation line. Failed
 solves retain their reports, and no backend silently substitutes another.
-Execution compiles each complete registered unit, including feed-property
-preparation and retained outputs, with dynamic operating values. Compiled unit
-templates are cached for the whole process, so every runner with the same unit
-structure and fixed settings shares them. Studies reuse
+Execution reuses numerical kernels with dynamic operating values. Unit
+templates are cached for the whole process, so runners with the same structure
+and fixed settings share them. Columns and exchangers retain separate property
+and implicit solver kernels; their preparation, profiles, and reports aren't
+fused into another case-level compiled solver. Studies reuse
 one local linearization per operating point, selecting forward or reverse
 directions from the input/output counts. They retain the individual unit kernels.
 Fixed case topology and dynamic recycle parameters let optimizer trials reuse

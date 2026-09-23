@@ -26,6 +26,7 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
+from fugacio.thermo._iteration import primal_call, while_loop
 from fugacio.thermo.diagnostics import SolveResult, SolveStatus, residual_report
 from fugacio.thermo.linear import DenseJacobian, Jacobian, JacobianFn
 
@@ -407,22 +408,6 @@ def newton_system_with_info(
     return SolveResult(value, report)
 
 
-def newton_system(
-    residual: ResidualFn,
-    x0: Array,
-    theta: Any,
-    tol: float = 1e-10,
-    max_iter: int = 50,
-) -> Array:
-    """Solve a vector root with implicit forward and reverse derivatives.
-
-    Returns the best iterate for compatibility. Use :func:`newton_system_with_info`
-    when accepting a result; a finite iterate alone does not prove convergence.
-    Derivatives of an unconverged solution are nonfinite.
-    """
-    return newton_system_with_info(residual, x0, theta, tol, max_iter).value
-
-
 def fixed_point_with_info(
     g: Callable[[Array, Any], Array],
     x0: Array,
@@ -472,6 +457,67 @@ def fixed_point(
     iterate has nonfinite derivatives.
     """
     return fixed_point_with_info(g, x0, theta, tol, max_iter).value
+
+
+def _bracketed_iterations(
+    residual: ResidualFn,
+    params: Any,
+    lo: Array,
+    hi: Array,
+    *,
+    tol: float,
+    max_iter: int,
+    residual_tol: float,
+    relative_tol: float,
+) -> SolveResult:
+    """Find and check a scalar root without an ambient derivative trace."""
+    lower, upper, theta = jax.lax.stop_gradient(
+        (jnp.asarray(lo, dtype=float), jnp.asarray(hi, dtype=float), params)
+    )
+    fl, fu = residual(lower, theta), residual(upper, theta)
+    valid = (
+        jnp.isfinite(fl)
+        & jnp.isfinite(fu)
+        & (lower <= upper)
+        & ((jnp.sign(fl) != jnp.sign(fu)) | (fl == 0) | (fu == 0))
+    )
+    allowed = jnp.maximum(residual_tol, relative_tol * jnp.minimum(jnp.abs(fl), jnp.abs(fu)))
+    allowed = jnp.where(jnp.isfinite(allowed), allowed, residual_tol)
+    endpoint = (jnp.abs(fl) <= residual_tol) | (jnp.abs(fu) <= residual_tol)
+
+    def cond(state: tuple) -> Array:
+        left, right, _, _, i = state
+        return valid & ~endpoint & ((right - left) > tol) & (i < max_iter)
+
+    def body(state: tuple) -> tuple:
+        left, right, fleft, _, i = state
+        mid = (left + right) / 2
+        fm = residual(mid, theta)
+        # A nonfinite midpoint moves the bracket left, toward the finite side.
+        same = jnp.sign(fm) == jnp.sign(fleft)
+        return (
+            jnp.where(same, mid, left),
+            jnp.where(same, right, mid),
+            jnp.where(same, fm, fleft),
+            fm,
+            i + 1,
+        )
+
+    left, right, _, f_last, iterations = while_loop(
+        cond, body, (lower, upper, fl, fl, jnp.asarray(0))
+    )
+    at_lower = jnp.abs(fl) <= residual_tol
+    root = jnp.where(endpoint, jnp.where(at_lower, lower, upper), (left + right) / 2)
+    final = jnp.where(endpoint, jnp.where(at_lower, fl, fu), f_last)
+    report = residual_report(
+        jnp.atleast_1d(final / allowed), 1.0, iterations=iterations, step_norm=right - left
+    )
+    report = report._replace(
+        status=jnp.where(valid, report.status, SolveStatus.INVALID_INPUT),
+        residual_norm=jnp.abs(final),
+    )
+    report = jax.lax.stop_gradient(report)
+    return SolveResult(root, report)
 
 
 def bracketed_root_with_info(
@@ -528,52 +574,15 @@ def bracketed_root_with_info(
     """
     if tol <= 0 or residual_tol <= 0 or relative_tol < 0 or max_iter < 0:
         raise ValueError("tolerances must be positive and max_iter nonnegative")
-    lower, upper, theta = jax.lax.stop_gradient(
-        (jnp.asarray(lo, dtype=float), jnp.asarray(hi, dtype=float), params)
+    iterate = partial(
+        _bracketed_iterations,
+        residual,
+        tol=tol,
+        max_iter=max_iter,
+        residual_tol=residual_tol,
+        relative_tol=relative_tol,
     )
-    fl, fu = residual(lower, theta), residual(upper, theta)
-    valid = (
-        jnp.isfinite(fl)
-        & jnp.isfinite(fu)
-        & (lower <= upper)
-        & ((jnp.sign(fl) != jnp.sign(fu)) | (fl == 0) | (fu == 0))
-    )
-    allowed = jnp.maximum(residual_tol, relative_tol * jnp.minimum(jnp.abs(fl), jnp.abs(fu)))
-    allowed = jnp.where(jnp.isfinite(allowed), allowed, residual_tol)
-    endpoint = (jnp.abs(fl) <= residual_tol) | (jnp.abs(fu) <= residual_tol)
-
-    def cond(state: tuple) -> Array:
-        left, right, _, _, i = state
-        return valid & ~endpoint & ((right - left) > tol) & (i < max_iter)
-
-    def body(state: tuple) -> tuple:
-        left, right, fleft, _, i = state
-        mid = (left + right) / 2
-        fm = residual(mid, theta)
-        # A nonfinite midpoint moves the bracket left, toward the finite side.
-        same = jnp.sign(fm) == jnp.sign(fleft)
-        return (
-            jnp.where(same, mid, left),
-            jnp.where(same, right, mid),
-            jnp.where(same, fm, fleft),
-            fm,
-            i + 1,
-        )
-
-    left, right, _, f_last, iterations = jax.lax.while_loop(
-        cond, body, (lower, upper, fl, fl, jnp.asarray(0))
-    )
-    at_lower = jnp.abs(fl) <= residual_tol
-    root = jnp.where(endpoint, jnp.where(at_lower, lower, upper), (left + right) / 2)
-    final = jnp.where(endpoint, jnp.where(at_lower, fl, fu), f_last)
-    report = residual_report(
-        jnp.atleast_1d(final / allowed), 1.0, iterations=iterations, step_norm=right - left
-    )
-    report = report._replace(
-        status=jnp.where(valid, report.status, SolveStatus.INVALID_INPUT),
-        residual_norm=jnp.abs(final),
-    )
-    report = jax.lax.stop_gradient(report)
+    root, report = primal_call(iterate, (params, lo, hi))
     value = implicit_solution(
         lambda x, th: jnp.atleast_1d(residual(x[0], th)),
         jnp.atleast_1d(root),

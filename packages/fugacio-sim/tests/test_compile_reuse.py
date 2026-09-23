@@ -16,6 +16,7 @@ from fugacio.sim import (
     adiabatic_flash,
     compressor,
     flash_drum,
+    heat_exchanger,
     heater,
     mix,
     package_for,
@@ -27,6 +28,8 @@ from fugacio.sim import (
 from fugacio.sim.cases.examples import example_case
 from fugacio.sim.cases.runtime import CaseRunner
 from fugacio.sim.cases.schema import ProcessCase
+from fugacio.thermo._iteration import primal_call
+from fugacio.thermo.sensitivity import linearize
 
 _COMPILES = [0]
 
@@ -73,6 +76,13 @@ CALLS = {
         float(PKG.mixture_enthalpy(330.0, 20e5, Z)),
     ),
     "package_bubble_pressure": (lambda t: PKG.bubble_pressure(t, Z), 250.0, 260.0),
+    "heat_exchanger_approach": (
+        lambda approach: heat_exchanger(
+            Stream.from_fractions(LIGHT, Z, 10.0, 450.0, 20e5), FEED, min_approach=approach
+        ),
+        15.0,
+        16.0,
+    ),
 }
 
 
@@ -125,6 +135,37 @@ def test_a_new_case_runner_reuses_unit_templates() -> None:
     assert _compiles_during(lambda: CaseRunner(case).evaluate().metrics) == 0
 
 
+def test_detached_primal_keeps_the_same_executable_inside_autodiff() -> None:
+    @jax.jit
+    def kernel(x):
+        return jnp.sin(x) + jnp.cos(x)
+
+    def forward(x):
+        return primal_call(kernel, (x,))
+
+    point = jnp.asarray(0.3)
+    forward(point).block_until_ready()
+    assert _compiles_during(lambda: jax.linearize(forward, point)[0]) == 0
+    assert jax.grad(forward)(point) == 0.0
+
+
+def test_new_process_points_reuse_the_compiled_unit_tangents() -> None:
+    runner = CaseRunner(example_case("recycle"))
+
+    def vector(point):
+        return jnp.atleast_1d(runner.evaluate({"temperature": point[0]}).metrics["duty"])
+
+    def derivative(temperature):
+        return linearize(vector, jnp.array([temperature])).jacobian()
+
+    # Initialize the primal and derivative contexts, including the callbacks
+    # for the first changed operating point. Later points reuse their kernels.
+    derivative(350.0).block_until_ready()
+    derivative(351.0).block_until_ready()
+    assert _compiles_during(derivative, 352.0) == 0
+    assert _compiles_during(derivative, 353.0) == 0
+
+
 def test_templates_that_differ_in_a_literal_setting_never_share_a_kernel() -> None:
     def literal(t_out: float) -> ProcessCase:
         document = example_case("heater").to_dict()
@@ -134,3 +175,61 @@ def test_templates_that_differ_in_a_literal_setting_never_share_a_kernel() -> No
     for t_out in (350.0, 360.0):
         evaluation = CaseRunner(literal(t_out)).evaluate()
         assert float(evaluation.streams["product"].t) == pytest.approx(t_out)
+
+
+def test_case_column_cold_and_profile_starts_share_the_compiled_solver() -> None:
+    document = example_case("heater").to_dict()
+    document.update(
+        components=["benzene", "toluene"],
+        parameters={"reflux": {"value": 2.5, "unit": "1", "lower": 1.1, "upper": 5}},
+        feeds={
+            "feed": {
+                "flow": {"value": 100, "unit": "mol/s"},
+                "z": [0.5, 0.5],
+                "temperature": {"value": 365, "unit": "K"},
+                "pressure": {"value": 1.013, "unit": "bar"},
+            }
+        },
+        units=[
+            {
+                "name": "column",
+                "kind": "column",
+                "inlets": ["feed"],
+                "outlets": ["distillate", "bottoms"],
+                "settings": {
+                    "n_stages": 4,
+                    "feed_stages": [2],
+                    "p": {"value": 1.013, "unit": "bar"},
+                    "specs": [
+                        {"kind": "reflux_ratio", "value": {"parameter": "reflux"}},
+                        {"kind": "distillate_rate", "value": {"value": 50, "unit": "mol/s"}},
+                    ],
+                },
+            }
+        ],
+        metrics={
+            "duty": {"expression": {"unit": "column", "property": "reboiler_duty"}, "unit": "W"}
+        },
+    )
+    runner = CaseRunner(ProcessCase.from_dict(document))
+    kernel = runner._unit_kernels["column"]
+    inputs = (runner._flow.feeds["feed"],)
+    cold = kernel(inputs, runner.defaults, runner.package, None)
+    assert cold.report.converged
+    seed = {
+        "liquid": cold.profiles["stage_liquid"],
+        "vapor": cold.profiles["stage_vapor"],
+        "t": cold.profiles["t"],
+        "condenser_duty": cold.quantities["condenser_duty"],
+        "reboiler_duty": cold.quantities["reboiler_duty"],
+    }
+
+    def warm():
+        return kernel(inputs, runner.defaults, runner.package, seed)
+
+    assert _compiles_during(warm) == 0
+    result = warm()
+    assert result.report.converged and result.report.iterations == 0
+    changed = {"reflux": jnp.asarray(2.6)}
+    assert _compiles_during(lambda: kernel(inputs, changed, runner.package, seed)) == 0
+    assert kernel(inputs, changed, runner.package, seed).report.converged

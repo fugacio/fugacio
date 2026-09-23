@@ -23,9 +23,10 @@ calculation. Fugacio arranges its calculations so a structure compiles once:
   per method and static options, with the package as a dynamic argument. A
   package whose pytree holds a non-array leaf, such as an unregistered
   activity-model object, runs eagerly instead.
-- `Flowsheet` caches each recycle block's map, so solving again at a new
-  `theta` reuses the compiled recycle iteration. Registering a unit or a tear
-  clears the cache.
+- `Flowsheet` caches each recycle block's map. Concrete iterations reuse the
+  compiled unit kernels; an explicitly staged iteration also retains its
+  function identity across operating points. Registering a unit or a tear
+  clears the structural cache.
 - Saved-case unit templates are shared by every `CaseRunner` in a process,
   keyed by the template's fixed settings, so another case with the same unit
   structure reuses them.
@@ -69,7 +70,7 @@ runner = CaseRunner(
     options=SolverOptions(
         recycle_method="broyden",
         column_solver="block",
-        eo_jacobian="colored",
+        plant_solver="sparse",
     ),
 )
 structure = runner.diagnose_structure()
@@ -78,11 +79,10 @@ run = runner.run(check=True)
 
 `column_solver="block"` is the default for saved cases. The direct
 `rigorous_column` API calls this option `linear_solver`. Set either option to
-`"dense"` to use the reference assembly and solve. `eo_jacobian="colored"`
-reduces global flowsheet differentiation work; `"dense"` retains the original
-assembly. These are numerical choices recorded in runs, independent of case
-identity. Replaying an older run without these fields selects its original
-dense algorithms.
+`"dense"` to use the reference assembly and solve. `plant_solver="sparse"`
+uses local unit assembly and sparse CPU factorization. `"dense"` selects a
+small reference matrix. These choices are recorded in runs independently of
+case identity. Old numerical-option replay defaults have been removed.
 
 ### Rigorous columns
 
@@ -129,48 +129,27 @@ for exact warm starts, including columns with side products.
 
 ### Flowsheet assembly and diagnostics
 
-`EOFlowsheet.diagnose_structure()` and `CaseRunner.diagnose_structure()` inspect
-declared incidence without a nonlinear solve. Reports include equation and
-variable counts, maximum matching, unmatched labels, density, and coloring
-cost. They also identify duplicate auxiliary owners and freed variables.
-Matching is an upper bound on numerical rank. `EOFlowsheet.diagnose()` adds
-state-dependent rank and conditioning checks.
+The [shared process runtime](process-runtime.md) preserves local unit
+compilation during concrete process iterations and differentiation. Both
+sequential and simultaneous saved-case execution use one process graph.
+Native EO built-ins call the same physical kernels; custom residual blocks
+use local sparse assembly with declared dependencies.
 
-Built-in EO blocks declare their stream and auxiliary dependencies. Custom
-blocks, including subclasses of built-ins, default to all unknowns unless
-they explicitly implement `residual_dependencies`. Declaring dependencies is
-a contract over the model domain; observed zeros at one state aren't enough.
-Global EO matrices still use dense pivoted factorization. Registered columns
-and flashes retain their nested implicit solves; the case adapter doesn't
-expand a column into global MESH unknowns.
+The process Jacobian stores outlet identities and local unit input blocks.
+Forward and transposed solves use checked sparse CPU LU with bounded factor
+reuse. There is no automatic dense process fallback. Design specifications
+add a small border to this system, so specification trials evaluate unit and
+metric equations without repeatedly solving the complete plant.
 
-The modular recycle solver keeps the initial unit pass outside its iteration
-executable. Broyden backtracking uses one trial-evaluation site, including the
-full step, so the compiler doesn't receive separate copies of the entire unit
-train for full and shortened steps. Its residual checks and accepted step
-sequence retain the same search policy.
-Recycle sensitivities retain a dense global matrix but assemble its directions
-sequentially. This avoids multiplying a column's internal tangent batch by
-the number of tear coordinates. State and parameter directions share one
-residual linearization, so the matrix and its right-hand side don't repeat
-the same nested unit linearizations.
-Scalar implicit roots and ordinary dense implicit systems also share residual
-data between state and parameter directions. This matters when an exchanger
-duty root contains energy flashes and equilibrium roots: separate residual
-evaluations at each level otherwise repeat work throughout that stack.
-Phase-classification locators detach their state and package inputs before
-calling a flash. Their derivatives were already excluded from the physical
-model; this avoids constructing those unused derivatives in the first place.
-The same rule applies to numerical LU factors: the linear solve differentiates
-its original matrix equation, while factor and pivot calculations stay detached.
-Exchanger sides with matching model structures and array shapes share one
-sequential PH-flash body. Each side retains its own composition and model
-parameters. Different models or component bases retain separate bodies;
-phase-regime branches remain conditional within each position.
-Mixture outlets reuse the curve endpoints and resolve only their phase
-inventories. Pure-fluid outlets retain a PH solve because temperature alone
-doesn't determine saturation quality. This avoids repeating two complete
-mixture energy solves after the profiles have already converged.
+`CaseRunner.diagnose_structure()` reports `process_graph`, including stored
+coefficients, scalar coordinates, matching, and specification variables.
+`EOFlowsheet.diagnose_structure()` reports custom equation incidence, and
+`diagnose()` adds a state-dependent dense rank diagnostic. Matching alone
+doesn't establish a solvable or physically accepted state.
+
+Column internals retain structured MESH solves. The connection matrix doesn't
+expand their stages. Parameter and feed derivatives pass through the same
+local kernels, and numerical seeds never carry derivatives.
 
 ```bash
 uv run fugacio diagnose examples/process-cases/depropanizer.json
@@ -271,6 +250,44 @@ options are available through the same CLI and copilot routes as ordinary runs.
 
 ## Measured behavior
 
+### Shared runtime observations
+
+The September 23, 2026, observations in
+`benchmarks/shared-process-runtime.json` retain source digests, solver settings,
+phase timings, study results, and independently audited runs. Each study uses a
+fresh process and retains JAX kernels across baseline, derivative, and audit
+phases. The Linux container has four CPUs, an 8,000,000,000-byte hard memory
+limit, no additional swap allowance, and `MALLOC_ARENA_MAX=2`.
+GB means 1,000,000,000 bytes.
+
+| Workload | Environment | Disk cache | Total, seconds | Peak RSS, GB |
+| --- | --- | --- | ---: | ---: |
+| 12-stage NRTL train sensitivities | Linux, JAX 0.10.1 | Empty | 1,096.2 | 7.920 |
+| 16-stage depropanizer optimization | Linux, JAX 0.10.1 | Empty | 367.8 | 4.795 |
+
+The NRTL train passes all seven physical audits and all six finite-difference
+comparisons. Its largest derivative relative error is 0.00000908. The process
+matrix has 30 connection unknowns and 210 stored coefficients; the column
+retains its own structured stage solve. The audited baseline peaks at 3.308 GB,
+and the first complete linearization peaks at 7.920 GB. Its compilation remains
+the dominant cost: 712.0 seconds, followed by 66.1 seconds to apply the Jacobian.
+This observation leaves little headroom below 8 GB; it doesn't establish that
+every host, allocator, or larger process will fit that budget.
+
+The depropanizer optimization completes six SLSQP iterations and passes its
+final cold-start physical audit. The first linearization takes 229.4 seconds;
+later linearizations settle near 3.1 seconds, with Jacobian applications near
+0.54 seconds. Peak RSS remains near 4.795 GB across the later optimizer points.
+Separate compile-event regression tests verify kernel reuse across changed
+operating points on JAX 0.4.38 and 0.10.1.
+
+Peak RSS uses the largest retained process observation, including samples after
+the study's final timer. The runs shared their physical host with other
+validation work, so elapsed times include that contention. Stage counts, cache
+states, and platforms are recorded separately for each observation.
+
+### Earlier observations
+
 The September 9, 2026, observations are recorded in
 `benchmarks/process-performance.json`, including source digests, environments,
 phase timings, acceptance checks, and failures. The following measurements
@@ -320,7 +337,7 @@ outputs inherit a 7 GB guarantee. The default-allocator cold run reached
 Failed resource observations remain in the benchmark record. A warm persistent
 cache can reduce compilation time without reducing peak resident memory.
 
-### What checked solves cost
+### Measurements before the shared graph
 
 Checked solves, retained reports, and per-unit kernels enlarge the compiled
 process graph, so the same studies need more compile memory and time than they
@@ -328,15 +345,15 @@ did before the engine reported every failure. Measured on the same CI runner,
 same case, and same JAX 0.10.1: the depropanizer optimization's audited
 baseline run went from 2.533 GB and 88 seconds to 3.148 GB and 139 seconds, and
 its first plant linearization from 6.104 GB to more than 7 GB, which is why
-that job's limit is now 9 GB. The 12-stage ethanol/water train's audited run
+the earlier job used a 9 GB limit. The 12-stage ethanol/water train's audited run
 went from 5.984 GB and 379 seconds to 8.041 GB and 654 seconds, and its first
 linearization no longer fits a 16 GB runner at all (it passed 12 GB before
-completing), so a pull request skips that benchmark. Shrinking the column
-doesn't recover it: at eight stages the same train has to work harder for the
+completing), so the earlier workflow skipped that benchmark on pull requests.
+Shrinking the column didn't recover it: at eight stages the same train had to work harder for the
 same distillate rate, and its audited run peaked higher still, at 10.494 GB.
-The depropanizer optimization now completes in 639 seconds at 8.043 GB, within
-its 9 GB limit. A local comparison on one
-macOS host attributes the increase to the process graph rather than to the
+That implementation completed its depropanizer optimization in 639 seconds at
+8.043 GB, within its 9 GB limit. A local comparison on one macOS host attributed
+the increase to the process graph rather than to the
 retained kernels: the same depropanizer solve moved from 3.794 GB and 122
 seconds to 4.758 GB and 158 seconds, while its per-unit kernels *reduced* peak
 memory (4.755 GB with them, 4.987 GB without), and the heat exchanger's
@@ -393,15 +410,13 @@ uv run python scripts/benchmark_process.py \
   --output artifacts/performance/column32-dense
 
 uv run python scripts/benchmark_process.py \
-  --scenario depropanizer --study optimization --release-caches \
-  --max-rss-gb 9 --timeout-seconds 3000 \
+  --scenario depropanizer --study optimization \
+  --max-rss-gb 8 --timeout-seconds 3000 \
   --output artifacts/performance/depropanizer-optimization
 
-# This train needs a host with more than 16 GB of RAM: CI runs it only on a
-# manual workflow dispatch (see the measurements below).
 uv run python scripts/benchmark_process.py \
-  --scenario ethanol-train --stages 12 --study sensitivities --release-caches \
-  --max-rss-gb 16 --timeout-seconds 3000 \
+  --scenario ethanol-train --stages 12 --study sensitivities \
+  --max-rss-gb 8 --timeout-seconds 3000 \
   --output artifacts/performance/ethanol-train
 
 uv run python scripts/benchmark_process.py \
@@ -423,7 +438,8 @@ after each completed point. The host value/Jacobian pair remains cached for
 repeated optimizer callbacks at that same point. Clearing compiler caches
 between individual points increased both compilation time and peak memory in
 the Linux depropanizer experiment. The option retains the persistent cache and
-recorded runs. The constrained-memory CI studies enable it.
+recorded runs. The shared-runtime CI studies leave it disabled to check
+retained-kernel memory across the complete study.
 
 The standalone column benchmark separates tracing and lowering, compilation,
 first execution, and repeated execution for both the primal and derivative
@@ -434,14 +450,12 @@ pure execution time.
 
 The process-performance CI workflow runs 32- and 64-stage columns, the saved
 depropanizer optimization, the NRTL train, and a 24-variable study in separate
-jobs. The columns and heater bank have a 7 GB process limit and the
-depropanizer optimization a 9 GB limit. The NRTL sensitivity train exceeds a
-16 GB runner with the checked engine, so a pull request skips it with a notice
-and it runs on a manual workflow dispatch, on a host with more memory. All these Linux jobs
-set `MALLOC_ARENA_MAX=2` before process startup. The NRTL job needs enough
-additional RAM for the runner and operating system. GitHub documents 16 GB
-for public-repository Linux runners; private forks need to select a runner
-with sufficient memory. See the
+jobs on pull requests and manual dispatch. The columns and heater bank have
+a 7 GB process limit; both complete plant studies have an 8 GB target. These
+are enforced budgets, not guarantees for other processes, hosts, or JAX
+versions. All Linux jobs set `MALLOC_ARENA_MAX=2` before process startup.
+Select a host with additional memory for the runner and operating system;
+private forks may have different runner resources. See the
 [GitHub-hosted runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 The workflow preserves failed observations. Timing
 observations are hardware dependent; the CI gates completion and correctness,

@@ -73,6 +73,11 @@ reports, stability checks, phase inventories, warm starts, continuation, and
 derivative limits. Upgrading from 0.8? See the
 [upgrading guide](docs/upgrading.md).
 
+Steady-state processes use a [shared process graph](docs/process-runtime.md).
+Sequential and simultaneous execution use the same physical unit kernels;
+plant sensitivities assemble local unit derivatives into a sparse implicit
+system. Saved design specifications join the process equations directly.
+
 Each unit operation compiles once per property-package structure and
 specification kind; new operating points and package parameters reuse the
 compiled kernel. To reuse compiled kernels across processes, call

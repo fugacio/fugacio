@@ -76,3 +76,31 @@ def test_nested_scalar_roots_share_state_and_parameter_linearizations(method):
     np.testing.assert_allclose(
         jax.jit(jax.hessian(solve))(point), [[0.0, 0.0], [0.0, 2.0]], atol=1e-9
     )
+
+
+def test_concrete_bisection_reuses_its_kernel_and_retains_implicit_derivatives():
+    traced = []
+
+    @jax.jit
+    def residual(x, p):
+        traced.append(True)
+        return x**2 - p
+
+    def solve(p):
+        return bracketed_root(residual, p, 0.1, 10.0)
+
+    assert solve(jnp.asarray(4.0)) == pytest.approx(2.0, abs=1e-10)
+    assert solve(jnp.asarray(9.0)) == pytest.approx(3.0, abs=1e-10)
+    assert len(traced) == 1
+    assert jax.grad(solve)(jnp.asarray(4.0)) == pytest.approx(0.25)
+    assert jax.hessian(solve)(jnp.asarray(4.0)) == pytest.approx(-1 / 32)
+
+
+def test_iteration_can_stage_a_condition_with_closed_over_traced_parameters():
+    from fugacio.thermo._iteration import while_loop
+
+    @jax.jit
+    def count(limit):
+        return while_loop(lambda x: x < limit, lambda x: x + 1, jnp.asarray(0))
+
+    assert count(jnp.asarray(3)) == 3

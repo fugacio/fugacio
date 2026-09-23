@@ -189,12 +189,12 @@ def test_eo_degrees_of_freedom_report() -> None:
     fs.feed("feed", _gas())
     fs.add(Flash(inlets=("feed",), outlets=("vap", "liq"), t="T", p="P"))
     report = fs.degrees_of_freedom()
-    # Two product streams, each n_components + 2 unknowns; the flash supplies
+    # Two product streams, each 2*n_components + 2 unknowns; the flash supplies
     # exactly that many equations, so the system is square.
-    assert report.n_unknowns == 2 * (len(C) + 2)
+    assert report.n_unknowns == 2 * (2 * len(C) + 2)
     assert report.n_equations == report.n_unknowns
     assert report.degrees_of_freedom == 0
-    assert report.per_block == {"vap": 2 * (len(C) + 2)}
+    assert report.per_block == {"vap": 2 * (2 * len(C) + 2)}
 
 
 def test_eo_unknown_stream_is_rejected() -> None:
@@ -210,7 +210,7 @@ def test_eo_duplicate_source_is_rejected() -> None:
     fs.feed("feed", _gas())
     fs.add(Valve(inlets=("feed",), outlets=("out",), p_out=10e5))
     fs.add(Heater(inlets=("feed",), outlets=("out",), t_out=320.0))
-    with pytest.raises(ValueError, match="produced by two blocks"):
+    with pytest.raises(ValueError, match="produced by both units"):
         fs.solve({})
 
 
