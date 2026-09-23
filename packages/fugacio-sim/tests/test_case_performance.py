@@ -19,7 +19,6 @@ from fugacio.sim.cases import (
 from fugacio.sim.cases.cli import main
 from fugacio.sim.cases.examples import example_case, heater_bank_case
 from fugacio.sim.cases.jsonio import read_json
-from fugacio.sim.cases.results import CaseRun, sealed
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +83,7 @@ def test_profile_preserves_ordinary_run_identity_and_saves_derivative_strategy(t
     assert saved["derivatives"]["jacobian_si"][0][0] > 0
     assert not saved["derivatives"]["finite_difference_verified"]
     assert saved["observations"]["process_peak_rss_bytes"] > 0
-    assert saved["structure"]["equation_oriented"]["structurally_square_and_matched"]
+    assert saved["structure"]["process_graph"]["structurally_square_and_matched"]
     assert workspace.load_run(saved["baseline_id"]).accepted
 
 
@@ -104,20 +103,6 @@ def test_profile_failed_physics_is_retained_without_derivative_claim():
     assert len(result.runs) == 2 and all(not r.accepted for r in result.runs)
 
 
-def test_legacy_run_replay_preserves_dense_numerical_choices(tmp_path, runner):
-    old = runner.run().to_dict()
-    old["solver"].pop("column_solver")
-    old["solver"].pop("eo_jacobian")
-    old.pop("artifact_id")
-    legacy = CaseRun.from_dict(sealed("run", old))
-    workspace = CaseWorkspace(tmp_path)
-    workspace.save_run(legacy)
-    replay = workspace.replay(legacy.run_id)
-    assert replay.accepted
-    assert replay.to_dict()["solver"]["column_solver"] == "dense"
-    assert replay.to_dict()["solver"]["eo_jacobian"] == "dense"
-
-
 def test_new_examples_and_structure_command_are_portable(tmp_path, capsys):
     case = heater_bank_case(12)
     assert len(case.parameters) == 12
@@ -127,8 +112,8 @@ def test_new_examples_and_structure_command_are_portable(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert len(result["partitions"]) == 12
     assert result["unit_instances"] == 12 and result["unit_templates"] == 1
-    assert result["equation_oriented"]["colored_directions"] == 4
-    assert result["equation_oriented"]["n_unknowns"] == 48
+    assert result["process_graph"]["colored_directions"] == 1
+    assert result["process_graph"]["n_unknowns"] == 72
     train = CaseRunner(example_case("ethanol-train"))
     assert train.diagnose_structure()["columns"]["column"]["stages"] == 12
 
@@ -146,7 +131,7 @@ def test_many_variable_reverse_study_matches_audited_finite_differences():
     assert all(phase["status"] == "completed" for phase in recorder.phases)
 
 
-@pytest.mark.parametrize("option,value", [("column_solver", "bad"), ("eo_jacobian", "bad")])
+@pytest.mark.parametrize("option,value", [("column_solver", "bad"), ("plant_solver", "bad")])
 def test_invalid_solver_choices(option, value):
     with pytest.raises(ValueError):
         SolverOptions(**{option: value})
@@ -178,6 +163,7 @@ def test_benchmark_limits_retain_failed_resource_reports(tmp_path, limit):
     if limit == "memory":
         assert report["resource_limit"]["reason"] == "memory_limit"
         assert report["resource_limit"]["peak_rss_bytes"] > 1e6
+        assert report["process_peak_rss_bytes"] >= report["resource_limit"]["peak_rss_bytes"]
     assert report["cache"]["fresh_process"] and report["cache"]["mode"] == "cold"
 
 
@@ -213,7 +199,8 @@ def test_benchmark_populates_persistent_cache_and_can_reuse_it(tmp_path):
         prior = report
 
 
-def test_benchmark_final_peak_cannot_bypass_the_sampled_watchdog(tmp_path, monkeypatch):
+@pytest.mark.parametrize("source", ["final_result", "late_sample"])
+def test_benchmark_final_peak_cannot_bypass_the_sampled_watchdog(tmp_path, monkeypatch, source):
     script = Path(__file__).resolve().parents[3] / "scripts" / "benchmark_process.py"
     spec = importlib.util.spec_from_file_location("process_benchmark", script)
     module = importlib.util.module_from_spec(spec)
@@ -231,10 +218,18 @@ def test_benchmark_final_peak_cannot_bypass_the_sampled_watchdog(tmp_path, monke
                 json.dumps(
                     {
                         "accepted": True,
-                        "observations": {"process_peak_rss_bytes": 1_100_000_000},
+                        "observations": {
+                            "process_peak_rss_bytes": 1_100_000_000
+                            if source == "final_result"
+                            else 900_000_000
+                        },
                     }
                 )
             )
+            if source == "late_sample":
+                (output / "resources.json").write_text(
+                    json.dumps({"process_peak_rss_bytes": 1_100_000_000})
+                )
             return self
 
         def __exit__(self, *args):
@@ -251,3 +246,4 @@ def test_benchmark_final_peak_cannot_bypass_the_sampled_watchdog(tmp_path, monke
     assert report["exit_code"] == 0 and not report["accepted"]
     assert report["resource_limit"]["peak_rss_bytes"] == 1_100_000_000
     assert report["resource_limit"]["detected_at"] == "completed_worker"
+    assert report["process_peak_rss_bytes"] == 1_100_000_000

@@ -218,6 +218,13 @@ from fugacio.sim.flowsheet import (
     tear_solve,
     tear_solve_with_info,
 )
+from fugacio.sim.graph import (
+    CompiledGraph,
+    ProcessGraph,
+    ProcessUnit,
+    ResidualGraph,
+    SpecifiedGraph,
+)
 from fugacio.sim.heat_exchanger import HeatExchangerResult, heat_exchanger
 from fugacio.sim.integration import (
     CompositeCurves,
@@ -386,6 +393,7 @@ __all__ = [
     "ClosedLoop",
     "ColumnFeed",
     "ColumnSpec",
+    "CompiledGraph",
     "ComponentSeparator",
     "CompositeCurves",
     "Compressor",
@@ -440,6 +448,8 @@ __all__ = [
     "PIDState",
     "Partition",
     "PinchResult",
+    "ProcessGraph",
+    "ProcessUnit",
     "Pump",
     "PumpResult",
     "PxyDiagram",
@@ -449,6 +459,7 @@ __all__ = [
     "ReactionSet",
     "ReactiveFlashResult",
     "ReferenceRate",
+    "ResidualGraph",
     "ResidueCurve",
     "RigorousColumnResult",
     "Scales",
@@ -458,6 +469,7 @@ __all__ = [
     "SolveResult",
     "SolveStatus",
     "SpecResult",
+    "SpecifiedGraph",
     "Splitter",
     "StageDuty",
     "StateSpace",

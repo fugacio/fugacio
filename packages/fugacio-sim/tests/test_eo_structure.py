@@ -10,9 +10,9 @@ from fugacio.sim import Stream
 from fugacio.sim.eo import EOFlowsheet, Heater
 
 
-def train(count=6, mode="colored"):
+def train(count=6, mode="sparse"):
     feed = Stream.from_fractions(("methane", "ethane"), jnp.array([0.8, 0.2]), 1.0, 300.0, 1e5)
-    fs = EOFlowsheet(jacobian_mode=mode).feed("feed", feed)
+    fs = EOFlowsheet(linear_solver=mode).feed("feed", feed)
     for i in range(count):
         fs.add(Heater(("feed" if i == 0 else f"out{i - 1}",), (f"out{i}",), t_out="t"))
     return fs
@@ -22,8 +22,8 @@ def test_structural_incidence_matches_dense_jacobian_and_reduces_directions():
     fs = train()
     report = fs.diagnose_structure()
     assert report["structurally_square_and_matched"]
-    assert report["n_unknowns"] == 24
-    assert report["colored_directions"] == 8
+    assert report["n_unknowns"] == 36
+    assert report["colored_directions"] == 12
     assert not fs._plans  # Structure inspection doesn't compile or seed a solve.
     ctx = fs._context()
     names = fs._internal_names()
@@ -38,21 +38,21 @@ def test_structural_incidence_matches_dense_jacobian_and_reduces_directions():
     )
 
 
-def test_eo_coloring_dense_reference_and_operating_point_cache():
-    colored, dense = train(3), train(3, "dense")
+def test_eo_sparse_dense_reference_and_operating_point_cache():
+    sparse, dense = train(3), train(3, "dense")
     for temperature in (340.0, 360.0):
-        actual = colored.solve({"t": temperature})
+        actual = sparse.solve({"t": temperature})
         expected = dense.solve({"t": temperature})
         assert actual.report.converged and expected.report.converged
         assert actual["out2"].t == pytest.approx(temperature, abs=1e-9)
         np.testing.assert_allclose(actual["out2"].n, expected["out2"].n, atol=1e-10)
-    assert len(colored._plans) == 1
-    derivative = jax.jit(jax.grad(lambda t: colored.solve({"t": t})["out2"].t))(345.0)
+    assert len(sparse._plans) == 1
+    derivative = jax.jit(jax.grad(lambda t: sparse.solve({"t": t})["out2"].t))(345.0)
     assert derivative == pytest.approx(1.0, abs=1e-10)
     # Changing assembly strategy invalidates the compiled plan.
-    colored.jacobian_mode = "dense"
-    colored.solve({"t": 350.0})
-    assert len(colored._plans) == 2
+    sparse.linear_solver = "dense"
+    sparse.solve({"t": 350.0})
+    assert len(sparse._plans) == 2
 
 
 def test_custom_subclass_defaults_to_conservative_dependencies():

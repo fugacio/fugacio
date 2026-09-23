@@ -28,7 +28,7 @@ either side.
 
 from __future__ import annotations
 
-from functools import partial
+from functools import lru_cache, partial
 from typing import Any, NamedTuple
 
 import jax
@@ -150,6 +150,7 @@ def _outlet_stream(
     return Stream(stream.n, temperature, pressure, stream.components, vapor.n)
 
 
+@partial(jax.jit, static_argnames=("zones", "flow", "t_init"))
 def _curves(
     q: Array,
     zones: int,
@@ -259,7 +260,25 @@ def _ua_required(q: Array, t_h: Array, t_c: Array) -> Array:
     return jnp.where(jnp.min(dt) <= 0.0, jnp.inf, jnp.sum((q / zones) / lm))
 
 
-@partial(jax.jit, static_argnames=("spec", "zones", "flow", "t_init", "tol"))
+@lru_cache(maxsize=64)
+def _curve_functions(spec: str, zones: int, flow: str, t_init: float) -> tuple[Any, Any]:
+    """Stable callbacks share the same compiled curves at every duty trial."""
+
+    def curves(q: Array, th: Any) -> tuple[Array, Array]:
+        pkg_h, pkg_c, hot, cold, hh, hc, ph, pc = th
+        return _curves(q, zones, flow, hot, cold, pkg_h, pkg_c, hh, hc, ph, pc, t_init)
+
+    def residual(frac: Array, th: Any) -> Array:
+        th_curves, qmax, target = th
+        q = frac * qmax
+        t_h, t_c = curves(q, th_curves)
+        if spec == "min_approach":
+            return jnp.min(t_h - t_c) - target
+        return jnp.log(target) - jnp.log(_ua_required(q, t_h, t_c))
+
+    return curves, residual
+
+
 def _solve(
     pkg_h: PropertyPackage,
     pkg_c: PropertyPackage,
@@ -286,10 +305,7 @@ def _solve(
     q_cold_max = cold.total * (pkg_c.mixture_enthalpy(hot.t, p_cold_out, cold.z) - h_cold_in)
     q_max = jnp.maximum(jnp.minimum(q_hot_max, q_cold_max), 1e-9)
 
-    def curves(q: Array, th: Any) -> tuple[Array, Array]:
-        pkg_h_, pkg_c_, hot_, cold_, hh, hc, ph, pc = th
-        return _curves(q, zones, flow, hot_, cold_, pkg_h_, pkg_c_, hh, hc, ph, pc, t_init)
-
+    curves, residual = _curve_functions(spec, zones, flow, t_init)
     theta_curves: Any = (pkg_h, pkg_c, hot, cold, h_hot_in, h_cold_in, p_hot_out, p_cold_out)
 
     if spec == "duty":
@@ -300,14 +316,6 @@ def _solve(
         q = cold.total * (pkg_c.mixture_enthalpy(value, p_cold_out, cold.z) - h_cold_in)
     else:
         # Size or approach spec: a monotone scalar root in the duty fraction.
-        def residual(frac: Array, th: Any) -> Array:
-            th_curves, qmax, target = th
-            q_ = frac * qmax
-            t_h, t_c = curves(q_, th_curves)
-            if spec == "min_approach":
-                return jnp.min(t_h - t_c) - target
-            return jnp.log(target) - jnp.log(_ua_required(q_, t_h, t_c))
-
         lo = jnp.asarray(1e-6)
         hi = jnp.asarray(1.0 - 1e-6)
         frac_star = bracketed_root(residual, (theta_curves, q_max, value), lo, hi, tol, 200)

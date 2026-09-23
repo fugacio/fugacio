@@ -1,35 +1,16 @@
-"""Equation-oriented flowsheeting: solve the whole flowsheet as one system.
+"""Simultaneous execution of physical units and custom residual blocks.
 
-Where the sequential-modular engine (`fugacio.sim.flowsheet`) evaluates units in
-order and converges recycles by tearing, the *equation-oriented* (EO) engine
-collects every unit's equations, the stream connectivity, the recycles, and any
-design specs into a single residual system ``F(x, theta) = 0`` and solves it
-**simultaneously** with Newton's method. There is no tear stream and no unit
-ordering: a recycle is just a stream that two blocks happen to share, and the
-global solve closes it like any other equation.
-
-This is the formulation a differentiable core is built for. The one expensive
-ingredient of an EO solver, the Jacobian ``dF/dx``, is supplied *exactly* by JAX
-autodiff rather than by finite differences or hand-coded analytic blocks, and the
-converged solution is itself differentiable with respect to the parameters
-``theta`` (operating conditions, feeds, prices, model parameters) by the implicit
-function theorem (`fugacio.thermo.implicit.newton_system`). So a gradient of any
-product spec, duty, or cost through the *entire converged plant*, recycles and
-all, costs a single adjoint solve.
-
-The unknowns are the flowsheet's internal streams (per-component molar flows plus
-temperature and pressure) together with any block auxiliary variables and any
-freed design-spec variables. Everything is carried in a non-dimensional form (see
-`fugacio.sim.eo.blocks.Scales`) so the Newton system stays well conditioned.
-`EOFlowsheet.degrees_of_freedom` reports the unknown/equation balance, the EO
-analogue of a specification check.
+Topology uses ProcessGraph validation. ResidualGraph assembles independently
+compiled blocks into sparse Newton and implicit derivative systems. Built-in
+blocks use the common physical unit kernels and stream coordinates; custom
+blocks can introduce residual equations and auxiliary unknowns. Design
+specifications enter as additional equations and manipulated variables.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from functools import partial
 from typing import Any, NamedTuple
 
 import jax
@@ -38,10 +19,12 @@ from jax import Array
 from jax.flatten_util import ravel_pytree
 
 from fugacio.sim.eo.blocks import Block, Context, Scales
-from fugacio.sim.properties import Model, _resolve, molar_enthalpy, resolve_package
+from fugacio.sim.graph import ProcessGraph, ProcessUnit, ResidualGraph, stream_vector, vector_stream
+from fugacio.sim.numerics import newton_iterations
+from fugacio.sim.properties import Model, _resolve, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.thermo.diagnostics import SolveReport, SolveStatus, require_converged, with_status
-from fugacio.thermo.implicit import newton_system_with_info
+from fugacio.thermo.implicit import gate_derivative
 from fugacio.thermo.sparsity import SparsityPattern
 
 #: A measurement read off the solved streams (for a design spec / objective).
@@ -49,12 +32,7 @@ Measure = Callable[[Mapping[str, Stream]], Array]
 
 
 def _is_traced(*trees: Any) -> bool:
-    """Whether any array leaf is a JAX tracer (i.e. we are inside a transform).
-
-    Used to pick the solve path: the fully JIT-compiled seed-and-solve core is
-    only valid for concrete inputs; under ``jax.grad``/``jax.jvp`` the seed is
-    instead built eagerly and detached, with only the Newton solve compiled.
-    """
+    """Whether numerical values are being traced by an enclosing transformation."""
     return any(isinstance(leaf, jax.core.Tracer) for leaf in jax.tree_util.tree_leaves(trees))
 
 
@@ -79,16 +57,7 @@ class DOFReport(NamedTuple):
 
 
 class _Plan(NamedTuple):
-    """A compiled, cached solve plan for one flowsheet *structure*.
-
-    Building the residual closure and JIT-compiling the Newton core is the
-    expensive part of an EO solve (tens of seconds for a flash-bearing system),
-    but it depends only on the flowsheet's *structure* (its blocks, connectivity,
-    specs, and scales), not on the numeric parameter or feed *values*. Caching the
-    plan on the flowsheet (keyed by that structure) means repeated solves, the
-    forward sweeps of a finite-difference check, and the inner solves of an
-    optimization all reuse one compilation and run essentially for free.
-    """
+    """Cached structural assembly and local kernels for one process layout."""
 
     ctx: Context
     internal: tuple[str, ...]
@@ -128,7 +97,7 @@ class EOSolution:
 
     Attributes:
         streams: All named streams (feeds plus solved internal streams).
-        aux: Solved block auxiliary variables (e.g. isentropic temperatures).
+        aux: Solved auxiliary variables declared by custom blocks.
         specs: Solved values of any freed design-spec manipulated variables.
         residual_norm: Max-norm of the (scaled) residual at the solution.
         n_unknowns: Number of scalar unknowns solved.
@@ -157,32 +126,19 @@ class EOSolution:
         return self.streams[name]
 
 
-def _pack_stream(s: Stream, sc: Scales, pkg: Any = None) -> Array:
-    """Pack material, thermal, and pressure coordinates.
-
-    Pure-fluid streams use enthalpy as the thermal coordinate because their
-    temperature does not determine quality on the saturation line. Mixtures
-    retain the historical temperature coordinate.
-    """
-    thermal = (
-        molar_enthalpy(s, model=pkg) / sc.enthalpy_molar
-        if len(s.components) == 1 and pkg is not None
-        else s.t / sc.temperature
-    )
-    return jnp.concatenate(
-        [s.n / sc.flow, jnp.atleast_1d(thermal), jnp.atleast_1d(s.p / sc.pressure)]
-    )
-
-
-@partial(jax.jit, static_argnames=("components", "sc"))
-def _unpack_stream(vec: Array, components: tuple[str, ...], sc: Scales, pkg: Any = None) -> Stream:
-    """Reconstruct streams, retaining pure-fluid phase amounts through PH state."""
+def _stream_scales(components: tuple[str, ...], sc: Scales) -> Array:
     c = len(components)
-    n, p = vec[:c] * sc.flow, vec[c + 1] * sc.pressure
-    if c == 1 and pkg is not None:
-        r = pkg.flash_ph(p, vec[c] * sc.enthalpy_molar, jnp.ones(1))
-        return Stream(n, r.t, p, components, r.beta * n)
-    return Stream(n, vec[c] * sc.temperature, p, components)
+    return jnp.asarray([*[sc.flow] * c, sc.temperature, sc.pressure, *[sc.flow] * c])
+
+
+def _pack_stream(s: Stream, sc: Scales, pkg: Any = None) -> Array:
+    """Pack the common process stream coordinates using declared scales."""
+    return stream_vector(s) / _stream_scales(s.components, sc)
+
+
+def _unpack_stream(vec: Array, components: tuple[str, ...], sc: Scales, pkg: Any = None) -> Stream:
+    """Restore material, temperature, pressure, and resolved vapor inventory."""
+    return vector_stream(vec * _stream_scales(components, sc), components)
 
 
 @dataclass
@@ -219,7 +175,7 @@ class EOFlowsheet:
     feeds: dict[str, Stream] = field(default_factory=dict)
     blocks: list[Block] = field(default_factory=list)
     specs: list[_DesignSpec] = field(default_factory=list)
-    jacobian_mode: str = "colored"
+    linear_solver: str = "sparse"
     _plans: dict[Any, _Plan] = field(default_factory=dict, init=False, repr=False, compare=False)
 
     # -- construction ------------------------------------------------------ #
@@ -286,27 +242,15 @@ class EOFlowsheet:
                 outlet shadows a feed, or a block inlet is neither a feed nor any
                 block's outlet.
         """
-        produced: dict[str, int] = {}
-        for i, blk in enumerate(self.blocks):
-            if not blk.outlets:
-                raise ValueError(f"block #{i} must declare at least one outlet")
-            for name in blk.outlets:
-                if name in self.feeds:
-                    raise ValueError(f"block output {name!r} shadows a feed of the same name")
-                if name in produced:
-                    raise ValueError(
-                        f"stream {name!r} is produced by two blocks "
-                        f"(#{produced[name]} and #{i}); each stream needs exactly one source"
-                    )
-                produced[name] = i
-        for i, blk in enumerate(self.blocks):
-            for name in blk.inlets:
-                if name not in self.feeds and name not in produced:
-                    raise ValueError(
-                        f"block #{i} reads undefined stream {name!r} "
-                        "(not a feed and not produced by any block)"
-                    )
-        return sorted(produced)
+        graph = ProcessGraph(
+            tuple(self.feeds),
+            tuple(
+                ProcessUnit(str(i), block.forward, block.inlets, block.outlets)
+                for i, block in enumerate(self.blocks)
+            ),
+        )
+        graph.edges()
+        return sorted(name for unit in graph.units for name in unit.outputs)
 
     def _aux_scales(self, ctx: Context) -> dict[str, float]:
         """Collect every block's auxiliary unknowns into one key -> scale map."""
@@ -331,14 +275,15 @@ class EOFlowsheet:
         parameters = tuple(range(len(aux), len(aux) + len(freed)))
         streams: dict[str, tuple[int, ...]] = {}
         for name in internal:
-            streams[name] = tuple(range(len(variables), len(variables) + ctx.n_components + 2))
+            streams[name] = tuple(range(len(variables), len(variables) + 2 * ctx.n_components + 2))
             variables.extend(f"{name}:n[{component}]" for component in ctx.components)
             variables.extend(
                 (
-                    name + (":enthalpy" if ctx.n_components == 1 else ":temperature"),
+                    name + ":temperature",
                     name + ":pressure",
                 )
             )
+            variables.extend(f"{name}:vapor_n[{component}]" for component in ctx.components)
         rows = []
         for block in self.blocks:
             declaration = block.residual_dependencies(ctx)
@@ -377,8 +322,8 @@ class EOFlowsheet:
         pattern, variables = self._incidence(ctx)
         return {
             **pattern.diagnose(equations=self.equation_labels(ctx), variables=variables),
-            "jacobian_mode": self.jacobian_mode,
-            "global_linear_solver": "pivoted_dense",
+            "linear_solver": self.linear_solver,
+            "stored_coefficients": sum(map(len, pattern.rows)),
             "blocks": [
                 {
                     "name": block.outlets[0],
@@ -404,7 +349,7 @@ class EOFlowsheet:
         per_block = {blk.outlets[0]: blk.n_residuals(ctx) for blk in self.blocks}
         n_aux = len(self._aux_scales(ctx))
         n_specs = len(self.specs)
-        n_unknowns = len(internal) * (ctx.n_components + 2) + n_aux + n_specs
+        n_unknowns = len(internal) * (2 * ctx.n_components + 2) + n_aux + n_specs
         n_equations = sum(per_block.values()) + n_specs
         return DOFReport(
             n_unknowns=n_unknowns,
@@ -489,47 +434,10 @@ class EOFlowsheet:
         for_residual: bool = False,
     ) -> dict[str, Stream]:
         """Reconstruct the full physical streams dict (feeds + internal) from unknowns."""
-        streams: dict[str, Stream] = dict(feeds)
-        thermal_needed = set(internal)
-        if for_residual and ctx.n_components == 1 and not self.specs:
-            from fugacio.sim.eo.blocks import Flash, Heater, Mixer, Splitter, Valve
-
-            thermal_needed = set()
-            for block in self.blocks:
-                if type(block) is Heater:
-                    if block.t_out is not None:
-                        thermal_needed.update(block.outlets)
-                elif type(block) is Mixer:
-                    if block.t is not None:
-                        thermal_needed.update(block.outlets)
-                elif type(block) not in (Splitter, Valve, Flash):
-                    thermal_needed.update(block.inlets + block.outlets)
-        for name in internal:
-            if name in thermal_needed:
-                streams[name] = _unpack_stream(
-                    u["s"][name], ctx.components, ctx.scales, ctx.package
-                )
-            else:
-                # These built-in equations read the H coordinate directly.
-                # Don't trace unused PH inversions into their Newton system.
-                values = u["s"][name]
-                streams[name] = Stream(
-                    values[:1] * ctx.scales.flow,
-                    jnp.asarray(300.0),
-                    values[2] * ctx.scales.pressure,
-                    ctx.components,
-                )
-        if ctx.n_components > 1:
-            from fugacio.sim.eo.blocks import Flash
-
-            for block in self.blocks:
-                if isinstance(block, Flash):
-                    vapor, liquid = block.outlets
-                    streams[vapor] = replace(streams[vapor], vapor_n=streams[vapor].n)
-                    streams[liquid] = replace(
-                        streams[liquid], vapor_n=jnp.zeros_like(streams[liquid].n)
-                    )
-        return streams
+        return {
+            **feeds,
+            **{name: _unpack_stream(u["s"][name], ctx.components, ctx.scales) for name in internal},
+        }
 
     def _assemble_residual(
         self,
@@ -540,14 +448,6 @@ class EOFlowsheet:
         ctx: Context,
     ) -> Array:
         """Stack all block residuals and design-spec residuals into one vector."""
-        if ctx.n_components == 1:
-            ctx = replace(
-                ctx,
-                enthalpy_coordinates={
-                    id(streams[name]): values[1] * ctx.scales.enthalpy_molar
-                    for name, values in u["s"].items()
-                },
-            )
         params = dict(params)
         aux = {k: u["a"][k] * aux_scales[k] for k in aux_scales}
         for sp in self.specs:
@@ -565,7 +465,7 @@ class EOFlowsheet:
         aux_scales: Mapping[str, float],
         unravel: Callable[[Array], Any],
     ) -> Callable[[Array, Any], Array]:
-        """Build the flat residual ``F(x, theta)`` for `newton_system`."""
+        """Build the flat residual ``F(x, theta)`` for process Newton and rank diagnostics."""
 
         def residual(x: Array, theta: Any) -> Array:
             u = unravel(x)
@@ -624,20 +524,14 @@ class EOFlowsheet:
             specs_sig,
             scales_sig,
             model_sig,
-            self.jacobian_mode,
+            self.linear_solver,
             int(sweeps),
             float(tol),
             int(max_iter),
         )
 
     def _get_plan(self, params: Mapping[str, Any], sweeps: int, tol: float, max_iter: int) -> _Plan:
-        """Return the compiled plan for this structure, building/caching on miss.
-
-        The plan's JIT core (and its adjoint), the residual norm, and the
-        initial-guess builder all compile once; every later solve with the same
-        structure reuses them, so only the parameter/feed values vary. This is
-        what makes finite-difference checks and optimization inner loops cheap.
-        """
+        """Reuse local residual and Jacobian kernels for an unchanged structure."""
         key = self._structural_key(sweeps, tol, max_iter)
         cached = self._plans.get(key)
         if cached is not None:
@@ -646,8 +540,8 @@ class EOFlowsheet:
         ctx = self._context()
         internal = tuple(self._internal_names())
         aux_scales = self._aux_scales(ctx)
-        if self.jacobian_mode not in ("colored", "dense"):
-            raise ValueError("EO jacobian_mode must be colored or dense")
+        if self.linear_solver not in ("sparse", "dense"):
+            raise ValueError("EO linear_solver must be sparse or dense")
         pattern, _ = self._incidence(ctx)
 
         # Warm the process-global component-data cache with *concrete* arrays so
@@ -662,10 +556,36 @@ class EOFlowsheet:
         # are irrelevant, so zero sweeps keeps it cheap.
         template = self._initial_unknowns(ctx, internal, aux_scales, params, self.feeds, None, 0)
         _, unravel = ravel_pytree(template)
-        residual = self._residual_fn(ctx, internal, aux_scales, unravel)
-        jacobian = (
-            pattern.jacobian(residual)
-            if self.jacobian_mode == "colored" and len(pattern.rows) == pattern.columns
+        block_equations = []
+        row = 0
+        size = pattern.columns
+        for index in range(len(self.blocks) + len(self.specs)):
+            count = self.blocks[index].n_residuals(ctx) if index < len(self.blocks) else 1
+            indices = tuple(
+                sorted({c for columns in pattern.rows[row : row + count] for c in columns})
+            )
+
+            def local(v: Array, theta: Any, index: int = index, indices: Any = indices) -> Array:
+                x = jnp.zeros(size, dtype=v.dtype).at[jnp.asarray(indices, dtype=int)].set(v)
+                u = unravel(x)
+                current_ctx = replace(ctx, model=theta["pkg"])
+                streams = self._assemble_streams(theta["feeds"], current_ctx, internal, u)
+                params = dict(theta["params"])
+                for spec in self.specs:
+                    params[spec.manipulated] = u["d"][spec.manipulated] * spec.scale()
+                if index < len(self.blocks):
+                    aux = {k: u["a"][k] * aux_scales[k] for k in aux_scales}
+                    return self.blocks[index].residuals(streams, aux, params, current_ctx)
+                spec = self.specs[index - len(self.blocks)]
+                return jnp.atleast_1d((spec.measure(streams) - spec.target) / spec.residual_scale())
+
+            block_equations.append((indices, count, local))
+            row += count
+        # Non-square systems remain available to rank diagnostics; solve rejects
+        # their degrees of freedom before executing a plan.
+        system = (
+            ResidualGraph(size, block_equations, linear_solver=self.linear_solver)
+            if len(pattern.rows) == size
             else None
         )
         lower_tree = jax.tree_util.tree_map(lambda x: jnp.full_like(x, -jnp.inf), template)
@@ -675,10 +595,11 @@ class EOFlowsheet:
                     jnp.zeros(ctx.n_components),
                     jnp.array(
                         [
-                            -jnp.inf if ctx.n_components == 1 else 50.0 / ctx.scales.temperature,
+                            50.0 / ctx.scales.temperature,
                             1.0 / ctx.scales.pressure,
                         ]
                     ),
+                    jnp.full(ctx.n_components, -1.0 / ctx.scales.flow),
                 ]
             )
         lower = ravel_pytree(lower_tree)[0]
@@ -686,24 +607,31 @@ class EOFlowsheet:
         def newton(x0: Array, params_: Any, feeds_: Any, pkg_: Any) -> tuple[Array, SolveReport]:
             """Newton solve from an externally supplied (detached) seed ``x0``."""
             theta = {"params": params_, "feeds": feeds_, "pkg": pkg_}
-            result = newton_system_with_info(
-                residual,
-                jax.lax.stop_gradient(x0),
+            if system is None:
+                raise ValueError("flowsheet is not square")
+            result = newton_iterations(
+                system.residual,
+                lambda x, p: system.linearize(x, p)[0],
+                x0,
                 theta,
-                tol,
-                max_iter,
+                scale=jnp.ones_like(x0),
+                tolerance=tol,
+                max_iterations=max_iter,
                 lower=lower,
-                jacobian=jacobian,
             )
-            return result.value, result.report
+            value = system.attach(result.value, theta, result.report.converged)
+            return value, result.report
 
         def core(params_: Any, feeds_: Any, pkg_: Any) -> tuple[Array, SolveReport]:
-            # The sequential-modular seed sweeps and the Newton solve share one
-            # JIT, so a flowsheet compiles once and every later (non-differentiated)
-            # solve reuses it. This is the fast path for plain solves and the
-            # forward sweeps of a finite-difference check.
+            raw_params, raw_feeds, raw_pkg = jax.lax.stop_gradient((params_, feeds_, pkg_))
             u0 = self._initial_unknowns(
-                replace(ctx, model=pkg_), internal, aux_scales, params_, feeds_, None, sweeps
+                replace(ctx, model=raw_pkg),
+                internal,
+                aux_scales,
+                raw_params,
+                raw_feeds,
+                None,
+                sweeps,
             )
             return newton(ravel_pytree(u0)[0], params_, feeds_, pkg_)
 
@@ -713,8 +641,8 @@ class EOFlowsheet:
             internal=internal,
             aux_scales=aux_scales,
             unravel=unravel,
-            core=jax.jit(core),
-            newton=jax.jit(newton),
+            core=core,
+            newton=newton,
             n_unknowns=report.n_unknowns,
             n_equations=report.n_equations,
             seed=[],
@@ -861,13 +789,8 @@ class EOFlowsheet:
                     "Add or remove a design spec, or fix/free an operating variable."
                 )
 
-        # Fast path (plain solves, finite-difference sweeps): the seed and the
-        # Newton solve share one cached JIT. Under autodiff, or with a
-        # caller-supplied per-stream guess, the seed is built eagerly and only the
-        # Newton solve is JIT-compiled: JIT-compiling the sequential-modular seed
-        # and then differentiating *it* is both wasteful and unsupported (its phase
-        # selections are non-differentiable), whereas the eager seed is detached
-        # and differentiation flows solely through ``newton_system``.
+        # Seeds never carry derivatives. Local kernels are reused whether the
+        # orchestration is concrete or explicitly staged by the caller.
         if (
             guess is None
             and not _is_traced(params, self.feeds, pkg)
@@ -881,40 +804,51 @@ class EOFlowsheet:
             if guess is None and warm_start and plan.seed:
                 x0 = plan.seed[0]
             else:
+                raw_params, raw_feeds, raw_pkg, raw_guess = jax.lax.stop_gradient(
+                    (params, self.feeds, pkg, guess)
+                )
                 u0 = self._initial_unknowns(
-                    replace(plan.ctx, model=pkg),
+                    replace(plan.ctx, model=raw_pkg),
                     plan.internal,
                     plan.aux_scales,
-                    params,
-                    self.feeds,
-                    guess,
+                    raw_params,
+                    raw_feeds,
+                    raw_guess,
                     sweeps,
                 )
                 x0 = ravel_pytree(u0)[0]
             x0 = jax.lax.stop_gradient(x0)
             x_star, solve_report = plan.newton(x0, params, self.feeds, pkg)
 
-        if not _is_traced(x_star) and bool(solve_report.converged):
-            plan.seed[:] = [jax.lax.stop_gradient(x_star)]
         ctx = replace(plan.ctx, model=pkg)
         u = plan.unravel(x_star)
         streams = self._assemble_streams(self.feeds, ctx, plan.internal, u)
         aux = {k: u["a"][k] * plan.aux_scales[k] for k in plan.aux_scales}
         # A converged solution a block can't physically realize (an exchanger
         # temperature cross) is reported, not returned as an answer.
-        realizable = [jnp.asarray(b.feasible(streams, aux, params, ctx)) for b in self.blocks]
+        solved_params = {
+            **params,
+            **{sp.manipulated: u["d"][sp.manipulated] * sp.scale() for sp in self.specs},
+        }
+        realizable = [
+            jnp.asarray(b.feasible(streams, aux, solved_params, ctx)) for b in self.blocks
+        ]
+        realizable.extend(stream.report.converged for stream in streams.values())
         feasible = jnp.all(jnp.stack(realizable)) if realizable else jnp.asarray(True)
         solve_report = with_status(
             solve_report, solve_report.converged & ~feasible, SolveStatus.INFEASIBLE
         )
+        if not _is_traced(x_star) and bool(solve_report.converged):
+            plan.seed[:] = [jax.lax.stop_gradient(x_star)]
+        x_star = gate_derivative(x_star, solve_report.converged)
         if check:
             require_converged(
                 solve_report, "equation-oriented flowsheet", self.equation_labels(plan.ctx)
             )
             x_star = jnp.where(solve_report.converged, x_star, jnp.nan)
-            u = plan.unravel(x_star)
-            streams = self._assemble_streams(self.feeds, ctx, plan.internal, u)
-            aux = {k: u["a"][k] * plan.aux_scales[k] for k in plan.aux_scales}
+        u = plan.unravel(x_star)
+        streams = self._assemble_streams(self.feeds, ctx, plan.internal, u)
+        aux = {k: u["a"][k] * plan.aux_scales[k] for k in plan.aux_scales}
         specs = {sp.manipulated: u["d"][sp.manipulated] * sp.scale() for sp in self.specs}
         return EOSolution(
             streams=streams,

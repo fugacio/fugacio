@@ -144,7 +144,7 @@ The initial guess comes from a bubble-point sweep over a linear composition
 profile with `k_seed` (Wilson for cubics, modified Raoult for gamma-phi) to
 start the K-values, then the Newton iteration with a step limiter runs to a
 scaled residual of \(10^{-10}\). The whole thing is wrapped in
-`newton_system` from `fugacio.thermo.implicit`, so the gradient of anything
+`newton_system_with_info` from `fugacio.thermo.implicit`, so the gradient of anything
 computed from the result (a duty, a purity, a reflux ratio) with respect to
 anything fed in (the feed state, a spec value, a `kij`, a stage pressure) is one
 adjoint solve against the converged Jacobian, never a differentiation *through*

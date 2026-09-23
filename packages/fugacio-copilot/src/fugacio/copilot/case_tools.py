@@ -81,7 +81,7 @@ def _solve(
     overrides: dict[str, Any] | None = None,
     backend: str = "sequential",
     column_solver: str = "block",
-    eo_jacobian: str = "colored",
+    plant_solver: str = "sparse",
 ) -> dict[str, Any]:
     return (
         CaseRunner(
@@ -90,7 +90,7 @@ def _solve(
                 backend=backend,
                 recycle_method="broyden",
                 column_solver=column_solver,
-                eo_jacobian=eo_jacobian,
+                plant_solver=plant_solver,
             ),
         )
         .run(overrides)
@@ -130,7 +130,7 @@ def case_tool_specs() -> list[Any]:
                     "overrides": {"type": "object"},
                     "backend": {"type": "string", "enum": ["sequential", "eo"]},
                     "column_solver": {"type": "string", "enum": ["block", "dense"]},
-                    "eo_jacobian": {"type": "string", "enum": ["colored", "dense"]},
+                    "plant_solver": {"type": "string", "enum": ["sparse", "dense"]},
                 },
                 ["case"],
             ),
@@ -159,7 +159,7 @@ class DesignSession:
         parsed = ProcessCase.from_dict(case)
         runner = CaseRunner(parsed, options=SolverOptions(recycle_method="broyden"))
         identity = self.workspace.save_case(parsed)
-        self._runners[(identity, "sequential", "block", "colored")] = runner
+        self._runners[(identity, "sequential", "block", "sparse")] = runner
         self.current_case_id, self.pending = identity, None
         return {"case_id": identity, "case": parsed.to_dict(), "selected": True}
 
@@ -183,11 +183,11 @@ class DesignSession:
         return self.update_case(case_id, case.to_dict())
 
     def _runner(
-        self, case_id: str, backend: str, column_solver: str = "block", eo_jacobian: str = "colored"
+        self, case_id: str, backend: str, column_solver: str = "block", plant_solver: str = "sparse"
     ) -> CaseRunner:
         if case_id != self.current_case_id:
             raise ValueError("select the intended case before running or studying it")
-        key = (case_id, backend, column_solver, eo_jacobian)
+        key = (case_id, backend, column_solver, plant_solver)
         if key not in self._runners:
             self._runners[key] = CaseRunner(
                 self.workspace.load_case(case_id),
@@ -195,7 +195,7 @@ class DesignSession:
                     backend=backend,
                     recycle_method="broyden",
                     column_solver=column_solver,
-                    eo_jacobian=eo_jacobian,
+                    plant_solver=plant_solver,
                 ),
             )
         return self._runners[key]
@@ -206,10 +206,10 @@ class DesignSession:
         overrides: dict[str, Any] | None = None,
         backend: str = "sequential",
         column_solver: str = "block",
-        eo_jacobian: str = "colored",
+        plant_solver: str = "sparse",
     ) -> dict[str, Any]:
         """Compute, audit, and save a run, preserving failed calculation evidence."""
-        run = self._runner(case_id, backend, column_solver, eo_jacobian).run(overrides)
+        run = self._runner(case_id, backend, column_solver, plant_solver).run(overrides)
         self.workspace.save_run(run)
         self.trusted_runs.add(run.run_id)
         self.pending = None
@@ -222,7 +222,7 @@ class DesignSession:
         request: dict[str, Any],
         backend: str = "sequential",
         column_solver: str = "block",
-        eo_jacobian: str = "colored",
+        plant_solver: str = "sparse",
     ) -> dict[str, Any]:
         """Run a bounded sweep, optimization, or independently checked sensitivity study."""
         functions: dict[str, Any] = {
@@ -234,7 +234,7 @@ class DesignSession:
         if kind not in functions or {"runner", "workspace", "recorder"} & request.keys():
             raise ValueError("invalid study kind or reserved request argument")
         result = functions[kind](
-            self._runner(case_id, backend, column_solver, eo_jacobian),
+            self._runner(case_id, backend, column_solver, plant_solver),
             workspace=self.workspace,
             **request,
         )
@@ -358,7 +358,7 @@ class DesignSession:
                     "overrides": obj,
                     "backend": {"type": "string", "enum": ["sequential", "eo"]},
                     "column_solver": {"type": "string", "enum": ["block", "dense"]},
-                    "eo_jacobian": {"type": "string", "enum": ["colored", "dense"]},
+                    "plant_solver": {"type": "string", "enum": ["sparse", "dense"]},
                 },
                 ["case_id"],
                 self.run_case,
@@ -376,7 +376,7 @@ class DesignSession:
                     "request": obj,
                     "backend": string,
                     "column_solver": {"type": "string", "enum": ["block", "dense"]},
-                    "eo_jacobian": {"type": "string", "enum": ["colored", "dense"]},
+                    "plant_solver": {"type": "string", "enum": ["sparse", "dense"]},
                 },
                 ["case_id", "kind", "request"],
                 self.study_case,

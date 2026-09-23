@@ -33,7 +33,7 @@ every stage (so flows stay positive through the Newton iteration) plus the stage
 temperatures and the condenser/reboiler duties; the equilibrium relations are
 written in logarithmic form so trace components are as well conditioned as bulk
 ones. A bubble-point (Wang-Henke) sweep seeds the iteration, then
-`fugacio.thermo.implicit.newton_system` converges it with a backtracking line
+`fugacio.thermo.implicit.newton_system_with_info` converges it with a backtracking line
 search. The converged column is differentiable with respect to the feeds, the
 pressure profile, the specifications, the side-draw fractions, the duties, and the
 property package by the implicit function theorem, so column design variables
@@ -693,19 +693,21 @@ def _seed(
     # saturation point for a component above its critical temperature and the
     # brackets would have to be guessed anyway).
     refine_t = st.has_condenser or st.has_reboiler
+
+    def cold_temperature(_: Any = None) -> Array:
+        if refine_t:
+            t_feed = sum(fd.total * jnp.asarray(fd.t, dtype=float) for fd in feeds) / f_total
+            return _bubble_newton(pkg, jnp.full(n, t_feed), p, jnp.tile(z, (n, 1)), steps=6)
+        # Absorber / stripper: the combined feed has no meaningful bubble point.
+        order = sorted(range(len(feeds)), key=lambda i: st.feed_stages[i])
+        return jnp.linspace(feeds[order[0]].t, feeds[order[-1]].t, n)
+
     if "t" in guess:
         t = jnp.asarray(guess["t"], dtype=float)
-    elif refine_t:
-        t_feed = sum(fd.total * jnp.asarray(fd.t, dtype=float) for fd in feeds) / f_total
-        t = jnp.full(n, t_feed)
-        t = _bubble_newton(pkg, t, p, jnp.tile(z, (n, 1)), steps=6)
+        if "_use_profile" in guess:
+            t = jax.lax.cond(guess["_use_profile"] > 0.5, lambda _: t, cold_temperature, None)
     else:
-        # Absorber / stripper: the stages sit between the two feed temperatures;
-        # the combined feed has no meaningful bubble point (it is mostly gas).
-        order = sorted(range(len(feeds)), key=lambda i: st.feed_stages[i])
-        top_t = jnp.asarray(feeds[order[0]].t, dtype=float)
-        bot_t = jnp.asarray(feeds[order[-1]].t, dtype=float)
-        t = jnp.linspace(top_t, bot_t, n)
+        t = cold_temperature()
 
     def sweep(_: int, state: tuple[Array, Array]) -> tuple[Array, Array]:
         t, x = state
@@ -839,6 +841,13 @@ def _solve(
             hints["reboiler_duty"],
             st,
         )
+        if "_use_profile" in hints:
+            u0 = jax.lax.cond(
+                hints["_use_profile"] > 0.5,
+                lambda _: u0,
+                lambda _: _seed(pkg, st, theta_seed, feeds, hints, sweeps),
+                None,
+            )
     else:
         u0 = _seed(pkg, st, theta_seed, feeds, hints, sweeps)
     u0 = jax.lax.stop_gradient(u0)

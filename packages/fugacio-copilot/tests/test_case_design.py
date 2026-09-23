@@ -29,14 +29,14 @@ def test_design_solver_choices_structure_and_profile_evidence(tmp_path):
     session = DesignSession(CaseWorkspace(tmp_path))
     case_id = session.create_case(example_case().to_dict())["case_id"]
     diagnostic = session.diagnose_case(case_id)
-    assert diagnostic["equation_oriented"]["structurally_square_and_matched"]
+    assert diagnostic["process_graph"]["structurally_square_and_matched"]
     assert not session.trusted_runs
     dense = session._runner(case_id, "sequential", "dense", "dense")
-    block = session._runner(case_id, "sequential", "block", "colored")
+    block = session._runner(case_id, "sequential", "block", "sparse")
     assert dense is not block
     assert dense is session._runner(case_id, "sequential", "dense", "dense")
     study = session.study_case(
-        case_id, "profile", {"warm_repeats": 1}, column_solver="dense", eo_jacobian="dense"
+        case_id, "profile", {"warm_repeats": 1}, column_solver="dense", plant_solver="dense"
     )
     assert study["accepted"]
     run = session.workspace.load_run(study["baseline_id"])

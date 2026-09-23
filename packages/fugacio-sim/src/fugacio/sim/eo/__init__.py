@@ -1,26 +1,10 @@
-"""Equation-oriented (EO) flowsheeting for Fugacio.
+"""Simultaneous process equations using common physical unit kernels.
 
-The sequential-modular engine (`fugacio.sim.flowsheet`) evaluates units in order
-and tears recycles; this package instead assembles every unit's equations, the
-stream connectivity, the recycles, and any design specs into one residual system
-and solves it **simultaneously** by Newton's method. The Jacobian, the one hard
-ingredient of a classical EO solver, comes exactly from JAX autodiff, and the
-converged flowsheet is differentiable with respect to its parameters and feeds by
-the implicit function theorem, so whole-plant gradient optimization needs no tear
-and no nested loops.
-
-The public surface is:
-
-* `EOFlowsheet`: build a flowsheet from feeds, `Block` units, and design specs,
-  run a degrees-of-freedom check (`DOFReport`), and `EOFlowsheet.solve` it to an
-  `EOSolution`;
-* unit blocks mirroring the sequential-modular units, each written as residual
-  equations: `Mixer`, `Splitter`, `Heater`, `Valve`, `Pump`, `Compressor`,
-  `Turbine`, `Flash`, `ComponentSeparator`, `HeatExchanger`,
-  `StoichiometricReactor`, and the embedded rigorous `Column`;
-* `Scales` / `Context` for residual conditioning and shared solve data;
-* `optimize_flowsheet_eo` (with `EOOptResult`): nested or full-space simultaneous
-  optimization over named decision variables.
+EOFlowsheet declares unit blocks, custom residual equations, and design
+specifications. The shared graph validates connectivity and assembles local
+Jacobians into sparse Newton and implicit derivative systems. Built-in units
+retain their compiled thermodynamic solves and resolved phase inventories.
+The optimization API supports nested and full-space formulations.
 """
 
 from fugacio.sim.eo.blocks import (
