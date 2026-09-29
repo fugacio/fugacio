@@ -260,6 +260,51 @@ def _ua_required(q: Array, t_h: Array, t_c: Array) -> Array:
     return jnp.where(jnp.min(dt) <= 0.0, jnp.inf, jnp.sum((q / zones) / lm))
 
 
+def _report(
+    pkg_h: PropertyPackage,
+    pkg_c: PropertyPackage,
+    hot: Stream,
+    cold: Stream,
+    hot_out: Stream,
+    cold_out: Stream,
+    q: Array,
+    actual: Array,
+    target: ArrayLike,
+    dt: Array,
+) -> SolveReport:
+    """Audit the solved state without linearizing diagnostic-only properties.
+
+    Reports carry no derivatives. Detach their inputs before evaluating the
+    energy balances: stopping the finished report is too late for eager AD,
+    which would already have linearized both outlet enthalpy calculations.
+    Preserve opaque custom packages while detaching registered array leaves.
+    """
+    pkg_h, pkg_c, hot, cold, hot_out, cold_out, q, actual, target, dt = jax.tree_util.tree_map(
+        lambda x: lax.stop_gradient(x) if isinstance(x, Array | jax.core.Tracer) else x,
+        (pkg_h, pkg_c, hot, cold, hot_out, cold_out, q, actual, target, dt),
+    )
+    energy_scale = jnp.maximum(jnp.abs(q), 1e4)
+    errors = jnp.array(
+        [
+            (
+                hot.total
+                * (molar_enthalpy(hot, model=pkg_h) - molar_enthalpy(hot_out, model=pkg_h))
+                - q
+            )
+            / energy_scale,
+            (
+                cold.total
+                * (molar_enthalpy(cold_out, model=pkg_c) - molar_enthalpy(cold, model=pkg_c))
+                - q
+            )
+            / energy_scale,
+            (actual - target) / jnp.maximum(jnp.abs(target), 1.0),
+            jnp.maximum(-jnp.min(dt), 0.0) / 300.0,
+        ]
+    )
+    return residual_report(errors, tol=1e-6, failure=SolveStatus.INFEASIBLE)
+
+
 @lru_cache(maxsize=64)
 def _curve_functions(spec: str, zones: int, flow: str, t_init: float) -> tuple[Any, Any]:
     """Stable callbacks share the same compiled curves at every duty trial."""
@@ -453,26 +498,7 @@ def heat_exchanger(
         "min_approach": jnp.min(dt),
         "ua": ua_req,
     }[spec]
-    energy_scale = jnp.maximum(jnp.abs(q), 1e4)
-    errors = jnp.array(
-        [
-            (
-                hot.total
-                * (molar_enthalpy(hot, model=pkg_h) - molar_enthalpy(hot_out, model=pkg_h))
-                - q
-            )
-            / energy_scale,
-            (
-                cold.total
-                * (molar_enthalpy(cold_out, model=pkg_c) - molar_enthalpy(cold, model=pkg_c))
-                - q
-            )
-            / energy_scale,
-            (actual - value) / jnp.maximum(jnp.abs(value), 1.0),
-            jnp.maximum(-jnp.min(dt), 0.0) / 300.0,
-        ]
-    )
-    report = residual_report(errors, tol=1e-6, failure=SolveStatus.INFEASIBLE)
+    report = _report(pkg_h, pkg_c, hot, cold, hot_out, cold_out, q, actual, value, dt)
     return HeatExchangerResult(
         hot_out=hot_out,
         cold_out=cold_out,

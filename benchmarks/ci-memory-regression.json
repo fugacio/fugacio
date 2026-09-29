@@ -3,8 +3,8 @@
   "kind": "process_performance_observations",
   "recorded_date_utc": "2026-09-29",
   "scope": [
-    "The failed CI observation remains failed. The subsequent local run validates explicit glibc allocation thresholds with the same case, locked dependencies, and 8 GB budget.",
-    "Both workers use an empty persistent cache and retain JAX kernels throughout the study.",
+    "Failed CI observations remain failed. Allocator thresholds alone passed locally but did not resolve the CI memory limit.",
+    "Each observation records its persistent-cache mode. No study clears JAX kernels between phases.",
     "Different hosts are not controlled timing or memory comparisons. RSS includes compilation; per-run environments and source digests identify each observation."
   ],
   "observations": [
@@ -742,6 +742,137 @@
               "unit": "%",
               "value": 93.09707513103199,
               "value_si": 0.9309707513103198
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ethanol-ci-allocator-only-memory-limit",
+      "job_url": "https://github.com/fugacio/fugacio/actions/runs/36522073831/job/109256921619",
+      "original_report_sha256": "85ddf0b5fd892292d933f045ac628b67aab71960e4d50c0ced12f1a30712d6e9",
+      "accepted": false,
+      "revision": "36a0fdf23e6079a410924a6f1ec28212c43df903",
+      "working_tree_dirty": false,
+      "source_sha256": "2e6ed8a133301dd4bb5acfaeccc73a81b86737f65228b771abfa59dffbc6bf23",
+      "elapsed_seconds": 657.452483045,
+      "exit_code": 3,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "memory_limit",
+        "peak_rss_bytes": 8030097408,
+        "budget_bytes": 8000000000.0
+      },
+      "process_peak_rss_bytes": 8030097408,
+      "cgroup_memory_events": {
+        "before": null,
+        "after": null
+      },
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "plant_solver": "sparse",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 8.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "environment": {
+        "cpu_count": 4,
+        "devices": [
+          "cpu:0"
+        ],
+        "jax": "0.10.1",
+        "jax_backend": "cpu",
+        "jax_x64": true,
+        "machine": "x86_64",
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "python": "3.12.3",
+        "runtime_settings": {
+          "MALLOC_ARENA_MAX": "2",
+          "MALLOC_MMAP_THRESHOLD_": "131072",
+          "MALLOC_TRIM_THRESHOLD_": "131072",
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "XLA_FLAGS": null
+        }
+      },
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 228.662741971,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 3234529280,
+          "seconds": 167.39993973400001,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "study": null,
+      "audited_runs": [
+        {
+          "artifact_id": "300a23ffd37ec34646d785d592df18addfaf915eb317e7b3ddb163db5d769b5c",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657996.3012663681,
+              "value_si": 0.02085064457583492
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.612588562927584,
+              "value_si": 50.612588562927584
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95435535247277,
+              "value_si": 0.8095435535247277
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628862767968736,
+              "value_si": 1962886.2767968737
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553182788918124,
+              "value_si": 455318.2788918124
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09750865534369,
+              "value_si": 0.9309750865534369
             }
           }
         }

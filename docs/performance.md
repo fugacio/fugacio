@@ -285,6 +285,14 @@ preserves both the failed CI observation and this accepted local run. The
 remaining headroom is small, and different hosts aren't a controlled comparison
 of allocator effects or elapsed time.
 
+The allocator-only update still exceeded the CI limit at 8.030 GB. Exchanger
+energy-balance reports now detach their inputs before evaluating diagnostic
+enthalpies. Previously, eager differentiation could linearize those property
+calls before discarding their derivatives in the finished report. Both energy
+balances and their acceptance tolerances are unchanged; physical exchanger
+outputs retain their derivatives. The second CI failure is also retained in
+the regression record.
+
 The depropanizer optimization completes six SLSQP iterations and passes its
 final cold-start physical audit. The first linearization takes 229.4 seconds;
 later linearizations settle near 3.1 seconds, with Jacobian applications near
