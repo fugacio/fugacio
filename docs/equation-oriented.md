@@ -15,15 +15,17 @@ ingredient of a classical EO solver, the Jacobian `dF/dx`, comes *exactly* from
 JAX autodiff instead of finite differences or hand-coded analytic blocks, and the
 converged solution is itself differentiable in the parameters `theta` (operating
 conditions, feeds, prices, model parameters) by the implicit function theorem.
-So a gradient of any product spec, duty, or cost through the entire converged
-plant, recycles and all, costs a single adjoint solve.
+A scalar product spec, duty, or cost uses one process adjoint solve, together
+with the local unit derivatives and their internal implicit solves.
 
 ## Build and solve a flowsheet
 
 An `EOFlowsheet` is a small declarative builder: register feeds, add `Block`
-units that name their inlet and outlet streams, then `solve`. Each block writes
-its physics as residual equations rather than as an explicit input-to-output
-function, so its outlet streams become unknowns of the global system.
+units that name their inlet and outlet streams, then `solve`. Built-in blocks
+call the common physical unit kernels and constrain their outlet stream
+coordinates. Custom blocks can provide residual equations and auxiliary
+unknowns. Local Jacobians assemble into a checked sparse CPU solve; see the
+[shared runtime](process-runtime.md).
 `EOFlowsheet()` uses Peng-Robinson over the feeds' components;
 `EOFlowsheet(model=pkg)` runs every block on another
 [property package](property-packages.md).
@@ -56,8 +58,8 @@ returns the best iterate with its `report` for diagnosis.
 
 The compressor, heater, and valve are solved **together**, not one after the
 other. The `EOSolution` exposes every named stream (`sol["c"]`, `sol["h"]`,
-`sol["v"]`, and the feed), the block auxiliary unknowns (`sol.aux`, here the
-compressor's isentropic outlet temperature), any freed design-spec values
+`sol["v"]`, and the feed), custom block auxiliary unknowns (`sol.aux`, empty
+for these built-ins), any freed design-spec values
 (`sol.specs`), and the converged residual norm. Solved the same chain unit by
 unit, the sequential-modular `compressor`, `heater`, and `valve` reproduce these
 streams to solver tolerance: the EO and sequential-modular engines share the same
@@ -109,8 +111,7 @@ sol = fs.solve({"T": 320.0, "P": 20e5, "r": jnp.array([0.5, 0.5])})
 sol["fresh"].n - (sol["vapor"].n + sol["purge"].n)   # ~0
 ```
 
-Because the converged plant is differentiable, a gradient through the recycle is
-a single adjoint solve, independent of how many Newton iterations the forward
+The process adjoint is independent of how many Newton iterations the forward
 solve took:
 
 ```python
@@ -138,9 +139,13 @@ fs.feed("feed", feed)
 fs.add(Flash(inlets=("feed",), outlets=("vap", "liq"), t="T", p="P"))
 
 report = fs.degrees_of_freedom()
-report.n_unknowns, report.n_equations, report.degrees_of_freedom   # 10, 10, 0
-report.per_block                                                   # {"vap": 10}
+report.n_unknowns, report.n_equations, report.degrees_of_freedom   # 16, 16, 0
+report.per_block                                                   # {"vap": 16}
 ```
+
+Each stream has 2C + 2 coordinates: C total component flows, temperature,
+pressure, and C vapor component flows. This three-component flash has two
+outlets, so it contributes 16 unknowns and 16 equations.
 
 ## Design specs
 
@@ -171,8 +176,8 @@ as on a cubic. Three blocks cover the units that turn a chain of exchangers
 into a plant:
 
 * `HeatExchanger(inlets=(hot_in, cold_in), outlets=(hot_out, cold_out), ...)`
-  couples two streams through one duty unknown and one closing spec (`duty`,
-  `t_hot_out`, `t_cold_out`, or `ua` with the `q = UA * LMTD` rating relation).
+  couples two streams with one thermal specification (`duty`,
+  `t_hot_out`, `t_cold_out`, or `ua` with the common segmented rating model).
 * `StoichiometricReactor(nu=..., key=..., conversion=..., t_out=... | duty=...)`
   applies fixed conversions with an energy balance on absolute ideal-gas
   enthalpies (formation enthalpy plus the ideal-gas heat-capacity integral), so

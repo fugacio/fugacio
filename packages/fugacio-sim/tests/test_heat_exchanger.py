@@ -9,6 +9,7 @@ implicit gradient of the ``UA``-specified duty against a finite difference.
 """
 
 from dataclasses import dataclass
+from importlib import import_module
 from typing import NamedTuple
 
 import jax
@@ -21,6 +22,51 @@ from fugacio.sim.heat_exchanger import _curves
 from fugacio.sim.properties import enthalpy_flow
 
 C = ("methane", "ethane", "propane")
+
+
+@pytest.mark.parametrize("compiled", [False, True])
+def test_energy_audit_never_differentiates_its_property_calls(monkeypatch, compiled):
+    module = import_module("fugacio.sim.heat_exchanger")
+    hot = Stream(jnp.array([1.0]), 320.0, 1e5, ("methane",))
+    cold = Stream(jnp.array([1.0]), 300.0, 1e5, ("methane",))
+
+    # A simple exact physical solution isolates the diagnostic property calls.
+    # The audit must still evaluate their values, but must never request a JVP.
+    def solve(pkg_h, pkg_c, hot, cold, q, dp_h, dp_c, **kwargs):
+        return (
+            q,
+            jnp.array([hot.t, hot.t - q]),
+            jnp.array([cold.t + q, cold.t]),
+            q / (hot.t - cold.t - q),
+            hot.p - dp_h,
+            cold.p - dp_c,
+        )
+
+    def outlet(pkg, stream, temperature, pressure, duty, t_init):
+        return Stream(stream.n, temperature, pressure, stream.components, jnp.zeros_like(stream.n))
+
+    @jax.custom_jvp
+    def audit_enthalpy(stream):
+        return stream.t
+
+    @audit_enthalpy.defjvp
+    def unsupported_derivative(primals, tangents):
+        raise AssertionError("diagnostic enthalpy must not be linearized")
+
+    monkeypatch.setattr(module, "_solve", solve)
+    monkeypatch.setattr(module, "_outlet_stream", outlet)
+    monkeypatch.setattr(module, "molar_enthalpy", lambda stream, **kwargs: audit_enthalpy(stream))
+
+    def calculate(q):
+        result = heat_exchanger(hot, cold, duty=q)
+        return jnp.array(
+            [result.duty, result.hot_out.t, result.cold_out.t, result.report.residual_norm]
+        )
+
+    function = jax.jit(calculate) if compiled else calculate
+    value, tangent = jax.jvp(function, (jnp.array(10.0),), (jnp.array(1.0),))
+    np.testing.assert_allclose(value, [10.0, 310.0, 310.0, 0.0])
+    np.testing.assert_allclose(tangent, [1.0, -1.0, 1.0, 0.0])
 
 
 @pytest.mark.parametrize("flow", ["counter", "parallel"])

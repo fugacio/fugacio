@@ -187,6 +187,7 @@ jobs:
                 packages/fugacio-sim/tests/test_eo_reliability.py
                 packages/fugacio-sim/tests/test_utility_reliability.py
                 packages/fugacio-sim/tests/test_flowsheet.py
+                packages/fugacio-sim/tests/test_process_graph.py
                 packages/fugacio-sim/tests/test_heat_exchanger.py
                 packages/fugacio-sim/tests/test_plants.py
                 packages/fugacio-sim/tests/test_reaction_units.py
@@ -219,6 +220,7 @@ jobs:
               run packages/fugacio-sim/tests/test_eo_reliability.py
               run packages/fugacio-sim/tests/test_eo_structure.py
               run packages/fugacio-sim/tests/test_flowsheet.py
+              run packages/fugacio-sim/tests/test_process_graph.py
               ;;
             distillation)
               run packages/fugacio-sim/tests/test_distillation.py

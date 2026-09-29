@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("request", help="JSON study arguments")
         cmd.add_argument("--backend", choices=("sequential", "eo"), default="sequential")
         cmd.add_argument("--column-solver", choices=("block", "dense"), default="block")
-        cmd.add_argument("--eo-jacobian", choices=("colored", "dense"), default="colored")
+        cmd.add_argument("--plant-solver", choices=("sparse", "dense"), default="sparse")
         cmd.add_argument(
             "--recycle-method", choices=("wegstein", "broyden", "newton"), default="broyden"
         )
@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
                     backend=args.backend,
                     recycle_method=args.recycle_method,
                     column_solver=args.column_solver,
-                    eo_jacobian=args.eo_jacobian,
+                    plant_solver=args.plant_solver,
                 ),
             )
             if args.command == "run":

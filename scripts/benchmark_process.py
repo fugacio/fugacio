@@ -39,7 +39,7 @@ def arguments():
     parser.add_argument("--stages", type=int, default=16)
     parser.add_argument("--variables", type=int, default=24)
     parser.add_argument("--column-solver", choices=("block", "dense"), default="block")
-    parser.add_argument("--eo-jacobian", choices=("colored", "dense"), default="colored")
+    parser.add_argument("--plant-solver", choices=("sparse", "dense"), default="sparse")
     parser.add_argument("--backend", choices=("sequential", "eo"), default="sequential")
     parser.add_argument("--derivative-mode", choices=("auto", "forward", "reverse"), default="auto")
     parser.add_argument("--derivative-batch-size", type=int, default=1)
@@ -81,9 +81,24 @@ def _write(path, data):
 def _watch_memory(output, budget):
     import resource
 
+    last_checkpoint = -float("inf")
     while True:
         rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         rss = int(rss if sys.platform == "darwin" else rss * 1024)
+        now = time.monotonic()
+        if now - last_checkpoint >= 1:
+            checkpoint = output / "resources.tmp"
+            _write(
+                checkpoint,
+                {
+                    "worker_pid": os.getpid(),
+                    "process_peak_rss_bytes": rss,
+                    "budget_bytes": budget,
+                    "observed_unix_seconds": time.time(),
+                },
+            )
+            checkpoint.replace(output / "resources.json")
+            last_checkpoint = now
         if rss > budget:
             _write(
                 output / "resource-limit.json",
@@ -220,7 +235,7 @@ def _case(args, recorder):
             recycle_method="broyden",
             tolerance=1e-8,
             column_solver=args.column_solver,
-            eo_jacobian=args.eo_jacobian,
+            plant_solver=args.plant_solver,
         ),
     )
     workspace = CaseWorkspace(args.output / "workspace")
@@ -371,7 +386,14 @@ def main():
     result = json.loads(result_path.read_text()) if result_path.exists() else {}
     limit_path = args.output / "resource-limit.json"
     limit = json.loads(limit_path.read_text()) if limit_path.exists() else None
-    peak = result.get("observations", {}).get("process_peak_rss_bytes")
+    resource_path = args.output / "resources.json"
+    resources = json.loads(resource_path.read_text()) if resource_path.exists() else None
+    peaks = [
+        result.get("observations", {}).get("process_peak_rss_bytes"),
+        (resources or {}).get("process_peak_rss_bytes"),
+        (limit or {}).get("peak_rss_bytes"),
+    ]
+    peak = max((value for value in peaks if value is not None), default=None)
     if limit is None and peak is not None and peak > args.max_rss_gb * 1e9:
         # A short-lived final allocation can occur between watchdog samples.
         # The completed worker's high-water mark must still enforce the budget.
@@ -404,6 +426,8 @@ def main():
         "exit_code": code,
         "timed_out": timed_out,
         "resource_limit": limit,
+        "last_resource_sample": resources,
+        "process_peak_rss_bytes": peak,
         "cgroup_memory_events": {"before": memory_before, "after": memory_after},
         "result": result,
         "scope": "Observed on this host; performance doesn't extend thermodynamic qualification.",

@@ -100,9 +100,7 @@ class CaseWorkspace:
         }
         run = CaseRunner(
             case,
-            options=SolverOptions(
-                **{"column_solver": "dense", "eo_jacobian": "dense", **d["solver"]}
-            ),
+            options=SolverOptions(**d["solver"]),
             policy=AcceptancePolicy(**d["policy"]),
         ).run(overrides)
         self.save_run(run)

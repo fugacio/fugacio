@@ -10,7 +10,6 @@ from typing import Any, NamedTuple
 import jax
 import jax.numpy as jnp
 
-from fugacio.sim.cases.backends import RegisteredBlock
 from fugacio.sim.cases.costing import evaluate_economics, parse_economics, validate_economic_values
 from fugacio.sim.cases.evidence import build_package
 from fugacio.sim.cases.expressions import metric_values
@@ -30,12 +29,13 @@ from fugacio.sim.cases.registry import (
     validate_unit_values,
 )
 from fugacio.sim.cases.schema import ProcessCase, parse_feeds, resolve_value, validate_feed_values
-from fugacio.sim.eo import EOFlowsheet
 from fugacio.sim.flowsheet import Flowsheet
+from fugacio.sim.graph import SpecifiedGraph
+from fugacio.sim.numerics import newton_iterations
 from fugacio.sim.stream import Stream
 from fugacio.thermo.acceptance import DEFAULT_POLICY, AcceptancePolicy
 from fugacio.thermo.diagnostics import SolveReport, residual_report
-from fugacio.thermo.implicit import newton_system_with_info
+from fugacio.thermo.implicit import gate_tree
 
 
 def _unit_template(definition: UnitDefinition) -> tuple[UnitDefinition, dict[str, Any]]:
@@ -98,16 +98,20 @@ def _compiled_template(template: UnitDefinition, column_solver: str) -> Any:
         _TEMPLATE_CACHE.move_to_end(key)
         return _TEMPLATE_CACHE[key]
 
-    @jax.jit
     def compiled(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
         return evaluate_unit(
             template, inputs, parameters, package, guess=guess, column_solver=column_solver
         )
 
-    _TEMPLATE_CACHE[key] = compiled
+    # Columns and exchangers already compile their implicit and property kernels.
+    # Wrapping their preparation and retained profiles in another JIT fuses
+    # those boundaries back together and duplicates their nonlinear program
+    # when JAX prepares the unit's implicit derivative.
+    kernel = compiled if template.kind in ("column", "heat_exchanger") else jax.jit(compiled)
+    _TEMPLATE_CACHE[key] = kernel
     while len(_TEMPLATE_CACHE) > _TEMPLATE_CACHE_SIZE:
         _TEMPLATE_CACHE.popitem(last=False)
-    return compiled
+    return kernel
 
 
 def _typed_arrays(tree: Any) -> Any:
@@ -127,7 +131,7 @@ class SolverOptions:
     max_iterations: int = 100
     specification_iterations: int = 40
     column_solver: str = "block"
-    eo_jacobian: str = "colored"
+    plant_solver: str = "sparse"
 
     def __post_init__(self) -> None:
         if self.backend not in ("sequential", "eo"):
@@ -136,8 +140,8 @@ class SolverOptions:
             raise ValueError("unknown recycle method")
         if self.column_solver not in ("block", "dense"):
             raise ValueError("column_solver must be block or dense")
-        if self.eo_jacobian not in ("colored", "dense"):
-            raise ValueError("eo_jacobian must be colored or dense")
+        if self.plant_solver not in ("sparse", "dense"):
+            raise ValueError("plant_solver must be sparse or dense")
         if number(self.tolerance, "tolerance") <= 0:
             raise ValueError("tolerance must be positive")
         for n in (self.max_iterations, self.specification_iterations):
@@ -201,14 +205,12 @@ class CaseRunner:
                 "units",
                 "reaction formation enthalpies aren't compatible with the reference-fluid datum",
             )
-        self._sequential = Flowsheet()
-        self._eo = EOFlowsheet(model=self.package, jacobian_mode=self.options.eo_jacobian)
+        self._flow = Flowsheet()
         self._unit_kernels: dict[str, Any] = {}
         self._unit_templates: dict[str, Any] = {}
         for feed in self.feeds:
             stream = feed.build(self.case.components, self.defaults, self.package)
-            self._sequential.feed(feed.name, stream)
-            self._eo.feed(feed.name, stream)
+            self._flow.feed(feed.name, stream)
         for definition in self.units:
 
             def make_unit(d: Any) -> Any:
@@ -221,6 +223,20 @@ class CaseRunner:
 
                 def kernel(inputs: Any, parameters: Any, package: Any, guess: Any) -> Any:
                     local = {k: resolve_value(v, parameters) for k, v in bindings.items()}
+                    if d.kind == "column":
+                        # Cold and accepted-profile starts share one input tree.
+                        # A dynamic selector avoids retaining a second compiled
+                        # MESH solver when a study starts from its audited run.
+                        n, c = d.structure["n_stages"], len(inputs[0].components)
+                        guess = {
+                            "liquid": jnp.zeros((n, c)),
+                            "vapor": jnp.zeros((n, c)),
+                            "t": jnp.zeros(n),
+                            "condenser_duty": jnp.asarray(0.0),
+                            "reboiler_duty": jnp.asarray(0.0),
+                            **(guess or {}),
+                            "_use_profile": jnp.asarray(guess is not None),
+                        }
                     return compiled(
                         _typed_arrays(inputs), _typed_arrays(local), package, _typed_arrays(guess)
                     )
@@ -229,23 +245,15 @@ class CaseRunner:
 
                 def unit(*args: Any) -> Any:
                     params, pkg, guesses = args[-1]
-                    return kernel(tuple(args[:-1]), params, pkg, guesses.get(d.name)).outlets
+                    return kernel(tuple(args[:-1]), params, pkg, guesses.get(d.name))
 
                 return unit
 
-            self._sequential.unit(
+            self._flow.unit(
                 definition.name,
                 make_unit(definition),
                 inputs=definition.inlets,
                 outputs=definition.outlets,
-            )
-            self._eo.add(
-                RegisteredBlock(
-                    definition.inlets,
-                    definition.outlets,
-                    definition,
-                    self._unit_kernels[definition.name],
-                )
             )
         consumed = {s for u in self.units for s in u.inlets}
         self.products = tuple(s for u in self.units for s in u.outlets if s not in consumed)
@@ -273,14 +281,14 @@ class CaseRunner:
 
         self._spec_lower, self._spec_span = lower, span
         self._spec_target, self._spec_tolerance = target, tolerance
-        self._ready = False
+        self._specified_graph: SpecifiedGraph | None = None
 
     def diagnose_structure(self) -> dict[str, Any]:
         """Describe process topology and declared numerical structure without solving.
 
-        Registered EO units retain nested column and flash solves. Their global
-        incidence report describes stream connections, not an expanded MESH
-        system. Structural matching doesn't imply accepted process physics.
+        Incidence describes stream connections and specification borders.
+        Columns retain their structured internal MESH solves. Structural
+        matching doesn't imply accepted process physics.
         """
         return {
             "case_id": self.case.case_id,
@@ -289,9 +297,9 @@ class CaseRunner:
             "unit_templates": len(self._unit_templates),
             "partitions": [
                 {"units": list(part.units), "cyclic": part.cyclic, "tears": list(part.tears)}
-                for part in self._sequential.partition()
+                for part in self._flow.partition()
             ],
-            "equation_oriented": self._eo.diagnose_structure(),
+            "process_graph": self._graph_diagnostics(),
             "columns": {
                 unit.name: {
                     "stages": unit.structure["n_stages"],
@@ -328,14 +336,24 @@ class CaseRunner:
         validate_unit_values(self.units, concrete)
         validate_economic_values(parse_economics(self.document, self.parameters), concrete)
 
+    def _graph_diagnostics(self) -> dict[str, Any]:
+        graph = self._compiled_graph()
+        if not self._specs:
+            return graph.diagnose()
+        # Inspection only needs incidence, not numerical metric callbacks.
+        system = SpecifiedGraph(
+            graph, len(self._specs), lambda *args: None, lambda *args: jnp.empty(0)
+        )
+        return system.diagnose(self.manipulated)
+
+    def _compiled_graph(self) -> Any:
+        template = next(iter(self._flow.feeds.values()))
+        streams = {name: template for unit in self.units for name in unit.outlets}
+        return self._flow.compile(streams, linear_solver=self.options.plant_solver)
+
     def prepare(self) -> None:
-        """Build EO plans with concrete defaults before tracing; repeated calls are cheap."""
-        if not self._ready:
-            if self.options.backend == "eo":
-                self._eo._get_plan(
-                    self.defaults, 3, self.options.tolerance, self.options.max_iterations
-                )
-            self._ready = True
+        """Bind the shared graph layout without solving or capturing operating values."""
+        self._compiled_graph()
 
     def initialization(self, run: Any) -> CaseInitialization:
         """Recover study seeds from an accepted run of this exact case revision.
@@ -363,28 +381,13 @@ class CaseRunner:
             )
             for name, s in data["streams"].items()
         }
-        values = {k: v["value_si"] for k, v in data["parameters"].items()}
         units = {}
         for d in self.units:
             if d.kind != "column":
                 continue
             saved = data["units"][d.name]
             p, q = saved["profiles_si"], saved["quantities_si"]
-            traffic = {}
-            for phase, composition in (("liquid", "x"), ("vapor", "y")):
-                if "stage_" + phase in p:
-                    traffic[phase] = jnp.asarray(p["stage_" + phase])
-                    continue
-                # Older saved runs contain totals including side draws.
-                factor = jnp.ones(d.structure["n_stages"])
-                for draw in d.structure["side_draws"]:
-                    if draw["phase"] == phase:
-                        factor = factor.at[draw["stage"] - 1].add(
-                            resolve_value(draw["fraction"], values)
-                        )
-                traffic[phase] = (jnp.asarray(p[phase + "_flow"]) / factor)[:, None] * jnp.asarray(
-                    p[composition]
-                )
+            traffic = {phase: jnp.asarray(p["stage_" + phase]) for phase in ("liquid", "vapor")}
             units[d.name] = {
                 **traffic,
                 "t": jnp.asarray(p["t"]),
@@ -402,38 +405,46 @@ class CaseRunner:
         feeds = {f.name: f.build(self.case.components, parameters, package) for f in self.feeds}
         guesses = {} if initialization is None else initialization.units
         stream_guess = None if initialization is None else initialization.streams
-        if self.options.backend == "sequential":
-            flow = copy.copy(self._sequential)
-            flow.feeds = feeds
-            solution = flow.solve_with_info(
-                (parameters, package, guesses),
-                guess=stream_guess,
-                audit=False,
-                method=self.options.recycle_method,
-                tol=self.options.tolerance,
-                max_iter=self.options.max_iterations,
-            )
-            streams, reports = dict(solution.streams), dict(solution.reports)
-        else:
-            eo = copy.copy(self._eo)
-            eo.feeds, eo.model = feeds, package
-            eo_result = eo.solve(
-                parameters,
-                guess=stream_guess,
-                sweeps=3,
-                tol=self.options.tolerance,
-                max_iter=self.options.max_iterations,
-                check=False,
-                warm_start=False,
-            )
-            streams, reports = dict(eo_result.streams), {"eo": eo_result.report}
+        flow = copy.copy(self._flow)
+        flow.feeds = feeds
+        solution = flow.solve_with_info(
+            (parameters, package, guesses),
+            guess=stream_guess,
+            audit=False,
+            retain_results=True,
+            strategy="sequential" if self.options.backend == "sequential" else "simultaneous",
+            linear_solver=self.options.plant_solver,
+            method=self.options.recycle_method,
+            tol=self.options.tolerance,
+            max_iter=self.options.max_iterations,
+        )
+        return self._evaluate_streams(
+            solution.streams,
+            parameters,
+            package,
+            guesses,
+            dict(solution.reports),
+            solution.unit_results,
+        )
+
+    def _evaluate_streams(
+        self,
+        streams: dict[str, Stream],
+        parameters: dict[str, Any],
+        package: Any,
+        guesses: Any,
+        reports: dict[str, SolveReport],
+        retained: dict[str, UnitEvaluation] | None = None,
+    ) -> CaseEvaluation:
+        """Retain unit and metric evidence at a supplied shared process state."""
         units: dict[str, UnitEvaluation] = {}
         for d in self.units:
-            result = self._unit_kernels[d.name](
-                tuple(streams[k] for k in d.inlets),
-                parameters,
-                package,
-                guesses.get(d.name),
+            result = (
+                retained[d.name]
+                if retained is not None
+                else self._unit_kernels[d.name](
+                    tuple(streams[k] for k in d.inlets), parameters, package, guesses.get(d.name)
+                )
             )
             units[d.name] = result
             reports["unit:" + d.name] = result.report
@@ -445,23 +456,10 @@ class CaseRunner:
                         (actual.n - expected.n) / jnp.maximum(jnp.sum(jnp.abs(expected.n)), 1),
                         jnp.atleast_1d((actual.t - expected.t) / 100),
                         jnp.atleast_1d((actual.p - expected.p) / jnp.maximum(expected.p, 1e5)),
+                        (jnp.asarray(actual.vapor_n) - jnp.asarray(expected.vapor_n))
+                        / jnp.maximum(jnp.sum(jnp.abs(expected.n)), 1),
                     )
                 )
-                # Restore branch inventories for mixtures after solving EO's PT
-                # coordinates. Keep solved n/T/P so replay never conceals a mismatch.
-                if self.options.backend == "eo" and len(self.case.components) > 1:
-                    fraction = jnp.asarray(expected.vapor_n) / jnp.where(
-                        expected.n > 0, expected.n, 1
-                    )
-                    vapor = jnp.where(
-                        expected.phase_known,
-                        # Transfer phase fractions onto the solved component
-                        # flows. Clipping replayed absolute inventories against
-                        # EO flows invents a trace second phase from roundoff.
-                        jnp.clip(fraction, 0, 1) * jnp.maximum(actual.n, 0),
-                        -jnp.ones_like(actual.n),
-                    )
-                    streams[name] = Stream(actual.n, actual.t, actual.p, actual.components, vapor)
             reports["closure:" + d.name] = residual_report(
                 jnp.concatenate(terms), max(self.options.tolerance * 10, 1e-7)
             )
@@ -480,6 +478,33 @@ class CaseRunner:
         evaluation = evaluation._replace(plant={**plant, **costs}, equipment=equipment)
         return evaluation._replace(metrics=metric_values(evaluation, self.document, package))
 
+    def _specification_system(self) -> SpecifiedGraph:
+        """Reuse specification callbacks without capturing an operating point."""
+        if self._specified_graph is not None:
+            return self._specified_graph
+        lower, span = self._spec_lower, self._spec_span
+        target, tolerance = self._spec_target, self._spec_tolerance
+
+        def bind(auxiliary: Any, external: Any) -> Any:
+            p, model, seeds = external
+            p = {**p, **dict(zip(self.manipulated, lower + span * auxiliary, strict=True))}
+            feeds = {f.name: f.build(self.case.components, p, model) for f in self.feeds}
+            return (p, model, seeds), feeds
+
+        def equations(streams: Any, bound: Any) -> Any:
+            p, model, seeds = bound[0]
+            evaluation = self._evaluate_streams(streams, p, model, seeds, {})
+            return (
+                (jnp.asarray([evaluation.metrics[s["metric"]] for s in self._specs]) - target)
+                / tolerance
+                * (self.options.tolerance / 0.1)
+            )
+
+        self._specified_graph = SpecifiedGraph(
+            self._compiled_graph(), len(self._specs), bind, equations
+        )
+        return self._specified_graph
+
     def evaluate(
         self,
         parameters: dict[str, Any] | None = None,
@@ -489,8 +514,8 @@ class CaseRunner:
     ) -> CaseEvaluation:
         """Evaluate in SI with implicit derivatives through recycles and bounded specs.
 
-        Call ``prepare`` before an enclosing JAX transformation for the EO
-        backend. Differentiating with respect to a manipulated parameter's
+        Both strategies use the same graph and local implicit derivatives.
+        Differentiating with respect to a manipulated parameter's
         initial guess gives zero; the converged specification determines it.
         """
         params = {**self.defaults, **(parameters or {})}
@@ -498,29 +523,43 @@ class CaseRunner:
         if not self._specs:
             return self._process(params, pkg, initialization)
         lower, span = self._spec_lower, self._spec_span
-        target, tolerance = self._spec_target, self._spec_tolerance
-
-        def residual(x: Any, theta: Any) -> Any:
-            p, model, seed = theta
-            p = {**p, **dict(zip(self.manipulated, lower + span * x, strict=True))}
-            evaluation = self._process(p, model, seed)
-            return (
-                jnp.asarray([evaluation.metrics[s["metric"]] for s in self._specs]) - target
-            ) / tolerance
-
-        start = (jnp.asarray([params[k] for k in self.manipulated]) - lower) / span
-        solved = newton_system_with_info(
-            residual,
-            start,
-            (params, pkg, initialization),
-            tol=0.1,
-            max_iter=self.options.specification_iterations,
-            lower=jnp.zeros_like(start),
-            upper=jnp.ones_like(start),
+        system = self._specification_system()
+        graph = system.graph
+        guesses = {} if initialization is None else initialization.units
+        external = (params, pkg, guesses)
+        # One ordinary process solution supplies an initialization. Subsequent
+        # Newton trials evaluate local equations, never a nested plant solve.
+        seed = self._process(*jax.lax.stop_gradient((params, pkg, initialization)))
+        start = jnp.concatenate(
+            (
+                graph.pack(seed.streams),
+                (jnp.asarray([params[k] for k in self.manipulated]) - lower) / span,
+            )
         )
-        final = {**params, **dict(zip(self.manipulated, lower + span * solved.value, strict=True))}
-        evaluation = self._process(final, pkg, initialization)
-        return evaluation._replace(reports={**evaluation.reports, "specifications": solved.report})
+        scale = jnp.concatenate(
+            (jnp.maximum(jnp.abs(start[: graph.size]), 1.0), jnp.ones(len(self._specs)))
+        )
+        solved = newton_iterations(
+            system.residual,
+            lambda x, p: system.linearize(x, p)[0],
+            start,
+            external,
+            scale=scale,
+            tolerance=self.options.tolerance,
+            max_iterations=self.options.specification_iterations,
+            lower=jnp.concatenate((jnp.full(graph.size, -jnp.inf), jnp.zeros(len(self._specs)))),
+            upper=jnp.concatenate((jnp.full(graph.size, jnp.inf), jnp.ones(len(self._specs)))),
+        )
+        value = system.attach(solved.value, external, solved.report.converged)
+        bound = system.bind(value[graph.size :], external)
+        streams = graph.unpack(value[: graph.size], bound[1])
+        final = bound[0][0]
+        evaluation = self._evaluate_streams(
+            streams, final, pkg, guesses, {"specifications": solved.report}
+        )
+        valid = jnp.all(jnp.asarray([r.converged for r in evaluation.reports.values()]))
+        valid &= jnp.all(jnp.asarray([s.report.converged for s in streams.values()]))
+        return gate_tree(evaluation, valid)
 
     def run(self, overrides: dict[str, Any] | None = None, *, check: bool = False) -> Any:
         """Solve and independently audit a case, retaining failures in a run artifact."""

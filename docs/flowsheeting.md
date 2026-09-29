@@ -70,13 +70,16 @@ accepts three `method`s (see `fugacio.sim.TEAR_METHODS`):
 | `"wegstein"` | bounded secant acceleration of direct substitution, per component | loops that are already contracting; cheap per iteration |
 | `"newton"` | full Newton with the autodiff Jacobian of the loop map | small tears with a badly conditioned loop, or when quadratic convergence is worth a Jacobian per step |
 
-Whichever method converges the loop, differentiation is by the implicit
-function theorem at the fixed point: the adjoint solves one dense system against
-\(I - \partial g/\partial x\), where \(g\) is the loop map, so
-`jax.grad(lambda th: fs.solve(th)["product"].n[0])` costs about one extra pass
-through the loop regardless of how many iterations the forward solve took. The
-three methods agree on the converged values and on the gradient to solver
-tolerance.
+Both execution strategies differentiate the converged connection equations.
+Local unit Jacobians assemble into a sparse process matrix; forward and reverse
+sensitivities use checked sparse solves. The standalone `tear_solve` API still
+supports arbitrary floating pytrees with a small dense fixed-point derivative.
+
+Pass `strategy="simultaneous"` to solve the same registered graph with sparse
+Newton steps. Set `linear_solver="dense"` for a small reference comparison.
+Concrete orchestration preserves compiled unit boundaries. See the
+[shared process runtime](process-runtime.md) for state coordinates,
+compilation behavior, and sparse-solver limits.
 
 ## Reports, unit records, and audits
 

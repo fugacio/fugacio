@@ -47,7 +47,7 @@ def test_run_retains_transfers_and_separate_acceptance(heater_run):
 def test_backends_agree(heater_run):
     eo = CaseRunner(example_case(), options=SolverOptions(backend="eo")).run(check=True)
     assert eo.to_dict()["metrics"] == heater_run.to_dict()["metrics"]
-    assert eo.to_dict()["checks"]["numerical"]["reports"]["eo"]["converged"]
+    assert eo.to_dict()["checks"]["numerical"]["reports"]["process"]["converged"]
 
 
 def test_study_initialization_requires_accepted_matching_revision(heater_runner, heater_run):
@@ -175,6 +175,7 @@ def test_design_spec_and_implicit_derivative():
     ]
     runner = CaseRunner(ProcessCase.from_dict(d))
     run = runner.run(check=True)
+    system = runner._specification_system()
     assert run.to_dict()["metrics"]["duty"]["value_si"] == pytest.approx(2500, abs=0.001)
     assert run.to_dict()["parameters"]["temperature"]["value_si"] > 360
     derivative = jax.grad(lambda f: runner.evaluate({"flow": f}).parameters["temperature"])(
@@ -196,6 +197,7 @@ def test_design_spec_and_implicit_derivative():
         )
     )
     assert float(warm(jnp.asarray(1.0))) == pytest.approx(float(derivative), rel=1e-8)
+    assert runner._specification_system() is system
 
 
 def test_infeasible_design_spec_is_saved_failure():

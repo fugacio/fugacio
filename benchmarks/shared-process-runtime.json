@@ -1,0 +1,1588 @@
+{
+  "schema_version": 1,
+  "kind": "process_performance_observations",
+  "recorded_date_utc": "2026-09-23",
+  "scope": [
+    "Final shared-runtime CPU observations in a local Linux container with JAX 0.10.1.",
+    "Every run uses a fresh worker and an empty persistent cache. No study explicitly clears JAX caches.",
+    "Benchmarks and functional tests shared this host; elapsed times are not controlled speed comparisons.",
+    "RSS is the process-lifetime high-water mark, including compilation.",
+    "Per-run source digests identify snapshots tested during validation. Numerical acceptance does not extend thermodynamic qualification."
+  ],
+  "observations": [
+    {
+      "name": "shared-runtime-ethanol-final-linux",
+      "accepted": true,
+      "source_sha256": "34324156b5f28289152fab5ad078772b55e659eb31e6e726be767272b881fbce",
+      "base_revision": "6f35a719a398b2192245920dd21c307c7cd13642",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/shared-runtime-ethanol-final-linux/benchmark.json",
+      "original_report_sha256": "2f965e81c73692f73473220afc8c5bbd8aac6455a22c93cb05825ef2db925cb9",
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "plant_solver": "sparse",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 8.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "environment": {
+        "cpu_count": 16,
+        "devices": [
+          "cpu:0"
+        ],
+        "jax": "0.10.1",
+        "jax_backend": "cpu",
+        "jax_x64": true,
+        "machine": "x86_64",
+        "platform": "Linux-6.10.14-linuxkit-x86_64-with-glibc2.41",
+        "python": "3.12.14",
+        "runtime_settings": {
+          "MALLOC_ARENA_MAX": "2",
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "XLA_FLAGS": null
+        }
+      },
+      "elapsed_seconds": 1096.1895790010003,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "process_peak_rss_bytes": 7920070656,
+      "container_limits": {
+        "memory_bytes": 8000000000,
+        "memory_and_swap_bytes": 8000000000,
+        "cpu_quota": 4,
+        "source_mount_read_only": true
+      },
+      "phases": [
+        {
+          "cpu_seconds": 1616.474803185,
+          "name": "sensitivity_study",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 1082.0833396360003,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 354.918353834,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 3308421120,
+          "seconds": 233.5405610910002,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 1121.374733577,
+          "name": "linearization[0]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 712.012264641,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 71.02235265199988,
+          "name": "jacobian[0]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 66.11443553500021,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 13.444514316000095,
+          "name": "audited_run[1]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 13.240860744000202,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 9.833967597000083,
+          "name": "audited_run[2]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 9.713997381999434,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 9.913237203000108,
+          "name": "audited_run[3]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 9.79105396199975,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 10.000425251000024,
+          "name": "audited_run[4]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 9.800126279999859,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 13.640395746999957,
+          "name": "audited_run[5]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 13.500707635000254,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 11.82014990200014,
+          "name": "audited_run[6]",
+          "process_peak_rss_bytes": 7920070656,
+          "seconds": 13.615387728999849,
+          "status": "completed"
+        }
+      ],
+      "study": {
+        "schema_version": 1,
+        "kind": "sensitivities",
+        "case_id": "8d34d0754e6fc7f5dd3bf1ed7459f4602aac0dbfe94d3d7ae9ea3ef557e7b4d7",
+        "baseline_id": "d2649fe24682e8b7c092c1cdeac122469dad5801f3ae015d06dc16e36869d6c8",
+        "initialization": "accepted_baseline; finite-difference runs start cold",
+        "accepted": true,
+        "relative_step": 0.0001,
+        "relative_tolerance": 0.005,
+        "derivative_numerically_accepted": true,
+        "derivatives": {
+          "requested_mode": "auto",
+          "mode": "reverse",
+          "inputs": 3,
+          "outputs": 2,
+          "directions": 2,
+          "batch_size": 1,
+          "linearizations_per_evaluation": 1
+        },
+        "release_caches": false,
+        "parameters": [
+          "approach",
+          "pressure",
+          "reflux"
+        ],
+        "metrics": [
+          "reboiler_duty",
+          "annual_cost"
+        ],
+        "results": [
+          {
+            "parameter": "approach",
+            "accepted": true,
+            "step_si": 0.0012000000000000001,
+            "phase_regime_unchanged": true,
+            "perturbed_run_ids": [
+              "5ef29bf9861a0cc6cd12bc1466b261aa91da8c32e062205e009b759a85294fbb",
+              "8e03164c9e9061536eaea518d675960ee3363483041d2899dc461ccbb00ca07c"
+            ],
+            "error": null,
+            "metrics": {
+              "reboiler_duty": {
+                "accepted": true,
+                "autodiff_si": 7229.796939222895,
+                "finite_difference_si": 7229.731307403805,
+                "relative_error": 9.077961613880068e-06,
+                "autodiff_display": 0.007229796939222895,
+                "derivative_unit": "(MW)/(delta_K increment)"
+              },
+              "annual_cost": {
+                "accepted": true,
+                "autodiff_si": 3.963766193676533e-05,
+                "finite_difference_si": 3.9637378584806794e-05,
+                "relative_error": 7.148553791764817e-06,
+                "autodiff_display": 1250.8694803356657,
+                "derivative_unit": "(USD/yr)/(delta_K increment)"
+              }
+            }
+          },
+          {
+            "parameter": "pressure",
+            "accepted": true,
+            "step_si": 10.129999999999999,
+            "phase_regime_unchanged": true,
+            "perturbed_run_ids": [
+              "290e55cb9717ead4b9b12d4d63328df2ef4134216e86a900dff6b55a55fada14",
+              "cf82b0b5f6dbe9d38aa69dad5c1b851bb726b1a73e73eabbd113e7418bbe691c"
+            ],
+            "error": null,
+            "metrics": {
+              "reboiler_duty": {
+                "accepted": true,
+                "autodiff_si": -0.4083794694362197,
+                "finite_difference_si": -0.4083807055097394,
+                "relative_error": 3.026767677742071e-06,
+                "autodiff_display": -0.04083794694362197,
+                "derivative_unit": "(MW)/(bar increment)"
+              },
+              "annual_cost": {
+                "accepted": true,
+                "autodiff_si": -2.785752815309399e-09,
+                "finite_difference_si": -2.78576199928822e-09,
+                "relative_error": 3.2967564434240565e-06,
+                "autodiff_display": -8791.16730444079,
+                "derivative_unit": "(USD/yr)/(bar increment)"
+              }
+            }
+          },
+          {
+            "parameter": "reflux",
+            "accepted": true,
+            "step_si": 0.00030000000000000003,
+            "phase_regime_unchanged": true,
+            "perturbed_run_ids": [
+              "35949e95ed5c8fe1ee4e121bd55999e12383731ca62ea13b7f6348a9c0feb6a4",
+              "626a1e67caa0cc5c626e8d9cbe2d5300644df79817bfc792675ed3ef84b832f5"
+            ],
+            "error": null,
+            "metrics": {
+              "reboiler_duty": {
+                "accepted": true,
+                "autodiff_si": 457475.0436696494,
+                "finite_difference_si": 457475.20428150886,
+                "relative_error": 3.510832018028221e-07,
+                "autodiff_display": 0.45747504366964936,
+                "derivative_unit": "(MW)/(1 increment)"
+              },
+              "annual_cost": {
+                "accepted": true,
+                "autodiff_si": 0.0035073527230027545,
+                "finite_difference_si": 0.003507353495581002,
+                "relative_error": 2.2027384705981525e-07,
+                "autodiff_display": 110683.63429143174,
+                "derivative_unit": "(USD/yr)/(1 increment)"
+              }
+            }
+          }
+        ],
+        "scope": "Local implicit derivatives checked against centered differences; no global smoothness or uncertainty claim.",
+        "artifact_id": "055a3bd1439677ff37fad77f036922de437445455d44363976ff84b39fa56848"
+      },
+      "audited_runs": [
+        {
+          "run_id": "290e55cb9717ead4b9b12d4d63328df2ef4134216e86a900dff6b55a55fada14",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.546368348060494e-11,
+            "heat_w": 125304.4895234101,
+            "material_relative_error": 1.4072654153096665e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657997.1917299496,
+              "value_si": 0.020850672792923082
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61100437448615,
+              "value_si": 50.61100437448615
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95456177449411,
+              "value_si": 0.809545617744941
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628904133408644,
+              "value_si": 1962890.4133408645
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.45529833684814447,
+              "value_si": 455298.3368481445
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09774604066823,
+              "value_si": 0.9309774604066823
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "35949e95ed5c8fe1ee4e121bd55999e12383731ca62ea13b7f6348a9c0feb6a4",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.3976170385584884e-11,
+            "heat_w": 125309.03164647124,
+            "material_relative_error": 1.7354473413888627e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657963.0961558765,
+              "value_si": 0.02084959236937779
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61257217515086,
+              "value_si": 50.61257217515086
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.9539783748104,
+              "value_si": 0.8095397837481041
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9627490341764677,
+              "value_si": 1962749.0341764677
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553175807319532,
+              "value_si": 455317.5807319532
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09707513103199,
+              "value_si": 0.9309707513103198
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "5ef29bf9861a0cc6cd12bc1466b261aa91da8c32e062205e009b759a85294fbb",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.3965225039650235e-11,
+            "heat_w": 125300.20063593914,
+            "material_relative_error": 1.7605827906663762e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657994.8002348315,
+              "value_si": 0.020850597011015777
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61749114404738,
+              "value_si": 50.61749114404738
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95434964235973,
+              "value_si": 0.8095434964235974
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628776008406785,
+              "value_si": 1962877.6008406784
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553269529281306,
+              "value_si": 455326.9529281306
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09750208871371,
+              "value_si": 0.9309750208871371
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "626a1e67caa0cc5c626e8d9cbe2d5300644df79817bfc792675ed3ef84b832f5",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 2.8201829875484376e-11,
+            "heat_w": 125308.73434976698,
+            "material_relative_error": 1.7009149644309218e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 658029.5063510799,
+              "value_si": 0.020851696781475137
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61260496404993,
+              "value_si": 50.61260496404993
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95473226658524,
+              "value_si": 0.8095473226658524
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9630235192990366,
+              "value_si": 1963023.5192990366
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553189769612829,
+              "value_si": 455318.9769612829
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09794210657303,
+              "value_si": 0.9309794210657303
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "8e03164c9e9061536eaea518d675960ee3363483041d2899dc461ccbb00ca07c",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.395888134429316e-11,
+            "heat_w": 125317.56493019545,
+            "material_relative_error": 1.453503983839255e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657997.8023001237,
+              "value_si": 0.02085069214072438
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.607687072693025,
+              "value_si": 50.607687072693025
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.9543610621807,
+              "value_si": 0.809543610621807
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628949521958161,
+              "value_si": 1962894.9521958162
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.45530960534598436,
+              "value_si": 455309.60534598434
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09751522150778,
+              "value_si": 0.9309751522150778
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "cf82b0b5f6dbe9d38aa69dad5c1b851bb726b1a73e73eabbd113e7418bbe691c",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 1.402658847828336e-11,
+            "heat_w": 125313.2752113624,
+            "material_relative_error": 1.3857004432793475e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657995.4106335818,
+              "value_si": 0.020850616353384976
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61417258693255,
+              "value_si": 50.61417258693255
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95414894535683,
+              "value_si": 0.8095414894535684
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.962882139547771,
+              "value_si": 1962882.1395477708
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.45533821925886314,
+              "value_si": 455338.21925886313
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09727128716038,
+              "value_si": 0.9309727128716038
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "d2649fe24682e8b7c092c1cdeac122469dad5801f3ae015d06dc16e36869d6c8",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 3.2664365068770475e-13,
+            "heat_w": 125308.88306190679,
+            "material_relative_error": 1.808349026077849e-12,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657996.3012663644,
+              "value_si": 0.0208506445758348
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.612588562927755,
+              "value_si": 50.612588562927755
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95435535247287,
+              "value_si": 0.8095435535247287
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.962886276796857,
+              "value_si": 1962886.276796857
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553182788918124,
+              "value_si": 455318.2788918124
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.0975086553438,
+              "value_si": 0.9309750865534381
+            }
+          },
+          "process_graph": {
+            "colored_directions": 18,
+            "declared_nonzeros": 210,
+            "degrees_of_freedom": 0,
+            "density": 0.23333333333333334,
+            "equation_labels": [
+              "bottoms_cooled:n[ethanol]",
+              "bottoms_cooled:n[water]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[ethanol]",
+              "bottoms_cooled:vapor_n[water]",
+              "preheated:n[ethanol]",
+              "preheated:n[water]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[ethanol]",
+              "preheated:vapor_n[water]",
+              "column_feed:n[ethanol]",
+              "column_feed:n[water]",
+              "column_feed:temperature",
+              "column_feed:pressure",
+              "column_feed:vapor_n[ethanol]",
+              "column_feed:vapor_n[water]",
+              "distillate:n[ethanol]",
+              "distillate:n[water]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[ethanol]",
+              "distillate:vapor_n[water]",
+              "bottoms:n[ethanol]",
+              "bottoms:n[water]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[ethanol]",
+              "bottoms:vapor_n[water]"
+            ],
+            "largest_unit_input": 6,
+            "linear_solver": "sparse",
+            "local_input_directions": 18,
+            "n_equations": 30,
+            "n_unknowns": 30,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 210,
+            "structural_rank_upper_bound": 30,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "shared-runtime-depropanizer-final-linux",
+      "accepted": true,
+      "source_sha256": "365dfc00fc0e562506b1954aa5a33cc86e3b86cb45e4177b3d5254822e2d6371",
+      "base_revision": "6f35a719a398b2192245920dd21c307c7cd13642",
+      "working_tree_dirty": true,
+      "original_report_path": "artifacts/performance/shared-runtime-depropanizer-final-linux/benchmark.json",
+      "original_report_sha256": "f7751d711b9a4e7c0822ce882d76d538431e97335eb172b7246ada0cd04ff652",
+      "configuration": {
+        "scenario": "depropanizer",
+        "study": "optimization",
+        "stages": 16,
+        "variables": 24,
+        "column_solver": "block",
+        "plant_solver": "sparse",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 8.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "environment": {
+        "cpu_count": 16,
+        "devices": [
+          "cpu:0"
+        ],
+        "jax": "0.10.1",
+        "jax_backend": "cpu",
+        "jax_x64": true,
+        "machine": "x86_64",
+        "platform": "Linux-6.10.14-linuxkit-x86_64-with-glibc2.41",
+        "python": "3.12.14",
+        "runtime_settings": {
+          "MALLOC_ARENA_MAX": "2",
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "XLA_FLAGS": null
+        }
+      },
+      "elapsed_seconds": 367.8334372190002,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "process_peak_rss_bytes": 4794675200,
+      "container_limits": {
+        "memory_bytes": 8000000000,
+        "memory_and_swap_bytes": 8000000000,
+        "cpu_quota": 4,
+        "source_mount_read_only": true
+      },
+      "phases": [
+        {
+          "cpu_seconds": 768.692149232,
+          "name": "optimization_study",
+          "process_peak_rss_bytes": 4794675200,
+          "seconds": 360.40747547499996,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 177.32971426400002,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 1420066816,
+          "seconds": 78.77256268300016,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 512.037222827,
+          "name": "linearization[0]",
+          "process_peak_rss_bytes": 4266008576,
+          "seconds": 229.40044928499992,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 50.03373943500003,
+          "name": "jacobian[0]",
+          "process_peak_rss_bytes": 4274704384,
+          "seconds": 25.63773431899972,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 10.207560871999931,
+          "name": "linearization[1]",
+          "process_peak_rss_bytes": 4750770176,
+          "seconds": 9.493843906000166,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.5624654299999747,
+          "name": "jacobian[1]",
+          "process_peak_rss_bytes": 4790353920,
+          "seconds": 0.5595819840000331,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 3.421175995999988,
+          "name": "linearization[2]",
+          "process_peak_rss_bytes": 4790353920,
+          "seconds": 2.9861142449999534,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.5408731090000174,
+          "name": "jacobian[2]",
+          "process_peak_rss_bytes": 4790800384,
+          "seconds": 0.5381647609997344,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 3.5819951219999666,
+          "name": "linearization[3]",
+          "process_peak_rss_bytes": 4790800384,
+          "seconds": 3.1493973409997125,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.5423711550000689,
+          "name": "jacobian[3]",
+          "process_peak_rss_bytes": 4792147968,
+          "seconds": 0.5390186749996246,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 3.497401253000021,
+          "name": "linearization[4]",
+          "process_peak_rss_bytes": 4792147968,
+          "seconds": 3.065515755999968,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.5351865810000618,
+          "name": "jacobian[4]",
+          "process_peak_rss_bytes": 4793008128,
+          "seconds": 0.5319475000001148,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 3.581214091999982,
+          "name": "linearization[5]",
+          "process_peak_rss_bytes": 4793008128,
+          "seconds": 3.140471733999675,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 0.5463585379999358,
+          "name": "jacobian[5]",
+          "process_peak_rss_bytes": 4793544704,
+          "seconds": 0.5427785050001148,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 1.7267037090000485,
+          "name": "audited_run[1]",
+          "process_peak_rss_bytes": 4793544704,
+          "seconds": 1.4387497010002335,
+          "status": "completed"
+        }
+      ],
+      "study": {
+        "schema_version": 1,
+        "kind": "optimization",
+        "case_id": "12d5581763e2730ab26c81f88a4fbef0958df79f4b5795e276f16500b2e3f5a9",
+        "accepted": true,
+        "baseline_id": "be44c00ea2434af5a12118ade48f3210175b904cdb9937bceaa29c0109edcf29",
+        "candidate_id": "b8f55a9f3bd16e468800b6aae5b7155f9e330d7660ed4e72e27d4222dfebaf6c",
+        "derivatives": {
+          "requested_mode": "auto",
+          "mode": "reverse",
+          "inputs": 2,
+          "outputs": 1,
+          "directions": 1,
+          "batch_size": 1,
+          "linearizations_per_evaluation": 1
+        },
+        "initialization": "accepted_baseline; final candidate starts cold",
+        "initialization_checks": [
+          {
+            "metric": "annual_cost",
+            "trial_si": 0.02288793451694124,
+            "cold_start_si": 0.02288793451639786,
+            "tolerance_si": 2.4853465911539417e-08,
+            "accepted": true
+          }
+        ],
+        "variables": [
+          "approach",
+          "pressure"
+        ],
+        "objective": "annual_cost",
+        "sense": "min",
+        "release_caches": false,
+        "constraints": [],
+        "optimizer": {
+          "method": "SLSQP",
+          "success": true,
+          "status": 0,
+          "message": "Optimization terminated successfully",
+          "iterations": 6,
+          "max_iterations": 30
+        },
+        "feasibility": [],
+        "history": [
+          {
+            "normalized_variables": [
+              0.3333333333333333,
+              0.5
+            ],
+            "numerically_accepted": true,
+            "reason": null
+          },
+          {
+            "normalized_variables": [
+              0.3199872003203197,
+              0.3336520310563008
+            ],
+            "numerically_accepted": true,
+            "reason": null
+          },
+          {
+            "normalized_variables": [
+              0.28335058076878344,
+              0.0
+            ],
+            "numerically_accepted": true,
+            "reason": null
+          },
+          {
+            "normalized_variables": [
+              0.2697071433215131,
+              4.652057923238137e-16
+            ],
+            "numerically_accepted": true,
+            "reason": null
+          },
+          {
+            "normalized_variables": [
+              0.19852948163693834,
+              4.652057923238137e-16
+            ],
+            "numerically_accepted": true,
+            "reason": null
+          },
+          {
+            "normalized_variables": [
+              0.0,
+              2.070759876205156e-30
+            ],
+            "numerically_accepted": true,
+            "reason": null
+          }
+        ],
+        "comparison": {
+          "schema_version": 1,
+          "kind": "comparison",
+          "baseline_id": "be44c00ea2434af5a12118ade48f3210175b904cdb9937bceaa29c0109edcf29",
+          "candidate_id": "b8f55a9f3bd16e468800b6aae5b7155f9e330d7660ed4e72e27d4222dfebaf6c",
+          "baseline_accepted": true,
+          "candidate_accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "baseline_si": 0.02485346591153942,
+              "candidate_si": 0.02288793451639786,
+              "delta_si": -0.001965531395141558,
+              "relative_change": -0.07908480057217956
+            },
+            "exchanger_area": {
+              "baseline_si": 53.70373792547834,
+              "candidate_si": 63.05598843940962,
+              "delta_si": 9.352250513931274,
+              "relative_change": 0.17414524342623722
+            },
+            "purity": {
+              "baseline_si": 0.949999999945272,
+              "candidate_si": 0.9499999999232288,
+              "delta_si": -2.2043145087025096e-11,
+              "relative_change": -2.320331061925786e-11
+            },
+            "reboiler_duty": {
+              "baseline_si": 2489541.1863115723,
+              "candidate_si": 2225324.8611112116,
+              "delta_si": -264216.32520036073,
+              "relative_change": -0.10613052985550944
+            },
+            "recovered_heat": {
+              "baseline_si": 806213.0599090037,
+              "candidate_si": 764973.0617471581,
+              "delta_si": -41239.99816184561,
+              "relative_change": -0.05115272899015096
+            },
+            "recovery": {
+              "baseline_si": 0.9799999999999999,
+              "candidate_si": 0.9799999999999999,
+              "delta_si": 0.0,
+              "relative_change": 0.0
+            }
+          },
+          "parameters": {
+            "approach": {
+              "baseline_si": 15.0,
+              "candidate_si": 10.0
+            },
+            "pressure": {
+              "baseline_si": 1600000.0,
+              "candidate_si": 1400000.0
+            }
+          },
+          "package_changed": false,
+          "solver_changed": false,
+          "policy_changed": false,
+          "artifact_id": "6327af60c0f2819532f799afde2986fbb61ddfb5fab198362fc0fe89e0314db0"
+        },
+        "scope": "Local constrained optimum candidate; only final and baseline points receive full physical audits. No global optimality claim.",
+        "artifact_id": "e9db117737766bdc3fbbb505625f897142d1297b55308e5c921c8121026624d9"
+      },
+      "audited_runs": [
+        {
+          "run_id": "b8f55a9f3bd16e468800b6aae5b7155f9e330d7660ed4e72e27d4222dfebaf6c",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 3.714237772891512e-12,
+            "heat_w": 185254.79425342637,
+            "material_relative_error": 3.754166755243205e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 722288.2822946772,
+              "value_si": 0.02288793451639786
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 63.05598843940962,
+              "value_si": 63.05598843940962
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 94.99999999232288,
+              "value_si": 0.9499999999232288
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 2.2253248611112117,
+              "value_si": 2225324.8611112116
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.7649730617471581,
+              "value_si": 764973.0617471581
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 97.99999999999999,
+              "value_si": 0.9799999999999999
+            }
+          },
+          "process_graph": {
+            "colored_directions": 16,
+            "declared_nonzeros": 288,
+            "degrees_of_freedom": 0,
+            "density": 0.28125,
+            "equation_labels": [
+              "bottoms_cooled:n[propane]",
+              "bottoms_cooled:n[n-butane]",
+              "bottoms_cooled:n[n-pentane]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[propane]",
+              "bottoms_cooled:vapor_n[n-butane]",
+              "bottoms_cooled:vapor_n[n-pentane]",
+              "preheated:n[propane]",
+              "preheated:n[n-butane]",
+              "preheated:n[n-pentane]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[propane]",
+              "preheated:vapor_n[n-butane]",
+              "preheated:vapor_n[n-pentane]",
+              "distillate:n[propane]",
+              "distillate:n[n-butane]",
+              "distillate:n[n-pentane]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[propane]",
+              "distillate:vapor_n[n-butane]",
+              "distillate:vapor_n[n-pentane]",
+              "bottoms:n[propane]",
+              "bottoms:n[n-butane]",
+              "bottoms:n[n-pentane]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[propane]",
+              "bottoms:vapor_n[n-butane]",
+              "bottoms:vapor_n[n-pentane]"
+            ],
+            "largest_unit_input": 8,
+            "linear_solver": "sparse",
+            "local_input_directions": 16,
+            "n_equations": 32,
+            "n_unknowns": 32,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 288,
+            "structural_rank_upper_bound": 32,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        },
+        {
+          "run_id": "be44c00ea2434af5a12118ade48f3210175b904cdb9937bceaa29c0109edcf29",
+          "accepted": true,
+          "plant": {
+            "accepted": true,
+            "component_generation_mol_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "element_relative_error": null,
+            "energy_reference": "property package datum",
+            "energy_relative_error": 5.649697930181847e-12,
+            "heat_w": 265416.08666040655,
+            "material_relative_error": 2.6542466002865694e-11,
+            "work_w": 0.0
+          },
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 784315.7358499964,
+              "value_si": 0.02485346591153942
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 53.70373792547834,
+              "value_si": 53.70373792547834
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 94.99999999452719,
+              "value_si": 0.949999999945272
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 2.4895411863115724,
+              "value_si": 2489541.1863115723
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.8062130599090037,
+              "value_si": 806213.0599090037
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 97.99999999999999,
+              "value_si": 0.9799999999999999
+            }
+          },
+          "process_graph": {
+            "colored_directions": 16,
+            "declared_nonzeros": 288,
+            "degrees_of_freedom": 0,
+            "density": 0.28125,
+            "equation_labels": [
+              "bottoms_cooled:n[propane]",
+              "bottoms_cooled:n[n-butane]",
+              "bottoms_cooled:n[n-pentane]",
+              "bottoms_cooled:temperature",
+              "bottoms_cooled:pressure",
+              "bottoms_cooled:vapor_n[propane]",
+              "bottoms_cooled:vapor_n[n-butane]",
+              "bottoms_cooled:vapor_n[n-pentane]",
+              "preheated:n[propane]",
+              "preheated:n[n-butane]",
+              "preheated:n[n-pentane]",
+              "preheated:temperature",
+              "preheated:pressure",
+              "preheated:vapor_n[propane]",
+              "preheated:vapor_n[n-butane]",
+              "preheated:vapor_n[n-pentane]",
+              "distillate:n[propane]",
+              "distillate:n[n-butane]",
+              "distillate:n[n-pentane]",
+              "distillate:temperature",
+              "distillate:pressure",
+              "distillate:vapor_n[propane]",
+              "distillate:vapor_n[n-butane]",
+              "distillate:vapor_n[n-pentane]",
+              "bottoms:n[propane]",
+              "bottoms:n[n-butane]",
+              "bottoms:n[n-pentane]",
+              "bottoms:temperature",
+              "bottoms:pressure",
+              "bottoms:vapor_n[propane]",
+              "bottoms:vapor_n[n-butane]",
+              "bottoms:vapor_n[n-pentane]"
+            ],
+            "largest_unit_input": 8,
+            "linear_solver": "sparse",
+            "local_input_directions": 16,
+            "n_equations": 32,
+            "n_unknowns": 32,
+            "scope": "Declared incidence only; a matching doesn't establish numerical rank or physical validity.",
+            "stored_coefficients": 288,
+            "structural_rank_upper_bound": 32,
+            "structurally_square_and_matched": true,
+            "unmatched_equations": [],
+            "unmatched_variables": []
+          }
+        }
+      ]
+    }
+  ]
+}

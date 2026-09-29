@@ -387,7 +387,11 @@ def build_run(
             issues.append(limits.LIQUID_INLET)
         unit_limits[definition.name] = {"accepted": not issues, "issues": issues}
     checks: dict[str, Any] = {
-        "numerical": {"accepted": numerical_ok, "reports": numerical},
+        "numerical": {
+            "accepted": numerical_ok,
+            "reports": numerical,
+            "process_graph": runner._graph_diagnostics(),
+        },
         "physical": {
             "accepted": all(s["accepted"] for s in states.values())
             and all(b["accepted"] for b in balances.values()),
@@ -521,8 +525,8 @@ def render_report(run: CaseRun) -> str:
         "",
         f"Process acceptance: **{'passed' if run.accepted else 'failed'}**. "
         f"Backend: `{d['solver']['backend']}`.",
-        f"Column linear solver: `{d['solver'].get('column_solver', 'dense')}`. "
-        f"EO Jacobian assembly: `{d['solver'].get('eo_jacobian', 'dense')}`.",
+        f"Column linear solver: `{d['solver']['column_solver']}`. "
+        f"Process linear solver: `{d['solver']['plant_solver']}`.",
         "",
         "| Check | Result |",
         "| --- | --- |",
