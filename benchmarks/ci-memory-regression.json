@@ -1,0 +1,751 @@
+{
+  "schema_version": 1,
+  "kind": "process_performance_observations",
+  "recorded_date_utc": "2026-09-29",
+  "scope": [
+    "The failed CI observation remains failed. The subsequent local run validates explicit glibc allocation thresholds with the same case, locked dependencies, and 8 GB budget.",
+    "Both workers use an empty persistent cache and retain JAX kernels throughout the study.",
+    "Different hosts are not controlled timing or memory comparisons. RSS includes compilation; per-run environments and source digests identify each observation."
+  ],
+  "observations": [
+    {
+      "name": "ethanol-ci-memory-limit",
+      "job_url": "https://github.com/fugacio/fugacio/actions/runs/36513578358/job/109230852988",
+      "original_report_sha256": "90f365ab43c235ceec7d54594a99bad60cd8dd51ad3eb6ca6c74e5c483eaf666",
+      "accepted": false,
+      "revision": "241fa9b9506fdf748d5dc629c74637d905690e7b",
+      "working_tree_dirty": false,
+      "source_sha256": "65fd0d9555ea8264827e03f98f7e65e423457c95e01f5e3afab83828ed4d6609",
+      "elapsed_seconds": 647.4847575059999,
+      "exit_code": 3,
+      "timed_out": false,
+      "resource_limit": {
+        "reason": "memory_limit",
+        "peak_rss_bytes": 8067436544,
+        "budget_bytes": 8000000000.0
+      },
+      "process_peak_rss_bytes": 8067436544,
+      "cgroup_memory_events": {
+        "before": null,
+        "after": null
+      },
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "plant_solver": "sparse",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 8.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "environment": {
+        "cpu_count": 4,
+        "devices": [
+          "cpu:0"
+        ],
+        "jax": "0.10.1",
+        "jax_backend": "cpu",
+        "jax_x64": true,
+        "machine": "x86_64",
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "python": "3.12.3",
+        "runtime_settings": {
+          "MALLOC_ARENA_MAX": "2",
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "XLA_FLAGS": null
+        }
+      },
+      "phases": [
+        {
+          "name": "sensitivity_study",
+          "status": "running"
+        },
+        {
+          "cpu_seconds": 230.97876385,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 3309412352,
+          "seconds": 167.940678348,
+          "status": "completed"
+        },
+        {
+          "name": "linearization[0]",
+          "status": "running"
+        }
+      ],
+      "study": null,
+      "audited_runs": [
+        {
+          "artifact_id": "7d6505930e612c119957ba7cad808091912a864af52c37d7659fb896fe9181ce",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657996.3012663687,
+              "value_si": 0.020850644575834937
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.612588562927755,
+              "value_si": 50.612588562927755
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95435535247287,
+              "value_si": 0.8095435535247287
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628862767968762,
+              "value_si": 1962886.2767968762
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553182788918124,
+              "value_si": 455318.2788918124
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.0975086553438,
+              "value_si": 0.9309750865534381
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ethanol-fixed-glibc-thresholds",
+      "container_limits": {
+        "memory_bytes": 8000000000,
+        "memory_and_swap_bytes": 8000000000,
+        "cpu_quota": 4,
+        "cpu_affinity": "0-3",
+        "source_mount_read_only": true
+      },
+      "original_report_sha256": "804d7128c051d450f5f7049f61ba82fbcb6c37f75c505b00b22b098919a73abb",
+      "accepted": true,
+      "revision": "074e50ca6444c4716c74e6053150a47c42fc0092",
+      "working_tree_dirty": true,
+      "source_sha256": "2e6ed8a133301dd4bb5acfaeccc73a81b86737f65228b771abfa59dffbc6bf23",
+      "elapsed_seconds": 1762.558979086,
+      "exit_code": 0,
+      "timed_out": false,
+      "resource_limit": null,
+      "process_peak_rss_bytes": 7882727424,
+      "cgroup_memory_events": {
+        "before": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "after": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        }
+      },
+      "configuration": {
+        "scenario": "ethanol-train",
+        "study": "sensitivities",
+        "stages": 12,
+        "variables": 24,
+        "column_solver": "block",
+        "plant_solver": "sparse",
+        "backend": "sequential",
+        "derivative_mode": "auto",
+        "derivative_batch_size": 1,
+        "warm_repeats": 2,
+        "cache": "cold",
+        "max_rss_gb": 8.0,
+        "timeout_seconds": 3000.0,
+        "max_iterations": 30,
+        "release_caches": false
+      },
+      "cache": {
+        "mode": "cold",
+        "fresh_process": true
+      },
+      "environment": {
+        "cpu_count": 16,
+        "devices": [
+          "cpu:0"
+        ],
+        "jax": "0.10.1",
+        "jax_backend": "cpu",
+        "jax_x64": true,
+        "machine": "x86_64",
+        "platform": "Linux-6.10.14-linuxkit-x86_64-with-glibc2.39",
+        "python": "3.12.3",
+        "runtime_settings": {
+          "MALLOC_ARENA_MAX": "2",
+          "MALLOC_MMAP_THRESHOLD_": "131072",
+          "MALLOC_TRIM_THRESHOLD_": "131072",
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "XLA_FLAGS": null
+        }
+      },
+      "phases": [
+        {
+          "cpu_seconds": 2295.364376217,
+          "name": "sensitivity_study",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 1746.939401801,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 382.68398962099997,
+          "name": "audited_run[0]",
+          "process_peak_rss_bytes": 3236954112,
+          "seconds": 307.46257076100005,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 1776.714564756,
+          "name": "linearization[0]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 1325.7810255519998,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 63.82498364100002,
+          "name": "jacobian[0]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 45.52735057299992,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 16.52627352699983,
+          "name": "audited_run[1]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 15.639421057999925,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 11.547790645000077,
+          "name": "audited_run[2]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 10.905529035999962,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 10.406450072999633,
+          "name": "audited_run[3]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 9.790792034000106,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 10.095037072000196,
+          "name": "audited_run[4]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 9.353081140999848,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 13.600377604000187,
+          "name": "audited_run[5]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 13.00703998999984,
+          "status": "completed"
+        },
+        {
+          "cpu_seconds": 9.529216791999715,
+          "name": "audited_run[6]",
+          "process_peak_rss_bytes": 7882727424,
+          "seconds": 8.880216703000087,
+          "status": "completed"
+        }
+      ],
+      "study": {
+        "schema_version": 1,
+        "kind": "sensitivities",
+        "case_id": "8d34d0754e6fc7f5dd3bf1ed7459f4602aac0dbfe94d3d7ae9ea3ef557e7b4d7",
+        "baseline_id": "3a6a6e3ab71562ed7597741044ffaadeb44eb34f5fb256009f527d40685e6706",
+        "initialization": "accepted_baseline; finite-difference runs start cold",
+        "accepted": true,
+        "relative_step": 0.0001,
+        "relative_tolerance": 0.005,
+        "derivative_numerically_accepted": true,
+        "derivatives": {
+          "requested_mode": "auto",
+          "mode": "reverse",
+          "inputs": 3,
+          "outputs": 2,
+          "directions": 2,
+          "batch_size": 1,
+          "linearizations_per_evaluation": 1
+        },
+        "release_caches": false,
+        "parameters": [
+          "approach",
+          "pressure",
+          "reflux"
+        ],
+        "metrics": [
+          "reboiler_duty",
+          "annual_cost"
+        ],
+        "results": [
+          {
+            "parameter": "approach",
+            "accepted": true,
+            "step_si": 0.0012000000000000001,
+            "phase_regime_unchanged": true,
+            "perturbed_run_ids": [
+              "eae4fda5a6cb4a9c35e56bcfd04e1cad1bd792238050a42257a03660567535d3",
+              "473db399a4ff2c103545ad52c38ba1975460db0d35207c3995b75d888fee73e9"
+            ],
+            "error": null,
+            "metrics": {
+              "reboiler_duty": {
+                "accepted": true,
+                "autodiff_si": 7229.796939222895,
+                "finite_difference_si": 7229.731307403805,
+                "relative_error": 9.077961613880068e-06,
+                "autodiff_display": 0.007229796939222895,
+                "derivative_unit": "(MW)/(delta_K increment)"
+              },
+              "annual_cost": {
+                "accepted": true,
+                "autodiff_si": 3.963766193676533e-05,
+                "finite_difference_si": 3.9637378584806794e-05,
+                "relative_error": 7.148553791764817e-06,
+                "autodiff_display": 1250.8694803356657,
+                "derivative_unit": "(USD/yr)/(delta_K increment)"
+              }
+            }
+          },
+          {
+            "parameter": "pressure",
+            "accepted": true,
+            "step_si": 10.129999999999999,
+            "phase_regime_unchanged": true,
+            "perturbed_run_ids": [
+              "c6530eafbbd01e37e3c7b3829eb681bbeafb4ce3870ea5fff659ec395d738266",
+              "988690aa18d36c6919d3023501c87ebe33fd1a4ca5c49f5af10e8c028c6db069"
+            ],
+            "error": null,
+            "metrics": {
+              "reboiler_duty": {
+                "accepted": true,
+                "autodiff_si": -0.4083794694362197,
+                "finite_difference_si": -0.4083807055097394,
+                "relative_error": 3.026767677742071e-06,
+                "autodiff_display": -0.04083794694362197,
+                "derivative_unit": "(MW)/(bar increment)"
+              },
+              "annual_cost": {
+                "accepted": true,
+                "autodiff_si": -2.785752815309399e-09,
+                "finite_difference_si": -2.78576199928822e-09,
+                "relative_error": 3.2967564434240565e-06,
+                "autodiff_display": -8791.16730444079,
+                "derivative_unit": "(USD/yr)/(bar increment)"
+              }
+            }
+          },
+          {
+            "parameter": "reflux",
+            "accepted": true,
+            "step_si": 0.00030000000000000003,
+            "phase_regime_unchanged": true,
+            "perturbed_run_ids": [
+              "ff6f509876ef14f25687c0e074c4ac0d53172b796127b556d2e9065703c02828",
+              "a0e758b986d3661d6632511dfc1e8ffc9a97053e11553d5a96b214375f69599d"
+            ],
+            "error": null,
+            "metrics": {
+              "reboiler_duty": {
+                "accepted": true,
+                "autodiff_si": 457475.0436696494,
+                "finite_difference_si": 457475.20428150886,
+                "relative_error": 3.510832018028221e-07,
+                "autodiff_display": 0.45747504366964936,
+                "derivative_unit": "(MW)/(1 increment)"
+              },
+              "annual_cost": {
+                "accepted": true,
+                "autodiff_si": 0.0035073527230027545,
+                "finite_difference_si": 0.003507353495581002,
+                "relative_error": 2.2027384705981525e-07,
+                "autodiff_display": 110683.63429143174,
+                "derivative_unit": "(USD/yr)/(1 increment)"
+              }
+            }
+          }
+        ],
+        "scope": "Local implicit derivatives checked against centered differences; no global smoothness or uncertainty claim.",
+        "artifact_id": "68dc58f9b4a65c7047c40470b88dece40caf0726f03a64ec04363a21d30089ed"
+      },
+      "audited_runs": [
+        {
+          "artifact_id": "3a6a6e3ab71562ed7597741044ffaadeb44eb34f5fb256009f527d40685e6706",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657996.3012663644,
+              "value_si": 0.0208506445758348
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.612588562927755,
+              "value_si": 50.612588562927755
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95435535247287,
+              "value_si": 0.8095435535247287
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.962886276796857,
+              "value_si": 1962886.276796857
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553182788918124,
+              "value_si": 455318.2788918124
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.0975086553438,
+              "value_si": 0.9309750865534381
+            }
+          }
+        },
+        {
+          "artifact_id": "473db399a4ff2c103545ad52c38ba1975460db0d35207c3995b75d888fee73e9",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657997.8023001237,
+              "value_si": 0.02085069214072438
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.607687072693025,
+              "value_si": 50.607687072693025
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.9543610621807,
+              "value_si": 0.809543610621807
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628949521958161,
+              "value_si": 1962894.9521958162
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.45530960534598436,
+              "value_si": 455309.60534598434
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09751522150778,
+              "value_si": 0.9309751522150778
+            }
+          }
+        },
+        {
+          "artifact_id": "988690aa18d36c6919d3023501c87ebe33fd1a4ca5c49f5af10e8c028c6db069",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657995.4106335818,
+              "value_si": 0.020850616353384976
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61417258693255,
+              "value_si": 50.61417258693255
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95414894535683,
+              "value_si": 0.8095414894535684
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.962882139547771,
+              "value_si": 1962882.1395477708
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.45533821925886314,
+              "value_si": 455338.21925886313
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09727128716038,
+              "value_si": 0.9309727128716038
+            }
+          }
+        },
+        {
+          "artifact_id": "a0e758b986d3661d6632511dfc1e8ffc9a97053e11553d5a96b214375f69599d",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 658029.5063510799,
+              "value_si": 0.020851696781475137
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61260496404993,
+              "value_si": 50.61260496404993
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95473226658524,
+              "value_si": 0.8095473226658524
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9630235192990366,
+              "value_si": 1963023.5192990366
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553189769612829,
+              "value_si": 455318.9769612829
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09794210657303,
+              "value_si": 0.9309794210657303
+            }
+          }
+        },
+        {
+          "artifact_id": "c6530eafbbd01e37e3c7b3829eb681bbeafb4ce3870ea5fff659ec395d738266",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657997.1917299496,
+              "value_si": 0.020850672792923082
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61100437448615,
+              "value_si": 50.61100437448615
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95456177449411,
+              "value_si": 0.809545617744941
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628904133408644,
+              "value_si": 1962890.4133408645
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.45529833684814447,
+              "value_si": 455298.3368481445
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09774604066823,
+              "value_si": 0.9309774604066823
+            }
+          }
+        },
+        {
+          "artifact_id": "eae4fda5a6cb4a9c35e56bcfd04e1cad1bd792238050a42257a03660567535d3",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657994.8002348315,
+              "value_si": 0.020850597011015777
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61749114404738,
+              "value_si": 50.61749114404738
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.95434964235973,
+              "value_si": 0.8095434964235974
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9628776008406785,
+              "value_si": 1962877.6008406784
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553269529281306,
+              "value_si": 455326.9529281306
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09750208871371,
+              "value_si": 0.9309750208871371
+            }
+          }
+        },
+        {
+          "artifact_id": "ff6f509876ef14f25687c0e074c4ac0d53172b796127b556d2e9065703c02828",
+          "accepted": true,
+          "metrics": {
+            "annual_cost": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "USD/yr",
+              "value": 657963.0961558765,
+              "value_si": 0.02084959236937779
+            },
+            "exchanger_area": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "m2",
+              "value": 50.61257217515086,
+              "value_si": 50.61257217515086
+            },
+            "purity": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 80.9539783748104,
+              "value_si": 0.8095397837481041
+            },
+            "reboiler_duty": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 1.9627490341764677,
+              "value_si": 1962749.0341764677
+            },
+            "recovered_heat": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "MW",
+              "value": 0.4553175807319532,
+              "value_si": 455317.5807319532
+            },
+            "recovery": {
+              "finite": true,
+              "source": "process_expression",
+              "unit": "%",
+              "value": 93.09707513103199,
+              "value_si": 0.9309707513103198
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

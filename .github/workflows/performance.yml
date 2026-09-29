@@ -60,6 +60,10 @@ jobs:
       # Bound glibc's allocation arenas at process startup. Record this setting
       # with the observations; it materially affects retained Linux RSS.
       MALLOC_ARENA_MAX: "2"
+      # Return freed compiler buffers instead of raising glibc's adaptive
+      # allocation/trim thresholds during successive cold compilations.
+      MALLOC_MMAP_THRESHOLD_: "131072"
+      MALLOC_TRIM_THRESHOLD_: "131072"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

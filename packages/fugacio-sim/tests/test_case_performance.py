@@ -28,6 +28,8 @@ def runner():
 
 def test_recorder_separates_compilation_from_synchronized_execution(tmp_path, monkeypatch):
     monkeypatch.setenv("MALLOC_ARENA_MAX", "2")
+    monkeypatch.setenv("MALLOC_MMAP_THRESHOLD_", "131072")
+    monkeypatch.setenv("MALLOC_TRIM_THRESHOLD_", "131072")
     recorder = PerformanceRecorder(tmp_path / "progress.json")
     value = recorder.compiled_kernel("square", lambda x: x**2, (jnp.array([2.0, 3.0]),), repeats=2)
     assert value.tolist() == [4.0, 9.0]
@@ -41,7 +43,10 @@ def test_recorder_separates_compilation_from_synchronized_execution(tmp_path, mo
     ]
     assert all(p["status"] == "completed" and p["seconds"] >= 0 for p in snapshot["phases"])
     assert snapshot["environment"]["jax_x64"]
-    assert snapshot["environment"]["runtime_settings"]["MALLOC_ARENA_MAX"] == "2"
+    settings = snapshot["environment"]["runtime_settings"]
+    assert settings["MALLOC_ARENA_MAX"] == "2"
+    assert settings["MALLOC_MMAP_THRESHOLD_"] == "131072"
+    assert settings["MALLOC_TRIM_THRESHOLD_"] == "131072"
 
 
 def test_recorder_checkpoints_failed_operations(tmp_path):

@@ -70,6 +70,8 @@ class PerformanceRecorder:
                 name: os.environ.get(name)
                 for name in (
                     "MALLOC_ARENA_MAX",
+                    "MALLOC_MMAP_THRESHOLD_",
+                    "MALLOC_TRIM_THRESHOLD_",
                     "OMP_NUM_THREADS",
                     "OPENBLAS_NUM_THREADS",
                     "XLA_FLAGS",

@@ -274,6 +274,17 @@ the dominant cost: 712.0 seconds, followed by 66.1 seconds to apply the Jacobian
 This observation leaves little headroom below 8 GB; it doesn't establish that
 every host, allocator, or larger process will fit that budget.
 
+On September 29, a GitHub runner exceeded the same 8 GB budget during the
+first NRTL linearization, reaching 8.067 GB. The workflow now fixes glibc's
+mmap and trim thresholds as described below. A fresh Ubuntu 24.04 container
+with Python 3.12.3, JAX 0.10.1, four assigned CPUs, and the same hard memory
+limit completed the full study in 1,762.6 seconds at 7.883 GB. All seven
+physical audits and six finite-difference comparisons passed, with the same
+maximum relative error of 0.00000908. `benchmarks/ci-memory-regression.json`
+preserves both the failed CI observation and this accepted local run. The
+remaining headroom is small, and different hosts aren't a controlled comparison
+of allocator effects or elapsed time.
+
 The depropanizer optimization completes six SLSQP iterations and passes its
 final cold-start physical audit. The first linearization takes 229.4 seconds;
 later linearizations settle near 3.1 seconds, with Jacobian applications near
@@ -360,11 +371,15 @@ memory (4.755 GB with them, 4.987 GB without), and the heat exchanger's
 compiled program is about three times smaller yet still costs 24% more memory
 to build.
 
-The Linux memory-budget workflow limits glibc's allocation arenas to reduce
-retained allocation memory. Set `MALLOC_ARENA_MAX=2` before starting Python to
-reproduce that runtime configuration. This changes allocation behavior, not
-the process equations or their acceptance tolerances. Profiles record this
-setting alongside thread and XLA settings. See the
+The Linux memory-budget workflow limits glibc's allocation arenas and fixes
+its mmap and trim thresholds to reduce retained allocation memory. Set
+`MALLOC_ARENA_MAX=2`, `MALLOC_MMAP_THRESHOLD_=131072`, and
+`MALLOC_TRIM_THRESHOLD_=131072` before starting Python to reproduce that
+runtime configuration. Fixing the thresholds disables glibc's adaptive
+increases, allowing freed compiler buffers to return to the operating system.
+It doesn't clear JAX caches or change the process equations or their acceptance
+tolerances. Profiles record all three settings alongside thread and XLA
+settings. See the
 [glibc allocation tunables](https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation-Tunables.html).
 
 The separate two-parameter, two-output depropanizer sensitivity study passed
@@ -398,8 +413,10 @@ A successful benchmark requires accepted numerical/physical evidence
 and completion within the resource limits.
 
 ```bash
-# Linux/glibc setting used by the memory-budget workflow.
+# Linux/glibc settings used by the memory-budget workflow.
 export MALLOC_ARENA_MAX=2
+export MALLOC_MMAP_THRESHOLD_=131072
+export MALLOC_TRIM_THRESHOLD_=131072
 
 uv run python scripts/benchmark_process.py \
   --scenario column --stages 32 --column-solver block \
@@ -453,7 +470,8 @@ depropanizer optimization, the NRTL train, and a 24-variable study in separate
 jobs on pull requests and manual dispatch. The columns and heater bank have
 a 7 GB process limit; both complete plant studies have an 8 GB target. These
 are enforced budgets, not guarantees for other processes, hosts, or JAX
-versions. All Linux jobs set `MALLOC_ARENA_MAX=2` before process startup.
+versions. All Linux jobs use the three glibc settings shown above at process
+startup; earlier observations retain their original runtime settings.
 Select a host with additional memory for the runner and operating system;
 private forks may have different runner resources. See the
 [GitHub-hosted runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
