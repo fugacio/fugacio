@@ -18,7 +18,7 @@
         <link rel="prev" href="../distillation/">
       
       
-        <link rel="next" href="../equation-oriented/">
+        <link rel="next" href="../process-runtime/">
       
       
         
@@ -392,6 +392,8 @@
   
     
     
+      
+        
       
         
       
@@ -940,6 +942,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2732,13 +2762,15 @@ accepts three <code>method</code>s (see <code>fugacio.sim.TEAR_METHODS</code>):<
 </tr>
 </tbody>
 </table>
-<p>Whichever method converges the loop, differentiation is by the implicit
-function theorem at the fixed point: the adjoint solves one dense system against
-(I - \partial g/\partial x), where (g) is the loop map, so
-<code>jax.grad(lambda th: fs.solve(th)["product"].n[0])</code> costs about one extra pass
-through the loop regardless of how many iterations the forward solve took. The
-three methods agree on the converged values and on the gradient to solver
-tolerance.</p>
+<p>Both execution strategies differentiate the converged connection equations.
+Local unit Jacobians assemble into a sparse process matrix; forward and reverse
+sensitivities use checked sparse solves. The standalone <code>tear_solve</code> API still
+supports arbitrary floating pytrees with a small dense fixed-point derivative.</p>
+<p>Pass <code>strategy="simultaneous"</code> to solve the same registered graph with sparse
+Newton steps. Set <code>linear_solver="dense"</code> for a small reference comparison.
+Concrete orchestration preserves compiled unit boundaries. See the
+<a href="../process-runtime/">shared process runtime</a> for state coordinates,
+compilation behavior, and sparse-solver limits.</p>
 <h2 id="reports-unit-records-and-audits">Reports, unit records, and audits<a class="headerlink" href="#reports-unit-records-and-audits" title="Permanent link">&para;</a></h2>
 <p><code>solve</code> returns the named streams after checking every recycle, unit, and
 stream. <code>solve_with_info</code> keeps the evidence instead of raising:</p>

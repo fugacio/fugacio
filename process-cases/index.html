@@ -431,6 +431,8 @@
       
         
       
+        
+      
     
     
     
@@ -965,6 +967,34 @@
     
   
     Flowsheeting, tears & exchangers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
   
 
     
@@ -2724,7 +2754,9 @@
 artifact. A case declares its component basis, property package, feeds, units,
 parameters, measurements, specifications, and optional economics. The same
 definition can be saved as JSON, solved with either flowsheet backend, studied,
-and reopened by the copilot.</p>
+and reopened by the copilot. Both backends use the
+<a href="../process-runtime/">shared process graph</a>, including sparse implicit
+derivatives and coupled bounded specifications.</p>
 <h2 id="run-a-saved-case">Run a saved case<a class="headerlink" href="#run-a-saved-case" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>example<span class="w"> </span>heater<span class="w"> </span>heater.json
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>validate<span class="w"> </span>heater.json
@@ -2890,15 +2922,16 @@ for these reaction cases.</p>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">wegstein</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span><span class="n">recycle_method</span><span class="o">=</span><span class="s2">&quot;wegstein&quot;</span><span class="p">))</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">simultaneous</span> <span class="o">=</span> <span class="n">CaseRunner</span><span class="p">(</span><span class="n">case</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">&quot;eo&quot;</span><span class="p">))</span>
 </span></code></pre></div>
-<p>Both backends delegate unit physics to the same kernels. The case EO adapter
-solves simultaneous stream equations with nested implicit unit solves; it
-doesn't expand a column into global MESH unknowns. Pure-fluid EO streams retain
-enthalpy coordinates so quality isn't lost on the saturation line. Failed
+<p>Both backends execute the same process graph and physical unit kernels.
+Simultaneous execution solves stream connection equations with nested implicit
+unit solves; it doesn't expand a column into global MESH unknowns. Stream
+coordinates include vapor inventory so quality isn't lost on the saturation line. Failed
 solves retain their reports, and no backend silently substitutes another.
-Execution compiles each complete registered unit, including feed-property
-preparation and retained outputs, with dynamic operating values. Compiled unit
-templates are cached for the whole process, so every runner with the same unit
-structure and fixed settings shares them. Studies reuse
+Execution reuses numerical kernels with dynamic operating values. Unit
+templates are cached for the whole process, so runners with the same structure
+and fixed settings share them. Columns and exchangers retain separate property
+and implicit solver kernels; their preparation, profiles, and reports aren't
+fused into another case-level compiled solver. Studies reuse
 one local linearization per operating point, selecting forward or reverse
 directions from the input/output counts. They retain the individual unit kernels.
 Fixed case topology and dynamic recycle parameters let optimizer trials reuse

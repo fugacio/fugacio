@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -799,6 +801,34 @@
     
   
     Flowsheeting, tears & exchangers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
   
 
     
@@ -3123,7 +3153,7 @@ every stage (so flows stay positive through the Newton iteration) plus the stage
 temperatures and the condenser/reboiler duties; the equilibrium relations are
 written in logarithmic form so trace components are as well conditioned as bulk
 ones. A bubble-point (Wang-Henke) sweep seeds the iteration, then
-<code>fugacio.thermo.implicit.newton_system</code> converges it with a backtracking line
+<code>fugacio.thermo.implicit.newton_system_with_info</code> converges it with a backtracking line
 search. The converged column is differentiable with respect to the feeds, the
 pressure profile, the specifications, the side-draw fractions, the duties, and the
 property package by the implicit function theorem, so column design variables

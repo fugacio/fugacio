@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -799,6 +801,34 @@
     
   
     Flowsheeting, tears & exchangers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
   
 
     
@@ -1542,17 +1572,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;newton_system_with_info
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fugacio.thermo.implicit.newton_system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;newton_system
       
     </span>
   </a>
@@ -3534,17 +3553,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fugacio.thermo.implicit.newton_system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;newton_system
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#fugacio.thermo.implicit.fixed_point_with_info" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4918,14 +4926,6 @@ used by the cubic-root <code>fugacio.thermo.eos.compress_factor</code>, generali
               </td>
             </tr>
             <tr class="doc-section-item">
-              <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;newton_system&lt;/span&gt; (&lt;code&gt;fugacio.thermo.implicit.newton_system&lt;/code&gt;)" href="#fugacio.thermo.implicit.newton_system">newton_system</a></code></td>
-              <td>
-                <div class="doc-md-description">
-                  <p>Solve a vector root with implicit forward and reverse derivatives.</p>
-                </div>
-              </td>
-            </tr>
-            <tr class="doc-section-item">
               <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;fixed_point_with_info&lt;/span&gt; (&lt;code&gt;fugacio.thermo.implicit.fixed_point_with_info&lt;/code&gt;)" href="#fugacio.thermo.implicit.fixed_point_with_info">fixed_point_with_info</a></code></td>
               <td>
                 <div class="doc-md-description">
@@ -5436,35 +5436,6 @@ only when the caller selects among roots and gates the result.</p>
           </tr>
       </tbody>
     </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="fugacio.thermo.implicit.newton_system" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">newton_system</span>
-
-
-<a href="#fugacio.thermo.implicit.newton_system" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">newton_system</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">residual</span><span class="p">:</span> <span class="n"><span title="fugacio.thermo.implicit.ResidualFn">ResidualFn</span></span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">x0</span><span class="p">:</span> <span class="n"><span title="jax.Array">Array</span></span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">theta</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">tol</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">max_iter</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="jax.Array">Array</span></span>
-</span></code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Solve a vector root with implicit forward and reverse derivatives.</p>
-<p>Returns the best iterate for compatibility. Use :func:<code>newton_system_with_info</code>
-when accepting a result; a finite iterate alone does not prove convergence.
-Derivatives of an unconverged solution are nonfinite.</p>
 
 
     </div>

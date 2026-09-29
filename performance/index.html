@@ -431,6 +431,8 @@
       
         
       
+        
+      
     
     
     
@@ -822,6 +824,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../equation-oriented/" class="md-nav__link">
         
   
@@ -1022,10 +1052,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#what-checked-solves-cost" class="md-nav__link">
+  <a href="#shared-runtime-observations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What checked solves cost
+        Shared runtime observations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#earlier-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Earlier observations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measurements-before-the-shared-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measurements before the shared graph
       
     </span>
   </a>
@@ -2650,10 +2702,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#what-checked-solves-cost" class="md-nav__link">
+  <a href="#shared-runtime-observations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What checked solves cost
+        Shared runtime observations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#earlier-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Earlier observations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measurements-before-the-shared-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measurements before the shared graph
       
     </span>
   </a>
@@ -2731,9 +2805,10 @@ calculation. Fugacio arranges its calculations so a structure compiles once:</p>
   per method and static options, with the package as a dynamic argument. A
   package whose pytree holds a non-array leaf, such as an unregistered
   activity-model object, runs eagerly instead.</li>
-<li><code>Flowsheet</code> caches each recycle block's map, so solving again at a new
-  <code>theta</code> reuses the compiled recycle iteration. Registering a unit or a tear
-  clears the cache.</li>
+<li><code>Flowsheet</code> caches each recycle block's map. Concrete iterations reuse the
+  compiled unit kernels; an explicitly staged iteration also retains its
+  function identity across operating points. Registering a unit or a tear
+  clears the structural cache.</li>
 <li>Saved-case unit templates are shared by every <code>CaseRunner</code> in a process,
   keyed by the template's fixed settings, so another case with the same unit
   structure reuses them.</li>
@@ -2768,7 +2843,7 @@ needs.</p>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">options</span><span class="o">=</span><span class="n">SolverOptions</span><span class="p">(</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">recycle_method</span><span class="o">=</span><span class="s2">&quot;broyden&quot;</span><span class="p">,</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">column_solver</span><span class="o">=</span><span class="s2">&quot;block&quot;</span><span class="p">,</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">eo_jacobian</span><span class="o">=</span><span class="s2">&quot;colored&quot;</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">plant_solver</span><span class="o">=</span><span class="s2">&quot;sparse&quot;</span><span class="p">,</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="p">),</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">)</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">structure</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">diagnose_structure</span><span class="p">()</span>
@@ -2776,11 +2851,10 @@ needs.</p>
 </span></code></pre></div>
 <p><code>column_solver="block"</code> is the default for saved cases. The direct
 <code>rigorous_column</code> API calls this option <code>linear_solver</code>. Set either option to
-<code>"dense"</code> to use the reference assembly and solve. <code>eo_jacobian="colored"</code>
-reduces global flowsheet differentiation work; <code>"dense"</code> retains the original
-assembly. These are numerical choices recorded in runs, independent of case
-identity. Replaying an older run without these fields selects its original
-dense algorithms.</p>
+<code>"dense"</code> to use the reference assembly and solve. <code>plant_solver="sparse"</code>
+uses local unit assembly and sparse CPU factorization. <code>"dense"</code> selects a
+small reference matrix. These choices are recorded in runs independently of
+case identity. Old numerical-option replay defaults have been removed.</p>
 <h3 id="rigorous-columns">Rigorous columns<a class="headerlink" href="#rigorous-columns" title="Permanent link">&para;</a></h3>
 <p>For N stages and C components, each stage has b = 2C + 1 unknowns.
 The condenser and reboiler add a border of size k, at most two. A stage's MESH
@@ -2819,46 +2893,24 @@ isn't a count of actual fallback events. A direct
 backward error, and relative residual. Full stage component flows are retained
 for exact warm starts, including columns with side products.</p>
 <h3 id="flowsheet-assembly-and-diagnostics">Flowsheet assembly and diagnostics<a class="headerlink" href="#flowsheet-assembly-and-diagnostics" title="Permanent link">&para;</a></h3>
-<p><code>EOFlowsheet.diagnose_structure()</code> and <code>CaseRunner.diagnose_structure()</code> inspect
-declared incidence without a nonlinear solve. Reports include equation and
-variable counts, maximum matching, unmatched labels, density, and coloring
-cost. They also identify duplicate auxiliary owners and freed variables.
-Matching is an upper bound on numerical rank. <code>EOFlowsheet.diagnose()</code> adds
-state-dependent rank and conditioning checks.</p>
-<p>Built-in EO blocks declare their stream and auxiliary dependencies. Custom
-blocks, including subclasses of built-ins, default to all unknowns unless
-they explicitly implement <code>residual_dependencies</code>. Declaring dependencies is
-a contract over the model domain; observed zeros at one state aren't enough.
-Global EO matrices still use dense pivoted factorization. Registered columns
-and flashes retain their nested implicit solves; the case adapter doesn't
-expand a column into global MESH unknowns.</p>
-<p>The modular recycle solver keeps the initial unit pass outside its iteration
-executable. Broyden backtracking uses one trial-evaluation site, including the
-full step, so the compiler doesn't receive separate copies of the entire unit
-train for full and shortened steps. Its residual checks and accepted step
-sequence retain the same search policy.
-Recycle sensitivities retain a dense global matrix but assemble its directions
-sequentially. This avoids multiplying a column's internal tangent batch by
-the number of tear coordinates. State and parameter directions share one
-residual linearization, so the matrix and its right-hand side don't repeat
-the same nested unit linearizations.
-Scalar implicit roots and ordinary dense implicit systems also share residual
-data between state and parameter directions. This matters when an exchanger
-duty root contains energy flashes and equilibrium roots: separate residual
-evaluations at each level otherwise repeat work throughout that stack.
-Phase-classification locators detach their state and package inputs before
-calling a flash. Their derivatives were already excluded from the physical
-model; this avoids constructing those unused derivatives in the first place.
-The same rule applies to numerical LU factors: the linear solve differentiates
-its original matrix equation, while factor and pivot calculations stay detached.
-Exchanger sides with matching model structures and array shapes share one
-sequential PH-flash body. Each side retains its own composition and model
-parameters. Different models or component bases retain separate bodies;
-phase-regime branches remain conditional within each position.
-Mixture outlets reuse the curve endpoints and resolve only their phase
-inventories. Pure-fluid outlets retain a PH solve because temperature alone
-doesn't determine saturation quality. This avoids repeating two complete
-mixture energy solves after the profiles have already converged.</p>
+<p>The <a href="../process-runtime/">shared process runtime</a> preserves local unit
+compilation during concrete process iterations and differentiation. Both
+sequential and simultaneous saved-case execution use one process graph.
+Native EO built-ins call the same physical kernels; custom residual blocks
+use local sparse assembly with declared dependencies.</p>
+<p>The process Jacobian stores outlet identities and local unit input blocks.
+Forward and transposed solves use checked sparse CPU LU with bounded factor
+reuse. There is no automatic dense process fallback. Design specifications
+add a small border to this system, so specification trials evaluate unit and
+metric equations without repeatedly solving the complete plant.</p>
+<p><code>CaseRunner.diagnose_structure()</code> reports <code>process_graph</code>, including stored
+coefficients, scalar coordinates, matching, and specification variables.
+<code>EOFlowsheet.diagnose_structure()</code> reports custom equation incidence, and
+<code>diagnose()</code> adds a state-dependent dense rank diagnostic. Matching alone
+doesn't establish a solvable or physically accepted state.</p>
+<p>Column internals retain structured MESH solves. The connection matrix doesn't
+expand their stages. Parameter and feed derivatives pass through the same
+local kernels, and numerical seeds never carry derivatives.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>fugacio<span class="w"> </span>diagnose<span class="w"> </span>examples/process-cases/depropanizer.json
 </span></code></pre></div>
 <p>Case runners in one process share compiled unit templates when their numerical
@@ -2938,6 +2990,77 @@ The standalone benchmark includes these phases in its progress checkpoints.</p>
 structure without creating a trusted run. Solver options and study derivative
 options are available through the same CLI and copilot routes as ordinary runs.</p>
 <h2 id="measured-behavior">Measured behavior<a class="headerlink" href="#measured-behavior" title="Permanent link">&para;</a></h2>
+<h3 id="shared-runtime-observations">Shared runtime observations<a class="headerlink" href="#shared-runtime-observations" title="Permanent link">&para;</a></h3>
+<p>The September 23, 2026, observations in
+<code>benchmarks/shared-process-runtime.json</code> retain source digests, solver settings,
+phase timings, study results, and independently audited runs. Each study uses a
+fresh process and retains JAX kernels across baseline, derivative, and audit
+phases. The Linux container has four CPUs, an 8,000,000,000-byte hard memory
+limit, no additional swap allowance, and <code>MALLOC_ARENA_MAX=2</code>.
+GB means 1,000,000,000 bytes.</p>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Environment</th>
+<th>Disk cache</th>
+<th style="text-align: right;">Total, seconds</th>
+<th style="text-align: right;">Peak RSS, GB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12-stage NRTL train sensitivities</td>
+<td>Linux, JAX 0.10.1</td>
+<td>Empty</td>
+<td style="text-align: right;">1,096.2</td>
+<td style="text-align: right;">7.920</td>
+</tr>
+<tr>
+<td>16-stage depropanizer optimization</td>
+<td>Linux, JAX 0.10.1</td>
+<td>Empty</td>
+<td style="text-align: right;">367.8</td>
+<td style="text-align: right;">4.795</td>
+</tr>
+</tbody>
+</table>
+<p>The NRTL train passes all seven physical audits and all six finite-difference
+comparisons. Its largest derivative relative error is 0.00000908. The process
+matrix has 30 connection unknowns and 210 stored coefficients; the column
+retains its own structured stage solve. The audited baseline peaks at 3.308 GB,
+and the first complete linearization peaks at 7.920 GB. Its compilation remains
+the dominant cost: 712.0 seconds, followed by 66.1 seconds to apply the Jacobian.
+This observation leaves little headroom below 8 GB; it doesn't establish that
+every host, allocator, or larger process will fit that budget.</p>
+<p>On September 29, a GitHub runner exceeded the same 8 GB budget during the
+first NRTL linearization, reaching 8.067 GB. The workflow now fixes glibc's
+mmap and trim thresholds as described below. A fresh Ubuntu 24.04 container
+with Python 3.12.3, JAX 0.10.1, four assigned CPUs, and the same hard memory
+limit completed the full study in 1,762.6 seconds at 7.883 GB. All seven
+physical audits and six finite-difference comparisons passed, with the same
+maximum relative error of 0.00000908. <code>benchmarks/ci-memory-regression.json</code>
+preserves both the failed CI observation and this accepted local run. The
+remaining headroom is small, and different hosts aren't a controlled comparison
+of allocator effects or elapsed time.</p>
+<p>The allocator-only update still exceeded the CI limit at 8.030 GB. Exchanger
+energy-balance reports now detach their inputs before evaluating diagnostic
+enthalpies. Previously, eager differentiation could linearize those property
+calls before discarding their derivatives in the finished report. Both energy
+balances and their acceptance tolerances are unchanged; physical exchanger
+outputs retain their derivatives. The second CI failure is also retained in
+the regression record.</p>
+<p>The depropanizer optimization completes six SLSQP iterations and passes its
+final cold-start physical audit. The first linearization takes 229.4 seconds;
+later linearizations settle near 3.1 seconds, with Jacobian applications near
+0.54 seconds. Peak RSS remains near 4.795 GB across the later optimizer points.
+Separate compile-event regression tests verify kernel reuse across changed
+operating points on JAX 0.4.38 and 0.10.1.</p>
+<p>Peak RSS uses the largest retained process observation, including samples after
+the study's final timer. The runs shared their physical host with other
+validation work, so elapsed times include that contention. Stage counts, cache
+states, and platforms are recorded separately for each observation.</p>
+<h3 id="earlier-observations">Earlier observations<a class="headerlink" href="#earlier-observations" title="Permanent link">&para;</a></h3>
 <p>The September 9, 2026, observations are recorded in
 <code>benchmarks/process-performance.json</code>, including source digests, environments,
 phase timings, acceptance checks, and failures. The following measurements
@@ -3011,32 +3134,36 @@ outputs inherit a 7 GB guarantee. The default-allocator cold run reached
 7.006 GB at its fifth optimizer point; warm-cache runs also exceeded 7 GB.
 Failed resource observations remain in the benchmark record. A warm persistent
 cache can reduce compilation time without reducing peak resident memory.</p>
-<h3 id="what-checked-solves-cost">What checked solves cost<a class="headerlink" href="#what-checked-solves-cost" title="Permanent link">&para;</a></h3>
+<h3 id="measurements-before-the-shared-graph">Measurements before the shared graph<a class="headerlink" href="#measurements-before-the-shared-graph" title="Permanent link">&para;</a></h3>
 <p>Checked solves, retained reports, and per-unit kernels enlarge the compiled
 process graph, so the same studies need more compile memory and time than they
 did before the engine reported every failure. Measured on the same CI runner,
 same case, and same JAX 0.10.1: the depropanizer optimization's audited
 baseline run went from 2.533 GB and 88 seconds to 3.148 GB and 139 seconds, and
 its first plant linearization from 6.104 GB to more than 7 GB, which is why
-that job's limit is now 9 GB. The 12-stage ethanol/water train's audited run
+the earlier job used a 9 GB limit. The 12-stage ethanol/water train's audited run
 went from 5.984 GB and 379 seconds to 8.041 GB and 654 seconds, and its first
 linearization no longer fits a 16 GB runner at all (it passed 12 GB before
-completing), so a pull request skips that benchmark. Shrinking the column
-doesn't recover it: at eight stages the same train has to work harder for the
+completing), so the earlier workflow skipped that benchmark on pull requests.
+Shrinking the column didn't recover it: at eight stages the same train had to work harder for the
 same distillate rate, and its audited run peaked higher still, at 10.494 GB.
-The depropanizer optimization now completes in 639 seconds at 8.043 GB, within
-its 9 GB limit. A local comparison on one
-macOS host attributes the increase to the process graph rather than to the
+That implementation completed its depropanizer optimization in 639 seconds at
+8.043 GB, within its 9 GB limit. A local comparison on one macOS host attributed
+the increase to the process graph rather than to the
 retained kernels: the same depropanizer solve moved from 3.794 GB and 122
 seconds to 4.758 GB and 158 seconds, while its per-unit kernels <em>reduced</em> peak
 memory (4.755 GB with them, 4.987 GB without), and the heat exchanger's
 compiled program is about three times smaller yet still costs 24% more memory
 to build.</p>
-<p>The Linux memory-budget workflow limits glibc's allocation arenas to reduce
-retained allocation memory. Set <code>MALLOC_ARENA_MAX=2</code> before starting Python to
-reproduce that runtime configuration. This changes allocation behavior, not
-the process equations or their acceptance tolerances. Profiles record this
-setting alongside thread and XLA settings. See the
+<p>The Linux memory-budget workflow limits glibc's allocation arenas and fixes
+its mmap and trim thresholds to reduce retained allocation memory. Set
+<code>MALLOC_ARENA_MAX=2</code>, <code>MALLOC_MMAP_THRESHOLD_=131072</code>, and
+<code>MALLOC_TRIM_THRESHOLD_=131072</code> before starting Python to reproduce that
+runtime configuration. Fixing the thresholds disables glibc's adaptive
+increases, allowing freed compiler buffers to return to the operating system.
+It doesn't clear JAX caches or change the process equations or their acceptance
+tolerances. Profiles record all three settings alongside thread and XLA
+settings. See the
 <a href="https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation-Tunables.html">glibc allocation tunables</a>.</p>
 <p>The separate two-parameter, two-output depropanizer sensitivity study passed
 all four independent finite-difference comparisons. With an existing cache,
@@ -3064,27 +3191,27 @@ phase. On Linux, it also records available cgroup memory-event counters, which
 can identify an OOM kill before the worker's watchdog records its own peak.
 A successful benchmark requires accepted numerical/physical evidence
 and completion within the resource limits.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Linux/glibc setting used by the memory-budget workflow.</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Linux/glibc settings used by the memory-budget workflow.</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MALLOC_ARENA_MAX</span><span class="o">=</span><span class="m">2</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>block<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-block
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>dense<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-dense
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span>--scenario<span class="w"> </span>depropanizer<span class="w"> </span>--study<span class="w"> </span>optimization<span class="w"> </span>--release-caches<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">9</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/depropanizer-optimization
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c1"># This train needs a host with more than 16 GB of RAM: CI runs it only on a</span>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1"># manual workflow dispatch (see the measurements below).</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MALLOC_MMAP_THRESHOLD_</span><span class="o">=</span><span class="m">131072</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MALLOC_TRIM_THRESHOLD_</span><span class="o">=</span><span class="m">131072</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>block<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-block
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span>--scenario<span class="w"> </span>column<span class="w"> </span>--stages<span class="w"> </span><span class="m">32</span><span class="w"> </span>--column-solver<span class="w"> </span>dense<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/column32-dense
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span>--scenario<span class="w"> </span>depropanizer<span class="w"> </span>--study<span class="w"> </span>optimization<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">8</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/depropanizer-optimization
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
 </span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">  </span>--scenario<span class="w"> </span>ethanol-train<span class="w"> </span>--stages<span class="w"> </span><span class="m">12</span><span class="w"> </span>--study<span class="w"> </span>sensitivities<span class="w"> </span>--release-caches<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">16</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">  </span>--scenario<span class="w"> </span>ethanol-train<span class="w"> </span>--stages<span class="w"> </span><span class="m">12</span><span class="w"> </span>--study<span class="w"> </span>sensitivities<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">  </span>--max-rss-gb<span class="w"> </span><span class="m">8</span><span class="w"> </span>--timeout-seconds<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">  </span>--output<span class="w"> </span>artifacts/performance/ethanol-train
 </span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
 </span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark_process.py<span class="w"> </span><span class="se">\</span>
@@ -3105,7 +3232,8 @@ after each completed point. The host value/Jacobian pair remains cached for
 repeated optimizer callbacks at that same point. Clearing compiler caches
 between individual points increased both compilation time and peak memory in
 the Linux depropanizer experiment. The option retains the persistent cache and
-recorded runs. The constrained-memory CI studies enable it.</p>
+recorded runs. The shared-runtime CI studies leave it disabled to check
+retained-kernel memory across the complete study.</p>
 <p>The standalone column benchmark separates tracing and lowering, compilation,
 first execution, and repeated execution for both the primal and derivative
 kernels. Its derivative is compared with centered finite differences. Modular
@@ -3114,14 +3242,13 @@ linearization can compile individual units, so its time mustn't be labeled
 pure execution time.</p>
 <p>The process-performance CI workflow runs 32- and 64-stage columns, the saved
 depropanizer optimization, the NRTL train, and a 24-variable study in separate
-jobs. The columns and heater bank have a 7 GB process limit and the
-depropanizer optimization a 9 GB limit. The NRTL sensitivity train exceeds a
-16 GB runner with the checked engine, so a pull request skips it with a notice
-and it runs on a manual workflow dispatch, on a host with more memory. All these Linux jobs
-set <code>MALLOC_ARENA_MAX=2</code> before process startup. The NRTL job needs enough
-additional RAM for the runner and operating system. GitHub documents 16 GB
-for public-repository Linux runners; private forks need to select a runner
-with sufficient memory. See the
+jobs on pull requests and manual dispatch. The columns and heater bank have
+a 7 GB process limit; both complete plant studies have an 8 GB target. These
+are enforced budgets, not guarantees for other processes, hosts, or JAX
+versions. All Linux jobs use the three glibc settings shown above at process
+startup; earlier observations retain their original runtime settings.
+Select a host with additional memory for the runner and operating system;
+private forks may have different runner resources. See the
 <a href="https://docs.github.com/en/actions/reference/runners/github-hosted-runners">GitHub-hosted runner specifications</a>.
 The workflow preserves failed observations. Timing
 observations are hardware dependent; the CI gates completion and correctness,

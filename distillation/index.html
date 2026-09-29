@@ -431,6 +431,8 @@
       
         
       
+        
+      
     
     
     
@@ -915,6 +917,34 @@
     
   
     Flowsheeting, tears & exchangers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
   
 
     
@@ -2774,7 +2804,7 @@ error, and an enthalpy error of (10^4) J/mol each register as order one.</p>
 profile with <code>k_seed</code> (Wilson for cubics, modified Raoult for gamma-phi) to
 start the K-values, then the Newton iteration with a step limiter runs to a
 scaled residual of (10^{-10}). The whole thing is wrapped in
-<code>newton_system</code> from <code>fugacio.thermo.implicit</code>, so the gradient of anything
+<code>newton_system_with_info</code> from <code>fugacio.thermo.implicit</code>, so the gradient of anything
 computed from the result (a duty, a purity, a reflux ratio) with respect to
 anything fed in (the feed state, a spec value, a <code>kij</code>, a stage pressure) is one
 adjoint solve against the converged Jacobian, never a differentiation <em>through</em>

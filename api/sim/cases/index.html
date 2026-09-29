@@ -429,6 +429,8 @@
       
         
       
+        
+      
     
     
     
@@ -799,6 +801,34 @@
     
   
     Flowsheeting, tears & exchangers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../process-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared process runtime
   
 
     
@@ -5751,7 +5781,7 @@ object, so a caller cannot mutate a compiled case by editing its source map.</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">max_iterations</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">specification_iterations</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">column_solver</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;block&quot;</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">eo_jacobian</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;colored&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">plant_solver</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></span> <span class="o">=</span> <span class="s2">&quot;sparse&quot;</span><span class="p">,</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -5991,7 +6021,7 @@ quantities. Design-spec manipulated parameters are solved within their bounds.</
               <td><code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;prepare&lt;/span&gt; (&lt;code&gt;fugacio.sim.cases.runtime.CaseRunner.prepare&lt;/code&gt;)" href="#fugacio.sim.cases.runtime.CaseRunner.prepare">prepare</a></code></td>
               <td>
                 <div class="doc-md-description">
-                  <p>Build EO plans with concrete defaults before tracing; repeated calls are cheap.</p>
+                  <p>Bind the shared graph layout without solving or capturing operating values.</p>
                 </div>
               </td>
             </tr>
@@ -6052,9 +6082,9 @@ quantities. Design-spec manipulated parameters are solved within their bounds.</
     <div class="doc doc-contents ">
 
         <p>Describe process topology and declared numerical structure without solving.</p>
-<p>Registered EO units retain nested column and flash solves. Their global
-incidence report describes stream connections, not an expanded MESH
-system. Structural matching doesn't imply accepted process physics.</p>
+<p>Incidence describes stream connections and specification borders.
+Columns retain their structured internal MESH solves. Structural
+matching doesn't imply accepted process physics.</p>
 
 
     </div>
@@ -6116,7 +6146,7 @@ system. Structural matching doesn't imply accepted process physics.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Build EO plans with concrete defaults before tracing; repeated calls are cheap.</p>
+        <p>Bind the shared graph layout without solving or capturing operating values.</p>
 
 
     </div>
@@ -6165,8 +6195,8 @@ explicitly to <code>evaluate</code>. No failed trial updates a shared seed.</p>
     <div class="doc doc-contents ">
 
         <p>Evaluate in SI with implicit derivatives through recycles and bounded specs.</p>
-<p>Call <code>prepare</code> before an enclosing JAX transformation for the EO
-backend. Differentiating with respect to a manipulated parameter's
+<p>Both strategies use the same graph and local implicit derivatives.
+Differentiating with respect to a manipulated parameter's
 initial guess gives zero; the converged specification determines it.</p>
 
 
