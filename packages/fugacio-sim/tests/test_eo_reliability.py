@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import pytest
 
 from fugacio.sim import Stream, enthalpy_flow, package_for
-from fugacio.sim.eo import Block, EOFlowsheet, Flash, Heater, Splitter
+from fugacio.sim.eo import Block, EOFlowsheet, Flash, Heater, HeatExchanger, Splitter
 from fugacio.thermo.diagnostics import ConvergenceError, SolveStatus
 
 
@@ -110,5 +110,43 @@ def test_infeasible_diagnostic_state_has_no_gradient_or_warm_start():
     assert not jnp.isfinite(
         jax.grad(lambda t: flow.solve({"temperature": t}, check=False)["out"].t)(360.0)
     )
+    assert jnp.isnan(jax.jit(lambda t: flow.solve({"temperature": t})["out"].t)(360.0))
     # The failed state cannot replace the last accepted seed.
     assert flow.solve({"temperature": 320.0}).report.iterations == 0
+
+
+@pytest.mark.parametrize(
+    "specification,accepted_target,impossible_target",
+    [("t_cold_out", 350.0, 450.0), ("duty", 1e4, 1e9)],
+)
+def test_exchanger_rejects_unmet_specifications_and_recovers(
+    specification, accepted_target, impossible_target
+):
+    # The unit-contract suite separately exercises the original mixture failure.
+    components = ("methane",)
+    fractions = jnp.ones(1)
+    hot = Stream.from_fractions(components, fractions, 10.0, 400.0, 5e5)
+    cold = Stream.from_fractions(components, fractions, 10.0, 300.0, 5e5)
+    flow = EOFlowsheet().feed("hot", hot).feed("cold", cold)
+    flow.add(
+        HeatExchanger(
+            inlets=("hot", "cold"),
+            outlets=("hot_out", "cold_out"),
+            **{specification: "target"},
+        )
+    )
+    accepted = flow.solve({"target": accepted_target})
+    failed = flow.solve({"target": impossible_target}, check=False)
+    assert accepted.converged
+    # The connection equations match the kernel's capped best state exactly,
+    # but that state doesn't meet the requested unit specification.
+    assert failed.residual_norm < 1e-10
+    assert failed.report.status == SolveStatus.INFEASIBLE
+    assert jnp.isfinite(failed["cold_out"].t)
+    with pytest.raises(ConvergenceError):
+        flow.solve({"target": impossible_target})
+
+    # A rejected best iterate must not replace the last accepted warm start.
+    recovered = flow.solve({"target": accepted_target})
+    assert recovered.converged and recovered.report.iterations == 0
+    assert recovered["cold_out"].t == pytest.approx(float(accepted["cold_out"].t))

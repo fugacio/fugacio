@@ -16,6 +16,8 @@ import jax.numpy as jnp
 from jax import Array
 
 from fugacio.sim.graph import stream_vector
+from fugacio.sim.heat_exchanger import HeatExchangerResult
+from fugacio.sim.heat_exchanger import heat_exchanger as _heat_exchanger_unit
 from fugacio.sim.properties import Model, resolve_package
 from fugacio.sim.stream import Stream
 from fugacio.sim.units import (
@@ -45,10 +47,6 @@ ArrayLike = Array | float
 #: can be made a differentiable parameter, or the manipulated variable of a
 #: design spec, simply by naming it).
 Spec = float | Array | str
-
-
-#: Temperature cross (K) an exchanger solution may show before it's infeasible.
-_APPROACH_TOLERANCE = 1e-3
 
 
 @dataclass(frozen=True)
@@ -548,13 +546,11 @@ class HeatExchanger(Block):
                 return {name: resolve(spec, params)}
         raise AssertionError("unreachable")  # pragma: no cover
 
-    def forward(
+    def _solve(
         self, streams: Mapping[str, Stream], params: Mapping[str, Any], ctx: Context
-    ) -> dict[str, Stream]:
-        """Evaluate via `fugacio.sim.heat_exchanger.heat_exchanger`."""
-        from fugacio.sim.heat_exchanger import heat_exchanger
-
-        res = heat_exchanger(
+    ) -> HeatExchangerResult:
+        """Retain the shared kernel's physical and specification acceptance report."""
+        return _heat_exchanger_unit(
             streams[self.inlets[0]],
             streams[self.inlets[1]],
             dp_hot=resolve(self.dp_hot, params),
@@ -563,7 +559,23 @@ class HeatExchanger(Block):
             model=ctx.model,
             **self._spec_kwargs(params),
         )
+
+    def forward(
+        self, streams: Mapping[str, Stream], params: Mapping[str, Any], ctx: Context
+    ) -> dict[str, Stream]:
+        """Evaluate via `fugacio.sim.heat_exchanger.heat_exchanger`."""
+        res = self._solve(streams, params, ctx)
         return {self.outlets[0]: res.hot_out, self.outlets[1]: res.cold_out}
+
+    def feasible(
+        self,
+        streams: Mapping[str, Stream],
+        aux: Mapping[str, Array],
+        params: Mapping[str, Any],
+        ctx: Context,
+    ) -> Array:
+        """Reject a failed unit solve even if its best outlet state matches the graph."""
+        return self._solve(streams, params, ctx).report.converged
 
 
 @dataclass(frozen=True)
