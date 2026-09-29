@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.10.0 (2026-09-29)
+
+### Features
+
+- Unify process execution with a shared sparse runtime
+  ([#27](https://github.com/fugacio/fugacio/pull/27),
+  [`ed0a477`](https://github.com/fugacio/fugacio/commit/ed0a477e37dc0185a63a7e10b983d83df82f9df7))
+
+
 ## v0.9.0 (2026-09-22)
 
 ### Bug Fixes
